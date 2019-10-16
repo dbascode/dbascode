@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const packagesToFix = ['lodash-es']
 
 for (const pkg of packagesToFix) {
-  const pkgJsonPath = path.join(__dirname, '..', 'node_modules', pkg, 'package.json')
+  const pkgJsonPath = path.join(__dirname, 'node_modules', pkg, 'package.json')
   const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath).toString())
   pkgJson.type = 'module'
   fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2))

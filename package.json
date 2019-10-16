@@ -4,10 +4,11 @@
   "author": "Alex Pravdin <alex.pravdin@interi.co> (https://interi.co)",
   "homepage": "https://interi.co",
   "scripts": {
-    "migrate": "node --experimental-modules --es-module-specifier-resolution=node migrate.mjs",
+    "migrate": "node --experimental-modules --es-module-specifier-resolution=node app.mjs migrate",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs"
   },
   "dependencies": {
+    "glob": "^7.1.4",
     "js-yaml": "^3.13.1",
     "lodash-es": "^4.17.15",
     "yargs": "^14.2.0"
