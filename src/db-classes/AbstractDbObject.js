@@ -14,6 +14,10 @@ import intersection from 'lodash-es/intersection'
 import difference from 'lodash-es/difference'
 import isEqualWith from 'lodash-es/isEqualWith'
 import isFunction from 'lodash-es/isFunction'
+import baseIsEqual from 'lodash-es/_baseIsEqual'
+import cloneDeep from 'lodash-es/cloneDeep'
+import isArray from 'lodash-es/isArray'
+import isObject from 'lodash-es/isObject'
 
 /**
  * Base class for all DB objects
@@ -60,13 +64,52 @@ class AbstractDbObject {
   /**
    * Has changes compared to the previous state object
    * @param {AbstractDbObject} compared
+   * @param {boolean} deep
    * @returns {boolean}
    */
-  hasChanges (compared) {
+  hasChanges (compared, deep = true) {
     if (!compared) {
       return true
     } else {
-      return !isEqual(this, compared)
+      const isSkippedName = name => (['_calcCache', 'objectCollectionProps', 'arrayCollectionProps']).indexOf(name) >= 0
+      const isChildren = (obj, name) => obj.objectCollectionProps.indexOf(name) >= 0 || obj.arrayCollectionProps.indexOf(name) >= 0
+      if (deep) {
+        return !baseIsEqual(
+          cloneDeep(this),
+          cloneDeep(compared),
+          undefined,
+          (objValue, othValue, key, object, other, stack) => {
+            if (key === 'parent') {
+              return (objValue ? objValue.constructor.name : undefined) === (othValue ? othValue.constructor.name : undefined)
+            } else if (isSkippedName(key)) {
+              return true
+            }
+          }
+        )
+      } else {
+        const cmp = (v1, v2) => {
+          if (v1 instanceof AbstractDbObject || v2 instanceof AbstractDbObject) {
+            return true
+          } else if (isFunction(v1) || isFunction(v2)) {
+            return true
+          } else if (isArray(v1) || isArray(v2) || isObject(v1) || isObject(v2)) {
+            // Assume if we are here then there values are flat and doesn't contain DB objects, so
+            // can be compared by isEqual
+            return isEqual(v1, v2)
+          } else {
+            return v1 === v2
+          }
+        }
+        const loop = (iterator, other) => {
+          for (const name in iterator) {
+            if (!isSkippedName(name) && !isChildren(iterator, name) && !cmp(iterator[name], other[name])) {
+              return true
+            }
+          }
+          return false
+        }
+        return loop(this, compared) || loop(compared, this)
+      }
     }
   }
 
@@ -88,7 +131,9 @@ class AbstractDbObject {
         result += this.getChildrenChangesSql()
       }
     } else if (this.hasChanges(compared)) {
-      result += this.getAlterSql(compared)
+      if (this.hasChanges(compared, false)) {
+        result += this.getAlterSql(compared)
+      }
       result += this.getChildrenChangesSql(compared)
     }
     return result

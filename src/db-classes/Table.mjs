@@ -71,7 +71,7 @@ class Table extends AbstractSchemaObject {
     }) {
     super(name, parent)
     this.arrayCollectionProps = ['indexes']
-    this.objectCollectionProps = ['triggers']
+    this.objectCollectionProps = ['columns', 'triggers']
     this.columns = columns
     this.comment = comment
     this.uniqueKeys = uniqueKeys

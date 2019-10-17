@@ -102,7 +102,7 @@ class Column extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `ALTER TABLE ${this.parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()}\n`
+    return `ALTER TABLE ${this.parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()};\n`
   }
 
   /**
@@ -118,16 +118,16 @@ class Column extends AbstractSchemaObject {
   }
 
   /**
-   * @inheritDoc
+   *
    * @param {Column} compared
    * @returns {string}
    */
   getAlterSql (compared) {
-    return `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getColumnDefinition()}\n`
+    return `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getColumnDefinition()};\n`
   }
 
   getDropSql () {
-    return `ALTER TABLE ${this.parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()}\n`
+    return `ALTER TABLE ${this.parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()};\n`
   }
 }
 
