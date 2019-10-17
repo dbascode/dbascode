@@ -12,6 +12,7 @@ import isObject from 'lodash-es/isObject'
 import isEmpty from 'lodash-es/isEmpty'
 import difference from 'lodash-es/difference'
 import intersection from 'lodash-es/intersection'
+import isArray from 'lodash-es/isArray'
 
 function checkFiles(cfg) {
   for (const configName of Object.keys(cfg)) {

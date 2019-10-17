@@ -102,6 +102,14 @@ class Column extends AbstractSchemaObject {
   }
 
   getCreateSql () {
+    return `ALTER TABLE ${this.parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()}\n`
+  }
+
+  /**
+   * Returns full SQL column definition
+   * @returns {string}
+   */
+  getColumnDefinition() {
     const defaultValue = this.isAutoIncrement ?
         (`DEFAULT nextval('${this.parent.getParentedNameFlat()}_${this.name}_seq'::regclass)`) :
         (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
@@ -109,10 +117,18 @@ class Column extends AbstractSchemaObject {
     return `${this.getQuotedName()} ${this.type} ${allowNull} ${defaultValue}`
   }
 
-  escapeComment (text) {
-    return text.split("'").join("''")
+  /**
+   * @inheritDoc
+   * @param {Column} compared
+   * @returns {string}
+   */
+  getAlterSql (compared) {
+    return `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getColumnDefinition()}\n`
   }
 
+  getDropSql () {
+    return `ALTER TABLE ${this.parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()}\n`
+  }
 }
 
 export default Column

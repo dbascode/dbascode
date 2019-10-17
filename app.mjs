@@ -14,17 +14,17 @@ import DataBase from './src/db-classes/DataBase'
 import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-const projectDir = __dirname + '/..';
+const projectDir = __dirname
 
 
 const cliConfig = yargs
   .command({
     command: 'migrate <source>',
     desc: 'Create SQL migrations based on config differences',
-    isDefault: true,
+    // isDefault: true,
     builder: yargs => {
       yargs.positional('source', {
         describe: 'Directory to read database state from',
@@ -55,10 +55,10 @@ const cliConfig = yargs
   .argv
 
 
-if (cliConfig.command === 'migrate') {
-  const configFile = path.join(projectDir, 'system/db.yml')
-  const outputDir = path.join(projectDir, 'output')
-  const migrationsDir = path.join(projectDir, 'migrations')
+if (cliConfig._[0] === 'migrate') {
+  const configFile = path.join(cliConfig.source, 'db.yml')
+  const outputDir = cliConfig.stateDir
+  const migrationsDir = cliConfig.migrationsDir
 
   const currentState = loadConfig(configFile)
 

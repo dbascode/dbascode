@@ -13,5 +13,9 @@
     "lodash-es": "^4.17.15",
     "yargs": "^14.2.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "docdash": "^1.1.1",
+    "jsdoc": "^3.6.3"
+  }
 }

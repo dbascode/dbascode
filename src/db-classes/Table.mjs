@@ -195,7 +195,7 @@ class Table extends AbstractSchemaObject {
     }
     if (foreignKeys.length > 0) {
       for (const key of foreignKeys) {
-        tableDef.push(key.getCreateSql())
+        tableDef.push(key.getColumnDefinition())
       }
     }
 
@@ -251,9 +251,21 @@ class Table extends AbstractSchemaObject {
     return `DROP TABLE "${this.name}";\n`
   }
 
-  // getAlterSql (compared) {
-  //
-  // }
+  /**
+   *
+   * @param {Table} compared
+   * @returns {string}
+   */
+  getAlterSql (compared) {
+    const result = []
+    for (const column in Object.values(this.columns)) {
+      const compColumn = compared.columns
+      if (compColumn) {
+
+      }
+    }
+    return result.join("\n") + "\n"
+  }
 
   /**
    * Returns all columns including inherited
