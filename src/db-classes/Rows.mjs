@@ -42,10 +42,11 @@ class Rows extends AbstractSchemaObject {
     if (!rows) {
       return null
     }
-    return new Rows(
+    const result = new Rows(
       rows,
       parent,
     )
+    return result.getDb().pluginOnObjectConfigured(result, rows)
   }
 
   getCreateSql () {

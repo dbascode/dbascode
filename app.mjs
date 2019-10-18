@@ -13,6 +13,7 @@ import {
 import DataBase from './src/db-classes/DataBase'
 import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
+import PostgraphilePlugin from './src/plugins/PostgraphilePlugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -76,8 +77,20 @@ if (cliConfig._[0] === 'migrate') {
   const previousStateFile = states.sort().pop()
   const previousState = previousStateFile ? loadConfig(previousStateFile) : null
 
-  const currentDbTree = DataBase.createFromCfg(currentState, cliConfig)
-  const previousDbTree = DataBase.createFromCfg(previousState, cliConfig)
+  const currentDbTree = DataBase.createFromCfg(
+    currentState,
+    cliConfig,
+    [
+      new PostgraphilePlugin,
+    ]
+  )
+  const previousDbTree = DataBase.createFromCfg(
+    previousState,
+    cliConfig,
+    [
+      new PostgraphilePlugin,
+    ]
+  )
 
   const sqlDump = currentDbTree.getChangesSql(previousDbTree)
 

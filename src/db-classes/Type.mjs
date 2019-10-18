@@ -64,7 +64,7 @@ class Type extends AbstractSchemaObject {
     } else {
       throw new Error('Either fields or enum values must be specified')
     }
-    return result
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   getCreateSql () {

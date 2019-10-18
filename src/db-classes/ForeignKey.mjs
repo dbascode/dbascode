@@ -55,17 +55,21 @@ class ForeignKey extends AbstractSchemaObject {
       return null
     }
     const [refTableName, refColName] = definition.split('.')
-    return new ForeignKey(prepareArgs(parent, {
+    const result = new ForeignKey(prepareArgs(parent, {
       colName,
       refTableName,
       refColName,
       parent,
     }))
+    return result.getDb().pluginOnObjectConfigured(result, definition)
   }
 
   getCreateSql () {
+  }
+
+  getInlineSql () {
     return `CONSTRAINT "${this.colName}_fkey" FOREIGN KEY ("${this.colName}")
-    REFERENCES ${this.getSchema().getQuotedName()}."${this.refTableName}" ("${this.refColName}") MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT`
+      REFERENCES ${this.getSchema().getQuotedName()}."${this.refTableName}" ("${this.refColName}") MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT`
   }
 }
 

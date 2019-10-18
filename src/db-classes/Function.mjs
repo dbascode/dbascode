@@ -77,7 +77,7 @@ class Function extends AbstractSchemaObject {
     if (!cfg) {
       return null
     }
-    return new Function(prepareArgs(parent, {
+    const result = new Function(prepareArgs(parent, {
       name,
       parent,
       language: cfg.language,
@@ -90,6 +90,7 @@ class Function extends AbstractSchemaObject {
       args: cfg.arguments,
       isLeakProof: cfg.leakproof,
     }))
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   getStabilitySql () {

@@ -40,11 +40,12 @@ class Field extends AbstractSchemaObject{
     if (!cfg) {
       return null
     }
-    return new Field(prepareArgs(parent, {
+    const result = new Field(prepareArgs(parent, {
       name,
       type: cfg,
       parent,
     }))
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   getCreateSql () {

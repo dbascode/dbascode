@@ -14,7 +14,7 @@ import Trigger from './Trigger'
 import Index from './Index'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
-import { prepareArgs } from './utils'
+import { escapeComment, prepareArgs } from './utils'
 
 /**
  *
@@ -28,7 +28,6 @@ class Table extends AbstractSchemaObject {
   isRLS = false
   defaultAcl = []
   rows = undefined
-  omit = []
   autoIncSeqRequired = false
   primaryKey = []
   rowLevelSecurity = {}
@@ -47,7 +46,6 @@ class Table extends AbstractSchemaObject {
    * @param {Rows} [rows]
    * @param {Table} [inherits]
    * @param {Schema} [parent]
-   * @param {String[]} [omit]
    * @param {string[]} [primaryKey]
    * @param {ForeignKey[]} [foreignKeys]
    * @param {Object.<string, string>} [rowLevelSecurity]
@@ -65,7 +63,6 @@ class Table extends AbstractSchemaObject {
       rows = undefined,
       inherits = undefined,
       parent = undefined,
-      omit = false,
       primaryKey = [],
       rowLevelSecurity = {},
     }) {
@@ -80,7 +77,6 @@ class Table extends AbstractSchemaObject {
     this.isRLS = isRLS
     this.defaultAcl = defaultAcl
     this.rows = rows
-    this.omit = omit
     this.primaryKey = primaryKey
     this.rowLevelSecurity = rowLevelSecurity
     this.inherits = inherits
@@ -104,7 +100,6 @@ class Table extends AbstractSchemaObject {
     const result = new Table(prepareArgs(parent, {
       name,
       parent,
-      omit: isBoolean(cfg.omit) ? (cfg.omit ? ['select', 'update', 'insert'] : []) : cfg.omit,
       inherits: inherits,
       comment: cfg.comment,
       primaryKey: isString(cfg.primary_key) ? [cfg.primary_key] : (cfg.primary_key || []),
@@ -131,7 +126,7 @@ class Table extends AbstractSchemaObject {
     }
     Rows.createFromCfg(cfg.rows, result)
 
-    return result
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   /**
@@ -163,26 +158,16 @@ class Table extends AbstractSchemaObject {
     let result = `CREATE TABLE ${this.getParentedName(true)} (\n`
     const tableDef = []
     const foreignKeys = []
-    const colComments = []
     for (const columnName of Object.keys(this.columns)) {
       const column = this.columns[columnName]
-      tableDef.push(column.getCreateSql())
+      column._inNewTable = true
+      tableDef.push(column.getColumnDefinition())
       if (column.isAutoIncrement) {
         this.autoIncSeqRequired = columnName
         this.primaryKey = [columnName]
       }
       if (column.foreignKey) {
         foreignKeys.push(column.foreignKey)
-      }
-      if (column.comment || column.omit.length > 0) {
-        const text = []
-        if (column.comment) {
-          text.push(column.comment)
-        }
-        if (column.omit.length > 0) {
-          text.push(`@omit ${column.omit.join(',')}`)
-        }
-        colComments.push(`COMMENT ON COLUMN ${this.getParentedName(true)}.${column.getQuotedName()} IS '${this.escapeComment(text.join("\n"))}';`)
       }
     }
     if (this.primaryKey.length > 0) {
@@ -195,7 +180,7 @@ class Table extends AbstractSchemaObject {
     }
     if (foreignKeys.length > 0) {
       for (const key of foreignKeys) {
-        tableDef.push(key.getColumnDefinition())
+        tableDef.push(key.getInlineSql())
       }
     }
 
@@ -211,19 +196,7 @@ class Table extends AbstractSchemaObject {
       result += this.rows.getCreateSql()
     }
 
-    if (this.comment || this.omit.length > 0) {
-      const text = []
-      if (this.comment) {
-        text.push(this.comment)
-      }
-      if (this.omit.length > 0) {
-        text.push(`@omit ${this.omit.join(',')}`)
-      }
-      result += `COMMENT ON TABLE ${this.getParentedName()} IS '${this.escapeComment(text.join("\n"))}';\n`
-    }
-    if (colComments.length > 0) {
-      result += colComments.join("\n") + "\n"
-    }
+    result += `COMMENT ON TABLE ${this.getParentedName(true)} IS '${this.getComment()}';\n`
 
     if (this.isRLS) {
       const rls = this.rowLevelSecurity
@@ -240,11 +213,11 @@ class Table extends AbstractSchemaObject {
     if (this.defaultAcl.length > 0) {
       result += `INSERT INTO ${this.parent.getQuotedName()}."default_acl" ("table", "acl") VALUES ('${this.name}', '${JSON.stringify(this.defaultAcl)}'::json);\n`
     }
-    return result + "\n\n"
+    return result
   }
 
-  escapeComment (text) {
-    return text.split("'").join("''")
+  getComment() {
+    return escapeComment(this.comment)
   }
 
   getDropSql () {
@@ -258,13 +231,7 @@ class Table extends AbstractSchemaObject {
    */
   getAlterSql (compared) {
     const result = []
-    for (const column in Object.values(this.columns)) {
-      const compColumn = compared.columns
-      if (compColumn) {
-
-      }
-    }
-    return result.join("\n") + "\n"
+    return result.join()
   }
 
   /**

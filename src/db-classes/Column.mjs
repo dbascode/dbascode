@@ -9,7 +9,7 @@ import isBoolean from 'lodash-es/isBoolean'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
 import ForeignKey from './ForeignKey'
-import { prepareArgs } from './utils'
+import { escapeComment, prepareArgs } from './utils'
 
 /**
  *
@@ -22,7 +22,7 @@ class Column extends AbstractSchemaObject {
   isAutoIncrement = false
   isInherited = false
   isIntl = false
-  omit = []
+  _inNewTable = false
 
   /**
    * Constructor
@@ -35,7 +35,6 @@ class Column extends AbstractSchemaObject {
    * @param {boolean} [isInherited]
    * @param {ForeignKey} [foreignKey]
    * @param {boolean} isIntl
-   * @param {string[]} omit
    */
   constructor (
     {
@@ -48,7 +47,6 @@ class Column extends AbstractSchemaObject {
       isInherited = false,
       foreignKey = undefined,
       isIntl = false,
-      omit = [],
     }
   ) {
     super(name, parent)
@@ -59,7 +57,6 @@ class Column extends AbstractSchemaObject {
     this.isAutoIncrement = isAutoIncrement
     this.isInherited = isInherited
     this.isIntl = isIntl
-    this.omit = omit
     if (parent) {
       parent.columns[name] = this
     }
@@ -70,7 +67,7 @@ class Column extends AbstractSchemaObject {
    * @param {string} name
    * @param {string|Object|null} cfg
    * @param {Table|Type} [parent]
-   * @return {Column|null}
+   * @return {AbstractDbObject}
    */
   static createFromCfg(name, cfg, parent) {
     if (!cfg) {
@@ -85,12 +82,11 @@ class Column extends AbstractSchemaObject {
       isIntl: !!config.intl,
       isAutoIncrement: !!config.autoincrement,
       defaultValue: config.default,
-      omit: isBoolean(config.omit) ? (config.omit ? ['select', 'update', 'insert'] : []) : config.omit,
     }))
     if (config.foreign_key) {
       ForeignKey.createFromCfg(name, config.foreign_key, result)
     }
-    return result
+    return result.getDb().pluginOnObjectConfigured(result, config)
   }
 
   getDefaultValueSql () {
@@ -102,7 +98,12 @@ class Column extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `ALTER TABLE ${this.parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()};\n`
+    const result = []
+    if (!this._inNewTable) {
+      result.push(`ALTER TABLE ${this.parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()};\n`)
+    }
+    result.push(`COMMENT ON COLUMN ${this.parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
+    return result.join('')
   }
 
   /**
@@ -113,8 +114,20 @@ class Column extends AbstractSchemaObject {
     const defaultValue = this.isAutoIncrement ?
         (`DEFAULT nextval('${this.parent.getParentedNameFlat()}_${this.name}_seq'::regclass)`) :
         (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
-    const allowNull = this.allowNull && !this.isAutoIncrement ? '' : 'NOT NULL'
-    return `${this.getQuotedName()} ${this.type} ${allowNull} ${defaultValue}`
+    const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
+    return `${this.getQuotedName()} ${this.getType()} ${allowNull} ${defaultValue}`
+  }
+
+  getComment() {
+    return escapeComment(this.comment)
+  }
+
+  getType() {
+    return this.type
+  }
+
+  getAllowNull() {
+    return this.allowNull && !this.isAutoIncrement
   }
 
   /**
@@ -123,7 +136,33 @@ class Column extends AbstractSchemaObject {
    * @returns {string}
    */
   getAlterSql (compared) {
-    return `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getColumnDefinition()};\n`
+    const result = []
+    if (this.type !== compared.type) {
+      result.push(
+        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} TYPE ${this.getType()};\n`
+      )
+    }
+    if (this.allowNull !== compared.allowNull) {
+      result.push(
+        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${this.getAllowNull() ? 'DROP NOT NULL' : 'SET NOT NULL'};\n`
+      )
+    }
+    if (this.isAutoIncrement !== compared.isAutoIncrement) {
+      const dv = this.getDefaultValueSql()
+      result.push(
+        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
+      )
+    }
+    if (this.defaultValue !== compared.defaultValue) {
+      const dv = this.getDefaultValueSql()
+      result.push(
+        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
+      )
+    }
+    if (this.getComment() !== compared.getComment()) {
+      result.push(`COMMENT ON COLUMN ${this.parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
+    }
+    return result.join()
   }
 
   getDropSql () {

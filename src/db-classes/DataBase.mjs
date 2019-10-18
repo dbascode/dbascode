@@ -22,6 +22,11 @@ class DataBase extends AbstractDbObject {
   rootPassword = ''
   defaultLocale = ''
   extensions = []
+  /**
+   * @type {Object.<string, AbstractPlugin>}
+   * @private
+   */
+  _plugins = {}
 
   /**
    * Constructor
@@ -57,11 +62,13 @@ class DataBase extends AbstractDbObject {
    * Instantiate new object from config data
    * @param {Object|null} cfg
    * @param {Object|null} [overrides]
+   * @param {AbstractPlugin[]} plugins
    * @return {DataBase|null}
    */
   static createFromCfg(
     cfg,
-    overrides
+    overrides,
+    plugins = [],
   ) {
     if (!cfg) {
       return null
@@ -71,6 +78,9 @@ class DataBase extends AbstractDbObject {
       rootUserName: overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name,
       rootPassword: overrides.rootUserPassword ? overrides.rootUserPassword : cfg.root_user_password,
     })
+    for (const plugin of plugins) {
+      result.addPlugin(plugin)
+    }
     for (const name of Object.keys(cfg.roles || {})) {
       Role.createFromCfg(name, cfg.roles[name], result)
     }
@@ -105,6 +115,28 @@ class DataBase extends AbstractDbObject {
     return {
       rootUserName: this.rootUserName,
     }
+  }
+
+  /**
+   *
+   * @param {AbstractPlugin} plugin
+   */
+  addPlugin(plugin) {
+    this._plugins[plugin.getName()] = plugin
+  }
+
+  /**
+   * Executes plugins when an object is created and configured
+   * @param {AbstractDbObject} instance
+   * @param {Object} config
+   * @returns {AbstractDbObject}
+   */
+  pluginOnObjectConfigured(instance, config = {}) {
+    let result = instance
+    for (const plugin of Object.values(this._plugins)) {
+      plugin.onObjectCreated(result, config)
+    }
+    return result
   }
 }
 

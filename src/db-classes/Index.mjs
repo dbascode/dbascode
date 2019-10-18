@@ -29,16 +29,17 @@ class Index extends AbstractSchemaObject {
    * Instantiate new object from config data
    * @param {string|string[]} colNames
    * @param {Table} [parent]
-   * @return {Index|null}
+   * @return {Index}
    */
   static createFromCfg(colNames, parent) {
     if (!colNames) {
       return null
     }
-    return new Index(
+    const result = new Index(
       isArray(colNames) ? colNames : [colNames],
       parent,
     )
+    return result.getDb().pluginOnObjectConfigured(result, colNames)
   }
 
   getCreateSql () {

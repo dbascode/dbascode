@@ -41,15 +41,16 @@ class Role extends AbstractDbObject {
    * @param {string} name
    * @param {Object|null} cfg
    * @param {DataBase} [parent]
-   * @return {Role|null}
+   * @return {Role}
    */
   static createFromCfg(name, cfg, parent) {
     const memberOf = cfg ? cfg.member_of : []
-    return new Role({
+    const result = new Role({
       name,
       memberOf: isArray(memberOf) ? memberOf : (memberOf ? [memberOf] : []),
       parent,
     })
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   /**

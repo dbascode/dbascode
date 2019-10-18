@@ -71,7 +71,7 @@ class AbstractDbObject {
     if (!compared) {
       return true
     } else {
-      const isSkippedName = name => (['_calcCache', 'objectCollectionProps', 'arrayCollectionProps']).indexOf(name) >= 0
+      const isSkippedName = name => (name[0] === '_') || (['objectCollectionProps', 'arrayCollectionProps']).indexOf(name) >= 0
       const isChildren = (obj, name) => obj.objectCollectionProps.indexOf(name) >= 0 || obj.arrayCollectionProps.indexOf(name) >= 0
       if (deep) {
         return !baseIsEqual(
@@ -128,7 +128,7 @@ class AbstractDbObject {
         result += this.getDropSql()
       } else {
         result += this.getCreateSql()
-        result += this.getChildrenChangesSql()
+        result += this.getChildrenChangesSql(undefined)
       }
     } else if (this.hasChanges(compared)) {
       if (this.hasChanges(compared, false)) {
@@ -172,7 +172,7 @@ class AbstractDbObject {
       result += currentSet[key].getChangesSql()
     }
     for (const key of objectDifferenceKeys(previousSet, currentSet)) {
-      result += currentSet.getChangesSql(undefined, true)
+      result += previousSet[key].getChangesSql(undefined, true)
     }
     return result
   }
@@ -193,7 +193,7 @@ class AbstractDbObject {
       result += currentSet[key].getChangesSql()
     }
     for (const key of difference(previousSet, currentSet)) {
-      result += currentSet.getChangesSql(undefined, true)
+      result += previousSet[key].getChangesSql(undefined, true)
     }
     return result
   }
@@ -302,6 +302,25 @@ class AbstractDbObject {
     }
     return result
   }
+
+  /**
+   * Applies a mixin to the current object
+   * @param {Object} mixin
+   */
+  applyMixin(mixin) {
+    for (const prop of Object.keys(mixin)) {
+      const v = mixin[prop]
+      if (isFunction(v)) {
+        const origFn = this[prop]
+        this[prop] = () => {
+          return v.apply(this, [() => origFn.apply(this, arguments), ...arguments])
+        }
+      } else {
+        this[prop] = mixin[prop]
+      }
+    }
+  }
+
 }
 
 export default AbstractDbObject

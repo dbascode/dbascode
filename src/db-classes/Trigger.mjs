@@ -47,12 +47,13 @@ class Trigger extends AbstractSchemaObject {
       return null
     }
     const [when, operation] = op.split('_')
-    return new Trigger(prepareArgs(parent, {
+    const result = new Trigger(prepareArgs(parent, {
       when,
       operation,
       what: cfg,
       parent,
     }))
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   getCreateSql () {

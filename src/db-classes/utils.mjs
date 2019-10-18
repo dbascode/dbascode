@@ -29,6 +29,12 @@ function prepareArgs (obj, args) {
   return args
 }
 
+function escapeComment (text) {
+  return text ? text.split("'").join("''") : ''
+}
+
+
 export {
   prepareArgs,
+  escapeComment,
 }

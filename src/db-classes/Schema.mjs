@@ -99,7 +99,7 @@ class Schema extends AbstractDbObject {
       }
       restMap = newRestMap
     } while (!isEmpty(restMap))
-    return result
+    return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
   getCreateSql () {
