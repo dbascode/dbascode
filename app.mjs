@@ -112,14 +112,16 @@ if (command === 'migrate' || command === 'plan') {
     }
   } else {
     const sqlDump = currentDbTree.getChangesSql(previousDbTree, changes)
-    // fs.writeFileSync(__dirname + '/prev.json', circularSafeStringify(previousDbTree, null, 2))
-    // fs.writeFileSync(__dirname + '/curr.json', circularSafeStringify(currentDbTree, null, 2))
     if (currentDbTree.hasChanges(previousDbTree)) {
       if (sqlDump.length === 0) {
         throw new Error('Changes in state detected, but SQL dump is empty.')
       }
+      console.log(`Writing new state to ${currentStateDumpFile}...`)
       fs.writeFileSync(currentStateDumpFile, JSON.stringify(currentState, null, 2))
+      console.log('Done')
+      console.log(`Writing SQL migration to ${migrationSqlFile}...`)
       fs.writeFileSync(migrationSqlFile, sqlDump)
+      console.log('Done')
     }
   }
 
