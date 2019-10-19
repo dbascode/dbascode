@@ -25,9 +25,6 @@ class Field extends AbstractSchemaObject{
   ) {
     super(name, parent)
     this.type = type
-    if (parent) {
-      parent.fields[name] = this
-    }
   }
   /**
    * Instantiate new object from config data
@@ -48,7 +45,15 @@ class Field extends AbstractSchemaObject{
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
-  getCreateSql () {
+  getCreateSql (withParent) {
+    if (withParent) {
+      return ''
+    } else {
+      return this.getFieldDefinition()
+    }
+  }
+
+  getFieldDefinition () {
     return `${this.getQuotedName()} ${this.type}`
   }
 }

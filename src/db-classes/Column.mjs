@@ -22,7 +22,7 @@ class Column extends AbstractSchemaObject {
   isAutoIncrement = false
   isInherited = false
   isIntl = false
-  _inNewTable = false
+  _childrenProps = ['foreignKey']
 
   /**
    * Constructor
@@ -57,9 +57,6 @@ class Column extends AbstractSchemaObject {
     this.isAutoIncrement = isAutoIncrement
     this.isInherited = isInherited
     this.isIntl = isIntl
-    if (parent) {
-      parent.columns[name] = this
-    }
   }
 
   /**
@@ -97,12 +94,17 @@ class Column extends AbstractSchemaObject {
     }
   }
 
-  getCreateSql () {
+  getCreateSql (withParent) {
     const result = []
-    if (!this._inNewTable) {
-      result.push(`ALTER TABLE ${this.parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()};\n`)
+    if (!withParent) {
+      if (!this.getAllowNull() && !this.isAutoIncrement && this.defaultValue === undefined) {
+        throw new Error(`Can not add not null value without default value`)
+      }
+      result.push(`ALTER TABLE ${this._parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()};\n`)
     }
-    result.push(`COMMENT ON COLUMN ${this.parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
+    if (this.getComment()) {
+      result.push(`COMMENT ON COLUMN ${this._parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
+    }
     return result.join('')
   }
 
@@ -112,7 +114,7 @@ class Column extends AbstractSchemaObject {
    */
   getColumnDefinition() {
     const defaultValue = this.isAutoIncrement ?
-        (`DEFAULT nextval('${this.parent.getParentedNameFlat()}_${this.name}_seq'::regclass)`) :
+        (`DEFAULT nextval('${this._parent.getParentedNameFlat()}_${this.name}_seq'::regclass)`) :
         (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
     const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
     return `${this.getQuotedName()} ${this.getType()} ${allowNull} ${defaultValue}`
@@ -127,7 +129,7 @@ class Column extends AbstractSchemaObject {
   }
 
   getAllowNull() {
-    return this.allowNull && !this.isAutoIncrement
+    return this.isAutoIncrement ? false : this.allowNull || this.defaultValue === null
   }
 
   /**
@@ -139,34 +141,34 @@ class Column extends AbstractSchemaObject {
     const result = []
     if (this.type !== compared.type) {
       result.push(
-        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} TYPE ${this.getType()};\n`
+        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} TYPE ${this.getType()};\n`
       )
     }
     if (this.allowNull !== compared.allowNull) {
       result.push(
-        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${this.getAllowNull() ? 'DROP NOT NULL' : 'SET NOT NULL'};\n`
+        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${this.getAllowNull() ? 'DROP NOT NULL' : 'SET NOT NULL'};\n`
       )
     }
     if (this.isAutoIncrement !== compared.isAutoIncrement) {
       const dv = this.getDefaultValueSql()
       result.push(
-        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
+        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
       )
     }
     if (this.defaultValue !== compared.defaultValue) {
       const dv = this.getDefaultValueSql()
       result.push(
-        `ALTER TABLE ${this.parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
+        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
       )
     }
     if (this.getComment() !== compared.getComment()) {
-      result.push(`COMMENT ON COLUMN ${this.parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
+      result.push(`COMMENT ON COLUMN ${this._parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
     }
     return result.join()
   }
 
   getDropSql () {
-    return `ALTER TABLE ${this.parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()};\n`
+    return `ALTER TABLE ${this._parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()};\n`
   }
 }
 

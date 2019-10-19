@@ -32,6 +32,7 @@ class Table extends AbstractSchemaObject {
   primaryKey = []
   rowLevelSecurity = {}
   inherits = undefined
+  _childrenProps = ['columns', 'indexes', 'triggers', 'rows']
 
   /**
    * Constructor
@@ -67,8 +68,6 @@ class Table extends AbstractSchemaObject {
       rowLevelSecurity = {},
     }) {
     super(name, parent)
-    this.arrayCollectionProps = ['indexes']
-    this.objectCollectionProps = ['columns', 'triggers']
     this.columns = columns
     this.comment = comment
     this.uniqueKeys = uniqueKeys
@@ -80,9 +79,6 @@ class Table extends AbstractSchemaObject {
     this.primaryKey = primaryKey
     this.rowLevelSecurity = rowLevelSecurity
     this.inherits = inherits
-    if (parent) {
-      parent.tables[name] = this
-    }
   }
 
   /**
@@ -154,13 +150,12 @@ class Table extends AbstractSchemaObject {
     return Object.keys(dependOnMap)
   }
 
-  getCreateSql () {
+  getCreateSql (withParent) {
     let result = `CREATE TABLE ${this.getParentedName(true)} (\n`
     const tableDef = []
     const foreignKeys = []
     for (const columnName of Object.keys(this.columns)) {
       const column = this.columns[columnName]
-      column._inNewTable = true
       tableDef.push(column.getColumnDefinition())
       if (column.isAutoIncrement) {
         this.autoIncSeqRequired = columnName
@@ -211,7 +206,7 @@ class Table extends AbstractSchemaObject {
     }
 
     if (this.defaultAcl.length > 0) {
-      result += `INSERT INTO ${this.parent.getQuotedName()}."default_acl" ("table", "acl") VALUES ('${this.name}', '${JSON.stringify(this.defaultAcl)}'::json);\n`
+      result += `INSERT INTO ${this._parent.getQuotedName()}."default_acl" ("table", "acl") VALUES ('${this.name}', '${JSON.stringify(this.defaultAcl)}'::json);\n`
     }
     return result
   }

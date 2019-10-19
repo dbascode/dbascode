@@ -8,6 +8,7 @@ import fs from 'fs'
 import path from 'path'
 import yargs from 'yargs'
 import {
+  circularSafeStringify,
   getFileList,
 } from './src/utils'
 import DataBase from './src/db-classes/DataBase'
@@ -25,7 +26,15 @@ const cliConfig = yargs
   .command({
     command: 'migrate <source>',
     desc: 'Create SQL migrations based on config differences',
-    // isDefault: true,
+    builder: yargs => {
+      yargs.positional('source', {
+        describe: 'Directory to read database state from',
+      })
+    }
+  })
+  .command({
+    command: 'plan <source>',
+    desc: 'Create SQL migrations based on config differences',
     builder: yargs => {
       yargs.positional('source', {
         describe: 'Directory to read database state from',
@@ -55,8 +64,9 @@ const cliConfig = yargs
   .demandCommand()
   .argv
 
+const command = cliConfig._[0]
 
-if (cliConfig._[0] === 'migrate') {
+if (command === 'migrate' || command === 'plan') {
   const configFile = path.join(cliConfig.source, 'db.yml')
   const outputDir = cliConfig.stateDir
   const migrationsDir = cliConfig.migrationsDir
@@ -64,7 +74,7 @@ if (cliConfig._[0] === 'migrate') {
   const currentState = loadConfig(configFile)
 
   const currentStateId = (new Date()).getTime()
-  const migrationSqlFile = path.join(migrationsDir, `migratioin${currentStateId}.sql`)
+  const migrationSqlFile = path.join(migrationsDir, `migration${currentStateId}.sql`)
   const currentStateDumpFile = path.join(outputDir, `state${currentStateId}.json`)
   if (!fs.existsSync(path.dirname(migrationSqlFile))) {
     fs.mkdirSync(path.dirname(migrationSqlFile))
@@ -92,14 +102,25 @@ if (cliConfig._[0] === 'migrate') {
     ]
   )
 
-  const sqlDump = currentDbTree.getChangesSql(previousDbTree)
+  const changes = currentDbTree.hasChanges(previousDbTree, true)
 
-  if (currentDbTree.hasChanges(previousDbTree)) {
-    if (sqlDump.length === 0) {
-      throw new Error('Changes in state detected, but SQL dump is empty.')
+  if (command === 'plan') {
+    if (changes.hasChanges()) {
+      console.log(changes.prettyPrint(true))
+    } else {
+      console.log('No changes')
     }
-    fs.writeFileSync(currentStateDumpFile, JSON.stringify(currentState, null, 2))
-    fs.writeFileSync(migrationSqlFile, sqlDump)
+  } else {
+    const sqlDump = currentDbTree.getChangesSql(previousDbTree, changes)
+    // fs.writeFileSync(__dirname + '/prev.json', circularSafeStringify(previousDbTree, null, 2))
+    // fs.writeFileSync(__dirname + '/curr.json', circularSafeStringify(currentDbTree, null, 2))
+    if (currentDbTree.hasChanges(previousDbTree)) {
+      if (sqlDump.length === 0) {
+        throw new Error('Changes in state detected, but SQL dump is empty.')
+      }
+      fs.writeFileSync(currentStateDumpFile, JSON.stringify(currentState, null, 2))
+      fs.writeFileSync(migrationSqlFile, sqlDump)
+    }
   }
 
   currentDbTree.dispose()

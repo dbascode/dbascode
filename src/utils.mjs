@@ -182,6 +182,21 @@ function objectIntersectionKeys (o1, o2) {
   return result
 }
 
+function circularSafeStringify (o, forPrint) {
+  const cache = []
+  return JSON.stringify(o, function (key, value) {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.indexOf(value) !== -1) {
+        // Duplicate reference found, discard key
+        return forPrint ? '<circular reference>' : undefined
+      }
+      // Store value in our collection
+      cache.push(value)
+    }
+    return value
+  }, forPrint ? 2 : undefined)
+}
+
 
 export {
   checkFiles,
@@ -199,4 +214,5 @@ export {
   objectDifferenceKeys,
   objectIntersection,
   objectIntersectionKeys,
+  circularSafeStringify,
 }

@@ -61,9 +61,6 @@ class Function extends AbstractSchemaObject {
     this.parallelSafety = parallelSafety
     this.code = code
     this.args = args
-    if (parent) {
-      parent.functions[name] = this
-    }
   }
 
   /**

@@ -14,7 +14,7 @@ class AbstractSchemaObject extends AbstractDbObject {
   getSchema () {
     let parent = this
     do {
-      parent = parent.parent
+      parent = parent._parent
     } while (parent && parent.constructor.name !== 'Schema')
     return parent
   }

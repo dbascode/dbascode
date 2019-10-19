@@ -5,29 +5,21 @@
  * Time: 21:10
  */
 
-import isEqual from 'lodash-es/isEqual'
-import {
-  objectDifferenceKeys,
-  objectIntersectionKeys,
-} from '../utils'
-import intersection from 'lodash-es/intersection'
-import difference from 'lodash-es/difference'
-import isEqualWith from 'lodash-es/isEqualWith'
 import isFunction from 'lodash-es/isFunction'
-import baseIsEqual from 'lodash-es/_baseIsEqual'
-import cloneDeep from 'lodash-es/cloneDeep'
 import isArray from 'lodash-es/isArray'
 import isObject from 'lodash-es/isObject'
+import ChangesContext from './ChangesContext'
+import reverse from 'lodash-es/reverse'
 
 /**
  * Base class for all DB objects
  */
 class AbstractDbObject {
   /**
-   * Object parent
+   * Object _parent
    * @type {AbstractDbObject}
    */
-  parent = undefined
+  _parent = undefined
   /**
    * @type {string}
    */
@@ -39,161 +31,166 @@ class AbstractDbObject {
    * @private
    */
   _calcCache = undefined
+  /**
+   * Names of properties of the Object type that store collections of child objects
+   * @type {string[]}
+   */
+  _childrenProps = []
+  _isMultiple = false
+
 
   /**
    * Constructor
    * @param {String} name
    * @param {AbstractDbObject} [parent]
    */
-  constructor (name, parent) {
+  constructor (
+    name,
+    parent,
+  ) {
     this.name = name
-    this.parent = parent
+    this._parent = parent
+    if (parent) {
+      parent.addChild(this)
+    }
   }
 
-  /**
-   * Names of properties of the Object type that store collections of child objects
-   * @type {string[]}
-   */
-  objectCollectionProps = []
-  /**
-   * Names of properties of the Array type that store collections of child objects
-   * @type {string[]}
-   */
-  arrayCollectionProps = []
+  getParentProp() {
+    let prop = this.constructor.name
+    prop = prop[0].toLowerCase() + prop.substr(1)
+    const lastChar = prop[prop.length - 1]
+    if (!this._isMultiple) {
+      prop += (['s', 'x'].indexOf(lastChar) >= 0) ? 'es' : 's'
+    }
+    return prop
+  }
+
+  addChild (instance) {
+    if (!instance instanceof AbstractDbObject) {
+      throw new Error(`Child object must be a DB object`)
+    }
+    const prop = instance.getParentProp()
+    const p = this[prop]
+    if (isArray(p)) {
+      p.push(instance)
+    } else if (p instanceof AbstractDbObject || p === undefined) {
+      this[prop] = instance
+    } else if (isObject(p)) {
+      p[instance.name] = instance
+    }
+  }
+
+  findChildProp (child) {
+    for (const prop in this._childrenProps) {
+      const p = this[prop]
+      if (p instanceof AbstractDbObject && p === child) {
+        return prop
+      }
+      let i
+      if (isArray(p) && (i = p.indexOf(child)) >= 0) {
+        return `${prop}[$i]`
+      }
+      if (isObject(p)) {
+        for (const sp in p) {
+          if (p[sp] === child) {
+            return `${prop}.${sp}`
+          }
+        }
+      }
+    }
+  }
 
   /**
    * Has changes compared to the previous state object
    * @param {AbstractDbObject} compared
-   * @param {boolean} deep
-   * @returns {boolean}
+   * @param {boolean} [deep]
+   * @returns {ChangesContext}
    */
-  hasChanges (compared, deep = true) {
-    if (!compared) {
-      return true
-    } else {
-      const isSkippedName = name => (name[0] === '_') || (['objectCollectionProps', 'arrayCollectionProps']).indexOf(name) >= 0
-      const isChildren = (obj, name) => obj.objectCollectionProps.indexOf(name) >= 0 || obj.arrayCollectionProps.indexOf(name) >= 0
-      if (deep) {
-        return !baseIsEqual(
-          cloneDeep(this),
-          cloneDeep(compared),
-          undefined,
-          (objValue, othValue, key, object, other, stack) => {
-            if (key === 'parent') {
-              return (objValue ? objValue.constructor.name : undefined) === (othValue ? othValue.constructor.name : undefined)
-            } else if (isSkippedName(key)) {
-              return true
-            }
-          }
-        )
-      } else {
-        const cmp = (v1, v2) => {
-          if (v1 instanceof AbstractDbObject || v2 instanceof AbstractDbObject) {
-            return true
-          } else if (isFunction(v1) || isFunction(v2)) {
-            return true
-          } else if (isArray(v1) || isArray(v2) || isObject(v1) || isObject(v2)) {
-            // Assume if we are here then there values are flat and doesn't contain DB objects, so
-            // can be compared by isEqual
-            return isEqual(v1, v2)
-          } else {
-            return v1 === v2
-          }
+  hasChanges (compared, deep = false) {
+    const context = new ChangesContext(deep)
+    hasChanges(this, compared, context)
+    return context
+  }
+
+  /**
+   * Returns SQL applying specified changes
+   * @param {AbstractDbObject} previous
+   * @param {ChangesContext} changes
+   */
+  getChangesSql (previous, changes) {
+    let result = []
+    const changed = {}
+    for (const [path, old, cur] of changes.changes) {
+      const curUndefined = cur === undefined
+      const oldUndefined = old === undefined
+      let objCur = this
+      let objOld = previous
+      let lastDbObjCur = objCur
+      let lastDbObjOld = objOld
+      let lastObjPath = []
+      let pathFromLastObj = []
+      for (const name of path ? path.split('.') : []) {
+        const matches = name.match(/[\w-]+(\[(\d+)\]|)/)
+        if (matches && matches[2] !== undefined) {
+          const [propName, i] = matches
+          objCur = objCur ? objCur[propName][Number(i)] : undefined
+          objOld = objOld ? objOld[propName][Number(i)] : undefined
+        } else {
+          objCur = objCur ? objCur[name] : undefined
+          objOld = objOld ? objOld[name] : undefined
         }
-        const loop = (iterator, other) => {
-          for (const name in iterator) {
-            if (!isSkippedName(name) && !isChildren(iterator, name) && !cmp(iterator[name], other[name])) {
-              return true
-            }
-          }
-          return false
+        if (objCur instanceof AbstractDbObject || objOld instanceof AbstractDbObject) {
+          lastDbObjCur = objCur
+          lastDbObjOld = objOld
+          lastObjPath = [...lastObjPath, ...pathFromLastObj, name]
+          pathFromLastObj = []
+        } else {
+          pathFromLastObj.push(name)
         }
-        return loop(this, compared) || loop(compared, this)
+      }
+      if (changed[lastObjPath.join('.')]) {
+        continue
+      }
+      changed[lastObjPath.join('.')] = 1
+      if (!curUndefined && !oldUndefined) {
+        result.push(lastDbObjCur.getAlterSql(lastDbObjOld))
+      } else if (!curUndefined && oldUndefined) {
+        result = [...result, ...lastDbObjCur.getCreateOrDropSql('create')]
+      } else if (curUndefined && !oldUndefined) {
+        result = [...result, ...lastDbObjOld.getCreateOrDropSql('drop', false)]
       }
     }
+    return result.join('')
   }
 
-  /**
-   * Returns SQL dump to update the compared object to the current state
-   * @public
-   * @param {AbstractDbObject} [compared]
-   * @param {boolean} [dropIfNoComparison]
-   * @returns {string}
-   */
-  getChangesSql (compared, dropIfNoComparison) {
-    let result = ''
-    if (!compared) {
-      if (dropIfNoComparison) {
-        result += this.getChildrenChangesSql()
-        result += this.getDropSql()
-      } else {
-        result += this.getCreateSql()
-        result += this.getChildrenChangesSql(undefined)
+  getCreateOrDropSql(what, withParent = false) {
+    let changes = []
+    if (what === 'create') {
+      changes = [
+        this.getCreateSql(withParent),
+        ...this.getChildrenCreateOrDropSql(what, true)
+      ]
+    } else if (what === 'drop') {
+      changes = [
+        ...this.getChildrenCreateOrDropSql(what, true),
+        this.getDropSql(withParent),
+      ]
+    }
+    return changes.join('')
+  }
+
+  getChildrenCreateOrDropSql (what, withParent) {
+    const result = []
+    const dropping = what === 'drop'
+    for (const prop of dropping ? reverse(this._childrenProps) : this._childrenProps) {
+      const collection = this[prop]
+      if (collection === undefined) {
+        continue
       }
-    } else if (this.hasChanges(compared)) {
-      if (this.hasChanges(compared, false)) {
-        result += this.getAlterSql(compared)
+      const loop = isArray(collection) ? collection : Object.values(collection)
+      for (const child of dropping ? reverse(loop) : loop) {
+        result.push(child.getCreateOrDropSql(what, withParent))
       }
-      result += this.getChildrenChangesSql(compared)
-    }
-    return result
-  }
-
-  /**
-   * Get changes SQL of children objects.
-   * @private
-   * @param {AbstractDbObject} [compared]
-   * @returns {string}
-   */
-  getChildrenChangesSql (compared) {
-    let result = ''
-    for (const prop of this.objectCollectionProps) {
-      result += AbstractDbObject.getChangesSqlObject(this[prop], (compared || {})[prop])
-    }
-    for (const prop of this.arrayCollectionProps) {
-      result += AbstractDbObject.getChangesSqlArray(this[prop], (compared || {})[prop])
-    }
-    return result
-  }
-
-  /**
-   * Returns changes SQL for the specified Object sets
-   * @private
-   * @param {Object} currentSet
-   * @param {Object} previousSet
-   * @returns {string}
-   */
-  static getChangesSqlObject (currentSet, previousSet) {
-    let result = ''
-    for (const key of objectIntersectionKeys(currentSet, previousSet)) {
-      result += currentSet[key].getChangesSql(previousSet[key])
-    }
-    for (const key of objectDifferenceKeys(currentSet, previousSet)) {
-      result += currentSet[key].getChangesSql()
-    }
-    for (const key of objectDifferenceKeys(previousSet, currentSet)) {
-      result += previousSet[key].getChangesSql(undefined, true)
-    }
-    return result
-  }
-
-  /**
-   * Returns changes SQL for the specified Object sets
-   * @private
-   * @param {Array} currentSet
-   * @param {Array} previousSet
-   * @returns {string}
-   */
-  static getChangesSqlArray (currentSet, previousSet) {
-    let result = ''
-    for (const key of intersection(currentSet, previousSet)) {
-      result += currentSet[key].getChangesSql(previousSet[key])
-    }
-    for (const key of difference(currentSet, previousSet)) {
-      result += currentSet[key].getChangesSql()
-    }
-    for (const key of difference(previousSet, currentSet)) {
-      result += previousSet[key].getChangesSql(undefined, true)
     }
     return result
   }
@@ -201,18 +198,20 @@ class AbstractDbObject {
   /**
    * Returns SQL for object creation
    * @protected
+   * @param {boolean} withParent
    * @returns {string}
    */
-  getCreateSql () {
+  getCreateSql (withParent) {
     return ''
   }
 
   /**
    * Returns SQL for object deletion
    * @protected
+   * @param {boolean} withParent
    * @returns {string}
    */
-  getDropSql () {
+  getDropSql (withParent) {
     return ''
   }
 
@@ -227,28 +226,51 @@ class AbstractDbObject {
   }
 
   /**
-   * Returns name of this object prepended by parent's name for SQL use
+   * Returns name of this object prepended by _parent's name for SQL use
    * @returns {string}
    */
   getParentedName (quoted = false) {
     return (
-      this.parent
-        ? (quoted ? this.parent.getQuotedName() : this.parent.name) + '.'
+      this._parent
+        ? (quoted ? this._parent.getQuotedName() : this._parent.name) + '.'
         : ''
     ) + (quoted ? this.getQuotedName() : this.name)
   }
 
   /**
-   * Returns name of this object prepended by parent's name separated by underscore
+   * Returns name of this object prepended by _parent's name separated by underscore
    * @returns {string}
    */
   getParentedNameFlat (quoted = false) {
-    const result = (this.parent ? this.parent.name + '_' : '') + this.name
+    const result = (this._parent ? this._parent.name + '_' : '') + this.name
     return quoted ? `"${result}"` : result
   }
 
+  /**
+   * Returns name escaped for DB identifiers
+   * @returns {string}
+   */
   getQuotedName () {
     return `"${this.name}"`
+  }
+
+  /**
+   * Returns full path of the object
+   * @returns {string}
+   */
+  getPath () {
+    const path = []
+    let curObject = this
+    let prevObject = null
+    do {
+      const parent = curObject._parent
+      if (parent) {
+        path.unshift(parent.findChildProp(curObject))
+      }
+      prevObject = curObject
+      curObject = parent
+    } while (curObject && curObject.constructor.name !== 'DataBase')
+    return path.join('.')
   }
 
   /**
@@ -258,7 +280,7 @@ class AbstractDbObject {
   getDb () {
     let parent = this
     do {
-      parent = parent.parent
+      parent = parent._parent
     } while (parent && parent.constructor.name !== 'DataBase')
     return parent
   }
@@ -285,7 +307,7 @@ class AbstractDbObject {
         let parent = this
         do {
           calculators = {...parent.getCalculators(), ...calculators}
-          parent = parent.parent
+          parent = parent._parent
         } while (parent)
         this._calcCache = calculators
       }
@@ -321,6 +343,136 @@ class AbstractDbObject {
     }
   }
 
+  apply (data) {
+    Object.keys(data).forEach(name => this[name] = data[name])
+  }
 }
+
+
+function isChildren (obj, name) {
+  return obj._childrenProps.indexOf(name) >= 0
+}
+
+function filterProps (obj, props, context) {
+  return props
+    // Remove mixin methods
+    .filter(prop => !isFunction(obj[prop]))
+    // Don't compare private props
+    .filter(prop => prop[0] !== '_')
+    // Don't compare DB children if not deep
+    .filter(prop => context.deep ? true : !isChildren(obj, prop))
+}
+
+function arrayHasChanges (v1, v2, context) {
+  for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+    context.addToPath(i)
+    try {
+      hasChangesInValues(v1[i], v2[i], context)
+    } finally {
+      context.popPath()
+    }
+  }
+  return false
+}
+
+function getComparingProps (obj, context) {
+  return obj instanceof AbstractDbObject
+    ? filterProps(obj, Object.keys(obj), context)
+    : Object.keys(obj)
+}
+
+function getObjectForChangeLog(obj) {
+  const props = getComparingProps(obj, {deep: false})
+  const result = {class: obj.constructor.name}
+  for (const prop of props) {
+    result[prop] = obj[prop]
+  }
+  for (const prop of obj._childrenProps) {
+    const v = obj[prop]
+    if (v instanceof AbstractDbObject) {
+      result[prop] = getObjectForChangeLog(v)
+    } else if (isObject(v)) {
+      result[prop] = {}
+      for (const sp of Object.keys(v)) {
+        result[prop][sp] = getObjectForChangeLog(v[sp])
+      }
+    } else if (isArray(v)) {
+      result[prop] = []
+      for (const item of v) {
+        result[prop].push(getObjectForChangeLog(item))
+      }
+    } else if (v !== undefined) {
+      throw new Error('Unknown object type')
+    }
+  }
+  return result
+}
+
+function mergeAndUnique (a1, a2) {
+  return a1.concat(a2).filter((item, i, a) => a.indexOf(item) === i)
+}
+
+function objectHasChanges (v1, v2, context) {
+  if (context.isInStack(v1) || context.isInStack(v2)) {
+    return false
+  }
+  context.addToStack(v1)
+  context.addToStack(v2)
+
+  try {
+    const v1Props = getComparingProps(v1, context)
+    const v2Props = getComparingProps(v2, context)
+
+    for (const prop of mergeAndUnique(v1Props, v2Props)) {
+      context.addToPath(prop)
+      try {
+        const v1Value = v1[prop]
+        const v2Value = v2[prop]
+        hasChangesInValues(v1Value, v2Value, context)
+      } finally {
+        context.popPath()
+      }
+    }
+
+  } finally {
+    context.popStack()
+    context.popStack()
+  }
+}
+
+function hasChangesInValues (v1, v2, context) {
+  if (v1 instanceof AbstractDbObject && v2 instanceof AbstractDbObject) {
+    return hasChanges(v1, v2, context)
+  } else if (isFunction(v1) && isFunction(v2)) {
+    return false
+  } else if (isArray(v1) && isArray(v2)) {
+    return arrayHasChanges(v1, v2, context)
+  } else if (isObject(v1) && isObject(v2)) {
+    return objectHasChanges(v1, v2, context)
+  } else {
+    if (v1 !== v2) {
+      context.addChange(
+        v2 instanceof AbstractDbObject ? getObjectForChangeLog(v2) : v2,
+        v1 instanceof AbstractDbObject ? getObjectForChangeLog(v1) : v1,
+      )
+      return true
+    } else {
+      return false
+    }
+  }
+}
+
+function hasChanges (current, old, context) {
+  if (old === undefined || current === undefined) {
+    context.addChange(
+      old ? getObjectForChangeLog(old) : undefined,
+      current ? getObjectForChangeLog(current) : undefined
+    )
+    return true
+  } else {
+    return objectHasChanges(current, old, context)
+  }
+}
+
 
 export default AbstractDbObject

@@ -31,9 +31,6 @@ class Role extends AbstractDbObject {
     super(name, parent)
     this.memberOf = memberOf
     this.isClient = isClient
-    if (parent) {
-      parent.roles[name] = this
-    }
   }
 
   /**

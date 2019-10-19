@@ -26,13 +26,10 @@ class Trigger extends AbstractSchemaObject {
       what,
       parent = undefined
     }) {
-    super('', parent)
+    super(`${when}_${operation}`, parent)
     this.operation = operation
     this.when = when
     this.what = what
-    if (parent) {
-      parent.triggers[`${when}_${operation}`] = this
-    }
   }
 
   /**
@@ -57,7 +54,7 @@ class Trigger extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `CREATE TRIGGER ${this.parent.name}_${this.event} ${this.getSqlTriggerType()} ON ${this.parent.getParentedName()} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
+    return `CREATE TRIGGER ${this._parent.name}_${this.event} ${this.getSqlTriggerType()} ON ${this._parent.getParentedName()} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
   }
 
   getSqlTriggerType() {

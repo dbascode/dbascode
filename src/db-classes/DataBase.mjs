@@ -27,6 +27,7 @@ class DataBase extends AbstractDbObject {
    * @private
    */
   _plugins = {}
+  _childrenProps = ['roles', 'schemas']
 
   /**
    * Constructor
@@ -49,7 +50,6 @@ class DataBase extends AbstractDbObject {
       extensions = [],
     }) {
     super(name)
-    this.objectCollectionProps = ['roles', 'schemas']
     this.rootUserName = rootUserName
     this.rootPassword = rootPassword
     this.defaultLocale = defaultLocale
@@ -71,7 +71,7 @@ class DataBase extends AbstractDbObject {
     plugins = [],
   ) {
     if (!cfg) {
-      return null
+      return undefined
     }
     const result = new DataBase({
       defaultLocale: overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale,

@@ -38,9 +38,6 @@ class ForeignKey extends AbstractSchemaObject {
     this.refColName = refColName
     this.onUpdate = onUpdate
     this.onDelete = onDelete
-    if (parent) {
-      parent.foreignKey = this
-    }
   }
 
   /**

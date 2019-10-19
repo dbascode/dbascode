@@ -15,6 +15,7 @@ import AbstractSchemaObject from './AbstractSchemaObject'
  */
 class Rows extends AbstractSchemaObject {
   rows
+  _isMultiple = true
 
   /**
    * Constructor
@@ -27,9 +28,6 @@ class Rows extends AbstractSchemaObject {
   ) {
     super('', parent)
     this.rows = rows
-    if (parent) {
-      parent.rows = this
-    }
   }
 
   /**
@@ -51,7 +49,7 @@ class Rows extends AbstractSchemaObject {
 
   getCreateSql () {
     const sqlValues = []
-    const columns = this.parent.getAllColumns()
+    const columns = this._parent.getAllColumns()
     const colNames = Object.keys(columns)
     for (const row of this.rows) {
       const values = []
@@ -66,7 +64,7 @@ class Rows extends AbstractSchemaObject {
             } else if (this.isFieldNumeric(column.type)) {
               values.push('0')
             } else {
-              throw new Error(`Can not set default value for field ${this.parent.getParentedName()}.${column.name}`)
+              throw new Error(`Can not set default value for field ${this._parent.getParentedName()}.${column.name}`)
             }
           }
         } else {
@@ -81,13 +79,13 @@ class Rows extends AbstractSchemaObject {
           } else if (this.isFieldNumeric(column.type)) {
             values.push(value)
           } else {
-            throw new Error(`Don't know how to format value for field ${this.parent.getParentedName()}.${column.name}`)
+            throw new Error(`Don't know how to format value for field ${this._parent.getParentedName()}.${column.name}`)
           }
         }
       }
       sqlValues.push(`(${values.join(', ')})`)
     }
-    return `INSERT INTO ${this.parent.getParentedName(true)} ("${colNames.join('", "')}") VALUES\n${sqlValues.join(",\n")};\n`
+    return `INSERT INTO ${this._parent.getParentedName(true)} ("${colNames.join('", "')}") VALUES\n${sqlValues.join(",\n")};\n`
   }
 
   isFieldText (type) {

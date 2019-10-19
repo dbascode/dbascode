@@ -14,8 +14,8 @@ import { arrayContainsEntirely } from '../utils'
 /**
  * Schema object.
  *
- * @field {DataBase} parent
- * @property {DataBase} parent
+ * @field {DataBase} _parent
+ * @property {DataBase} _parent
  */
 class Schema extends AbstractDbObject {
   /**
@@ -30,6 +30,7 @@ class Schema extends AbstractDbObject {
    * @type {Object.<string, Function>}
    */
   functions = {}
+  _childrenProps = ['types', 'functions', 'tables']
 
   /**
    * Constructor
@@ -49,13 +50,9 @@ class Schema extends AbstractDbObject {
     }
   ) {
     super(name, parent)
-    this.objectCollectionProps = ['types', 'functions', 'tables']
     this.types = types
     this.tables = tables
     this.functions = functions
-    if (parent) {
-      parent.schemas[name] = this
-    }
   }
 
   /**

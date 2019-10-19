@@ -22,7 +22,7 @@ class Index extends AbstractSchemaObject {
   ) {
     super('', parent)
     this.colNames = colNames
-    this.parent = parent
+    this._parent = parent
   }
 
   /**
@@ -43,7 +43,7 @@ class Index extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `CREATE INDEX "${this.parent.name}_${this.colNames.join('_')}_idx" ON ${this.parent.getParentedName()}("${this.colNames.join('","')}");\n`
+    return `CREATE INDEX "${this._parent.name}_${this.colNames.join('_')}_idx" ON ${this._parent.getParentedName()}("${this.colNames.join('","')}");\n`
   }
 }
 

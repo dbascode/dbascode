@@ -11,6 +11,7 @@ class Type extends AbstractSchemaObject {
   isEnum
   fields = []
   values = []
+  _childrenProps = ['fields']
 
   /**
    *
@@ -33,9 +34,6 @@ class Type extends AbstractSchemaObject {
     this.isEnum = isEnum
     this.fields = fields
     this.values = values
-    if (parent) {
-      parent.types[name] = this
-    }
   }
 
   /**

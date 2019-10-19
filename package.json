@@ -5,12 +5,14 @@
   "homepage": "https://interi.co",
   "scripts": {
     "migrate": "node --experimental-modules --es-module-specifier-resolution=node app.mjs migrate",
+    "plan": "node --experimental-modules --es-module-specifier-resolution=node app.mjs plan",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs"
   },
   "dependencies": {
     "glob": "^7.1.4",
     "js-yaml": "^3.13.1",
     "lodash-es": "^4.17.15",
+    "supports-color": "^7.1.0",
     "yargs": "^14.2.0"
   },
   "type": "module",
