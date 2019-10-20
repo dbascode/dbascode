@@ -11,6 +11,7 @@ class Trigger extends AbstractSchemaObject {
   operation
   when
   what
+  isInherited = false
 
   /**
    * Constructor
@@ -18,18 +19,23 @@ class Trigger extends AbstractSchemaObject {
    * @param {string} when
    * @param {string} what
    * @param {Table} [parent]
+   * @param {boolean} [isInherited]
    */
   constructor (
     {
       operation,
       when,
       what,
-      parent = undefined
+      parent = undefined,
+      isInherited = false,
     }) {
     super(`${when}_${operation}`, parent)
+    this.apply({...arguments[0], _parent: parent})
+    delete this.parent
     this.operation = operation
     this.when = when
     this.what = what
+    this.isInherited = isInherited
   }
 
   /**
@@ -54,7 +60,7 @@ class Trigger extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `CREATE TRIGGER ${this._parent.name}_${this.event} ${this.getSqlTriggerType()} ON ${this._parent.getParentedName()} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
+    return `CREATE TRIGGER "${this._parent.name}_${this.operation}" ${this.getSqlTriggerType()} ON ${this._parent.getParentedName()} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
   }
 
   getSqlTriggerType() {

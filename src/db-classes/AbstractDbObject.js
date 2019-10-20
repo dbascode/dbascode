@@ -183,7 +183,7 @@ class AbstractDbObject {
     const result = []
     const dropping = what === 'drop'
     for (const prop of dropping ? reverse(this._childrenProps) : this._childrenProps) {
-      const collection = this[prop]
+      const collection = this.getChildrenForSql(prop, what, withParent)
       if (collection === undefined) {
         continue
       }
@@ -193,6 +193,10 @@ class AbstractDbObject {
       }
     }
     return result
+  }
+
+  getChildrenForSql (prop, what, withParent) {
+    return this[prop]
   }
 
   /**
@@ -442,6 +446,9 @@ function objectHasChanges (v1, v2, context) {
 
 function hasChangesInValues (v1, v2, context) {
   if (v1 instanceof AbstractDbObject && v2 instanceof AbstractDbObject) {
+    if (v1.isInherited && v2.isInherited) {
+      return false
+    }
     return hasChanges(v1, v2, context)
   } else if (isFunction(v1) && isFunction(v2)) {
     return false

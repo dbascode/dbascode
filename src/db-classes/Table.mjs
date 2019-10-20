@@ -25,7 +25,6 @@ class Table extends AbstractSchemaObject {
   uniqueKeys = []
   indexes = []
   triggers = []
-  isRLS = false
   defaultAcl = []
   rows = undefined
   autoIncSeqRequired = false
@@ -33,6 +32,9 @@ class Table extends AbstractSchemaObject {
   rowLevelSecurity = {}
   inherits = undefined
   _childrenProps = ['columns', 'indexes', 'triggers', 'rows']
+  skipTriggers = false
+  skipIndexes = false
+  skipRLS = false
 
   /**
    * Constructor
@@ -42,7 +44,6 @@ class Table extends AbstractSchemaObject {
    * @param {string[][]} uniqueKeys
    * @param {Index[]} indexes
    * @param {Object.<string, Trigger>} triggers
-   * @param {boolean} isRLS
    * @param {array} defaultAcl
    * @param {Rows} [rows]
    * @param {Table} [inherits]
@@ -50,6 +51,9 @@ class Table extends AbstractSchemaObject {
    * @param {string[]} [primaryKey]
    * @param {ForeignKey[]} [foreignKeys]
    * @param {Object.<string, string>} [rowLevelSecurity]
+   * @param {boolean} skipIndexes
+   * @param {boolean} skipTriggers
+   * @param {boolean} skipRLS
    */
   constructor (
     {
@@ -59,13 +63,15 @@ class Table extends AbstractSchemaObject {
       uniqueKeys = [],
       indexes = [],
       triggers = {},
-      isRLS = false,
       defaultAcl = [],
       rows = undefined,
       inherits = undefined,
       parent = undefined,
       primaryKey = [],
       rowLevelSecurity = {},
+      skipTriggers = false,
+      skipIndexes = false,
+      skipRLS = false,
     }) {
     super(name, parent)
     this.columns = columns
@@ -73,12 +79,14 @@ class Table extends AbstractSchemaObject {
     this.uniqueKeys = uniqueKeys
     this.indexes = indexes
     this.triggers = triggers
-    this.isRLS = isRLS
     this.defaultAcl = defaultAcl
     this.rows = rows
     this.primaryKey = primaryKey
     this.rowLevelSecurity = rowLevelSecurity
     this.inherits = inherits
+    this.skipTriggers = skipTriggers
+    this.skipIndexes = skipIndexes
+    this.skipRLS = skipRLS
   }
 
   /**
@@ -100,6 +108,9 @@ class Table extends AbstractSchemaObject {
       comment: cfg.comment,
       primaryKey: isString(cfg.primary_key) ? [cfg.primary_key] : (cfg.primary_key || []),
       defaultAcl: cfg.default_acl,
+      skipIndexes: !!cfg.skip_indexes,
+      skipTriggers: !!cfg.skip_triggers,
+      skipRLS: !!cfg.skip_rls,
     }))
     for (const name of Object.keys(cfg.columns || {})) {
       const column = Column.createFromCfg(name, cfg.columns[name], result)
@@ -108,11 +119,40 @@ class Table extends AbstractSchemaObject {
         result.primaryKey = [column.name]
       }
     }
+    if (inherits) {
+      for (const parentColumn of Object.values(inherits.columns)) {
+        new Column({
+          ...parentColumn,
+          parent: result,
+          isInherited: true,
+        })
+      }
+    }
     for (const name of Object.keys(cfg.triggers || {})) {
       Trigger.createFromCfg(name, cfg.triggers[name], result)
     }
+    if (inherits) {
+      for (const parentTrigger of Object.values(inherits.triggers)) {
+        new Trigger({
+          ...parentTrigger,
+          parent: result,
+          isInherited: true,
+        })
+      }
+    }
     for (const indexDef of cfg.indexes || []) {
       Index.createFromCfg(indexDef, result)
+    }
+    if (inherits) {
+      for (const parentIndex of inherits.indexes) {
+        new Index({
+          colNames: {
+            ...parentIndex,
+            parent: result,
+            isInherited: true,
+          }
+        })
+      }
     }
     for (const indexDef of cfg.unique_keys || []) {
       result.uniqueKeys.push(isArray(indexDef) ? indexDef : [indexDef])
@@ -184,17 +224,19 @@ class Table extends AbstractSchemaObject {
     result += indent(tableDef, 1).join(",\n") + `\n) ${inherits} WITH (OIDS = FALSE);\n`
 
     if (this.autoIncSeqRequired) {
-      result = `CREATE SEQUENCE ${this.getParentedNameFlat()}_${this.autoIncSeqRequired}_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;\n${result}`
+      result = `CREATE SEQUENCE "${this.getParentedNameFlat()}_${this.autoIncSeqRequired}_seq" START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;\n${result}`
     }
 
     if (this.rows) {
       result += this.rows.getCreateSql()
     }
 
-    result += `COMMENT ON TABLE ${this.getParentedName(true)} IS '${this.getComment()}';\n`
+    if (this.getComment()) {
+      result += `COMMENT ON TABLE ${this.getParentedName(true)} IS '${this.getComment()}';\n`
+    }
 
-    if (this.isRLS) {
-      const rls = this.rowLevelSecurity
+    const rls = this.getRowLevelSecurity()
+    if (!this.skipRLS && Object.keys(rls).length > 0) {
       result += `ALTER TABLE ${this.getParentedName(true)} ENABLE ROW LEVEL SECURITY;\n`
       for (const op in rls) {
         if (!rls.hasOwnProperty(op)) {
@@ -205,17 +247,33 @@ class Table extends AbstractSchemaObject {
       }
     }
 
-    if (this.defaultAcl.length > 0) {
+    if (!this.skipRLS && this.defaultAcl.length > 0) {
       result += `INSERT INTO ${this._parent.getQuotedName()}."default_acl" ("table", "acl") VALUES ('${this.name}', '${JSON.stringify(this.defaultAcl)}'::json);\n`
     }
     return result
+  }
+
+  getRowLevelSecurity () {
+    return {...this.inherits ? this.inherits.getRowLevelSecurity() : {}, ...this.rowLevelSecurity}
+  }
+
+  getChildrenForSql (prop, what, withParent) {
+    if (what === 'drop' && withParent) {
+      return super.getChildrenForSql(prop)
+    }
+    switch (prop) {
+      // case 'columns': return filterInheritedSet(this.columns)
+      case 'triggers': return this.skipTriggers ? {} : this.triggers
+      case 'indexes': return this.skipIndexes ? [] : this.indexes
+      default: return super.getChildrenForSql(prop)
+    }
   }
 
   getComment() {
     return escapeComment(this.comment)
   }
 
-  getDropSql () {
+  getDropSql (withParent) {
     return `DROP TABLE "${this.name}";\n`
   }
 
@@ -228,14 +286,22 @@ class Table extends AbstractSchemaObject {
     const result = []
     return result.join()
   }
+}
 
-  /**
-   * Returns all columns including inherited
-   * @returns {Object.<string, Column>}
-   */
-  getAllColumns () {
-    return this.inherits ? {...this.inherits.getAllColumns(), ...this.columns} : {...this.columns}
-  }
+function filterInheritedSet(collection) {
+  const result = {}
+  Object.values(collection)
+    .filter(item => !item.isInherited)
+    .forEach(item => result[item.name] = item)
+  return result
+}
+
+function filterInheritedAry(collection) {
+  const result = []
+  collection
+    .filter(item => !item.isInherited)
+    .forEach(item => result.push(item))
+  return result
 }
 
 export default Table

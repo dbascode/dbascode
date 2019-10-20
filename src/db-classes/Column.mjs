@@ -50,6 +50,8 @@ class Column extends AbstractSchemaObject {
     }
   ) {
     super(name, parent)
+    this.apply({...arguments[0], _parent: parent})
+    delete this.parent
     this.foreignKey = foreignKey
     this.type = type
     this.allowNull = allowNull
@@ -96,7 +98,7 @@ class Column extends AbstractSchemaObject {
 
   getCreateSql (withParent) {
     const result = []
-    if (!withParent) {
+    if (!withParent && !this.isInherited) {
       if (!this.getAllowNull() && !this.isAutoIncrement && this.defaultValue === undefined) {
         throw new Error(`Can not add not null value without default value`)
       }
@@ -139,23 +141,23 @@ class Column extends AbstractSchemaObject {
    */
   getAlterSql (compared) {
     const result = []
-    if (this.type !== compared.type) {
+    if (!this.isInherited && this.type !== compared.type) {
       result.push(
         `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} TYPE ${this.getType()};\n`
       )
     }
-    if (this.allowNull !== compared.allowNull) {
+    if (!this.isInherited && this.allowNull !== compared.allowNull) {
       result.push(
         `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${this.getAllowNull() ? 'DROP NOT NULL' : 'SET NOT NULL'};\n`
       )
     }
-    if (this.isAutoIncrement !== compared.isAutoIncrement) {
+    if (!this.isInherited && this.isAutoIncrement !== compared.isAutoIncrement) {
       const dv = this.getDefaultValueSql()
       result.push(
         `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
       )
     }
-    if (this.defaultValue !== compared.defaultValue) {
+    if (!this.isInherited && this.defaultValue !== compared.defaultValue) {
       const dv = this.getDefaultValueSql()
       result.push(
         `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
@@ -167,8 +169,12 @@ class Column extends AbstractSchemaObject {
     return result.join()
   }
 
-  getDropSql () {
-    return `ALTER TABLE ${this._parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()};\n`
+  getDropSql (withParent) {
+    if (!this.isInherited) {
+      return `ALTER TABLE ${this._parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()};\n`
+    } else {
+      return ''
+    }
   }
 }
 

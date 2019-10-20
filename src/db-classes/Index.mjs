@@ -9,20 +9,27 @@ import AbstractSchemaObject from './AbstractSchemaObject'
 import isArray from 'lodash-es/isArray'
 
 class Index extends AbstractSchemaObject {
-  colNames
+  colNames = []
+  isInherited = false
 
   /**
    * Constructor
    * @param {string[]} colNames
    * @param {Table} [parent]
+   * @param {boolean} isInherited
    */
   constructor (
-    colNames,
-    parent
+    {
+      colNames,
+      parent,
+      isInherited = false,
+    }
   ) {
     super('', parent)
+    this.apply({...arguments[0], _parent: parent})
+    delete this.parent
+    this.isInherited = isInherited
     this.colNames = colNames
-    this._parent = parent
   }
 
   /**
@@ -36,8 +43,10 @@ class Index extends AbstractSchemaObject {
       return null
     }
     const result = new Index(
-      isArray(colNames) ? colNames : [colNames],
-      parent,
+      {
+        colNames: isArray(colNames) ? colNames : [colNames],
+        parent,
+      }
     )
     return result.getDb().pluginOnObjectConfigured(result, colNames)
   }
