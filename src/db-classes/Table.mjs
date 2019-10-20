@@ -7,7 +7,6 @@
 
 import isArray from 'lodash-es/isArray'
 import { indent } from '../utils'
-import isBoolean from 'lodash-es/isBoolean'
 import Column from './Column'
 import Rows from './Rows'
 import Trigger from './Trigger'
@@ -17,7 +16,7 @@ import isString from 'lodash-es/isString'
 import { escapeComment, prepareArgs } from './utils'
 
 /**
- *
+ * Table object
  */
 class Table extends AbstractSchemaObject {
   columns = []
@@ -101,6 +100,15 @@ class Table extends AbstractSchemaObject {
       return null
     }
     const inherits = cfg.inherit ? parent.getTable(cfg.inherit) : undefined
+    const uniqueKeys = []
+    const rowLevelSecurity = {}
+    for (const indexDef of cfg.unique_keys || []) {
+      uniqueKeys.push(isArray(indexDef) ? indexDef : [indexDef])
+    }
+    for (const op of Object.keys(cfg.row_level_security || {})) {
+      rowLevelSecurity[op] = cfg.row_level_security[op]
+    }
+
     const result = new Table(prepareArgs(parent, {
       name,
       parent,
@@ -111,6 +119,8 @@ class Table extends AbstractSchemaObject {
       skipIndexes: !!cfg.skip_indexes,
       skipTriggers: !!cfg.skip_triggers,
       skipRLS: !!cfg.skip_rls,
+      rowLevelSecurity,
+      uniqueKeys,
     }))
     for (const name of Object.keys(cfg.columns || {})) {
       const column = Column.createFromCfg(name, cfg.columns[name], result)
@@ -154,12 +164,6 @@ class Table extends AbstractSchemaObject {
         })
       }
     }
-    for (const indexDef of cfg.unique_keys || []) {
-      result.uniqueKeys.push(isArray(indexDef) ? indexDef : [indexDef])
-    }
-    for (const op of Object.keys(cfg.row_level_security || {})) {
-      result.rowLevelSecurity[op] = cfg.row_level_security[op]
-    }
     Rows.createFromCfg(cfg.rows, result)
 
     return result.getDb().pluginOnObjectConfigured(result, cfg)
@@ -194,12 +198,15 @@ class Table extends AbstractSchemaObject {
     let result = `CREATE TABLE ${this.getParentedName(true)} (\n`
     const tableDef = []
     const foreignKeys = []
+    let autoIncSeqColumn
     for (const columnName of Object.keys(this.columns)) {
       const column = this.columns[columnName]
+      if (column.isInherited) {
+        continue
+      }
       tableDef.push(column.getColumnDefinition())
       if (column.isAutoIncrement) {
-        this.autoIncSeqRequired = columnName
-        this.primaryKey = [columnName]
+        autoIncSeqColumn = column
       }
       if (column.foreignKey) {
         foreignKeys.push(column.foreignKey)
@@ -224,7 +231,7 @@ class Table extends AbstractSchemaObject {
     result += indent(tableDef, 1).join(",\n") + `\n) ${inherits} WITH (OIDS = FALSE);\n`
 
     if (this.autoIncSeqRequired) {
-      result = `CREATE SEQUENCE "${this.getParentedNameFlat()}_${this.autoIncSeqRequired}_seq" START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;\n${result}`
+      result = `CREATE SEQUENCE ${autoIncSeqColumn.getAutoIncSeqName()} START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;\n${result}`
     }
 
     if (this.rows) {

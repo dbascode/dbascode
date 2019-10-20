@@ -6,6 +6,8 @@
  */
 
 import isString from 'lodash-es/isString'
+import isObject from 'lodash-es/isObject'
+import isArray from 'lodash-es/isArray'
 
 /**
  * Process calculations in string config values
@@ -21,12 +23,26 @@ function prepareArgs (obj, args) {
     if (prop === 'name') {
       continue
     }
-    const value = args[prop]
-    if (isString(value)) {
-      args[prop] = obj.processCalculations(value)
-    }
+    args[prop] = recurseProcessCalculations(obj, args[prop])
   }
   return args
+}
+
+function recurseProcessCalculations (obj, value) {
+  if (isString(value)) {
+    return obj.processCalculations(value)
+  } else if (isObject(value) && value.constructor.name === 'Object') {
+    for (const prop of Object.keys(value)) {
+      value[prop] = recurseProcessCalculations(obj, value[prop])
+    }
+  } else if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      value[i] = recurseProcessCalculations(obj, value[i])
+    }
+  } else {
+    return value
+  }
+  return value
 }
 
 function escapeComment (text) {

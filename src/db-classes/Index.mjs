@@ -52,7 +52,7 @@ class Index extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `CREATE INDEX "${this._parent.name}_${this.colNames.join('_')}_idx" ON ${this._parent.getParentedName()}("${this.colNames.join('","')}");\n`
+    return `CREATE INDEX "${this._parent.name}_${this.colNames.join('_')}_idx" ON ${this._parent.getParentedName(true)}("${this.colNames.join('","')}");\n`
   }
 }
 

@@ -42,7 +42,7 @@ class Column extends AbstractSchemaObject {
       parent,
       type,
       allowNull = false,
-      defaultValue= undefined,
+      defaultValue = undefined,
       isAutoIncrement = false,
       isInherited = false,
       foreignKey = undefined,
@@ -50,7 +50,7 @@ class Column extends AbstractSchemaObject {
     }
   ) {
     super(name, parent)
-    this.apply({...arguments[0], _parent: parent})
+    this.apply({ ...arguments[0], _parent: parent })
     delete this.parent
     this.foreignKey = foreignKey
     this.type = type
@@ -68,11 +68,11 @@ class Column extends AbstractSchemaObject {
    * @param {Table|Type} [parent]
    * @return {AbstractDbObject}
    */
-  static createFromCfg(name, cfg, parent) {
+  static createFromCfg (name, cfg, parent) {
     if (!cfg) {
       return null
     }
-    const config = isString(cfg) ? {type: cfg} : cfg
+    const config = isString(cfg) ? { type: cfg } : cfg
     const result = new Column(prepareArgs(parent, {
       name,
       parent,
@@ -114,23 +114,31 @@ class Column extends AbstractSchemaObject {
    * Returns full SQL column definition
    * @returns {string}
    */
-  getColumnDefinition() {
+  getColumnDefinition () {
     const defaultValue = this.isAutoIncrement ?
-        (`DEFAULT nextval('${this._parent.getParentedNameFlat()}_${this.name}_seq'::regclass)`) :
-        (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
+      (`DEFAULT nextval('${this.getAutoIncSeqName()}'::regclass)`) :
+      (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
     const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
     return `${this.getQuotedName()} ${this.getType()} ${allowNull} ${defaultValue}`
   }
 
-  getComment() {
+  /**
+   * Returns full name of autoincrement sequence for this column
+   * @returns {string}
+   */
+  getAutoIncSeqName () {
+    return `${this.getSchema().getQuotedName()}."${this.getParent().name}_${this.name}_seq"`
+  }
+
+  getComment () {
     return escapeComment(this.comment)
   }
 
-  getType() {
+  getType () {
     return this.type
   }
 
-  getAllowNull() {
+  getAllowNull () {
     return this.isAutoIncrement ? false : this.allowNull || this.defaultValue === null
   }
 

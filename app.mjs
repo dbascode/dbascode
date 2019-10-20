@@ -70,9 +70,7 @@ if (command === 'migrate' || command === 'plan') {
   const configFile = path.join(cliConfig.source, 'db.yml')
   const outputDir = cliConfig.stateDir
   const migrationsDir = cliConfig.migrationsDir
-
   const currentState = loadConfig(configFile)
-
   const currentStateId = (new Date()).getTime()
   const migrationSqlFile = path.join(migrationsDir, `migration${currentStateId}.sql`)
   const currentStateDumpFile = path.join(outputDir, `state${currentStateId}.json`)

@@ -60,7 +60,7 @@ class Trigger extends AbstractSchemaObject {
   }
 
   getCreateSql () {
-    return `CREATE TRIGGER "${this._parent.name}_${this.operation}" ${this.getSqlTriggerType()} ON ${this._parent.getParentedName()} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
+    return `CREATE TRIGGER "${this._parent.name}_${this.operation}" ${this.getSqlTriggerType()} ON ${this._parent.getParentedName(true)} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
   }
 
   getSqlTriggerType() {

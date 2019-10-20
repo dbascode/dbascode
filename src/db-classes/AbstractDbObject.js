@@ -350,6 +350,14 @@ class AbstractDbObject {
   apply (data) {
     Object.keys(data).forEach(name => this[name] = data[name])
   }
+
+  /**
+   * Returns parent of this object
+   * @returns {AbstractDbObject}
+   */
+  getParent() {
+    return this._parent
+  }
 }
 
 
