@@ -197,6 +197,16 @@ function circularSafeStringify (o, forPrint) {
   }, forPrint ? 2 : undefined)
 }
 
+function convertPathToWsl (path) {
+  const p = path.split('\\')
+  if (p[0][1] === ':') {
+    p[0] = p[0].substr(0, 1).toLowerCase()
+    p.unshift('mnt')
+    p.unshift('')
+  }
+  return p.join('/')
+}
+
 
 export {
   checkFiles,
@@ -215,4 +225,5 @@ export {
   objectIntersection,
   objectIntersectionKeys,
   circularSafeStringify,
+  convertPathToWsl,
 }

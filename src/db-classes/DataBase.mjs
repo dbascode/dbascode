@@ -18,8 +18,8 @@ import {
 class DataBase extends AbstractDbObject {
   schemas = {}
   roles = {}
-  rootUserName = ''
-  rootPassword = ''
+  _rootUserName = ''
+  _rootPassword = ''
   defaultLocale = ''
   extensions = []
   /**
@@ -50,8 +50,8 @@ class DataBase extends AbstractDbObject {
       extensions = [],
     }) {
     super(name)
-    this.rootUserName = rootUserName
-    this.rootPassword = rootPassword
+    this._rootUserName = rootUserName
+    this._rootPassword = rootPassword
     this.defaultLocale = defaultLocale
     this.schemas = schemas
     this.roles = roles
@@ -76,7 +76,8 @@ class DataBase extends AbstractDbObject {
     const result = new DataBase({
       defaultLocale: overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale,
       rootUserName: overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name,
-      rootPassword: overrides.rootUserPassword ? overrides.rootUserPassword : cfg.root_user_password,
+      rootPassword: overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password,
+      name: overrides.dbName ? overrides.dbName : ''
     })
     for (const plugin of plugins) {
       result.addPlugin(plugin)
@@ -113,7 +114,7 @@ class DataBase extends AbstractDbObject {
 
   getCalculators () {
     return {
-      rootUserName: this.rootUserName,
+      rootUserName: this._rootUserName,
     }
   }
 
