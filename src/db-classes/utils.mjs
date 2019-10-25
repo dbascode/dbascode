@@ -8,6 +8,7 @@
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
 import isArray from 'lodash-es/isArray'
+import { replaceAll } from '../utils'
 
 /**
  * Process calculations in string config values
@@ -49,8 +50,64 @@ function escapeComment (text) {
   return text ? text.split("'").join("''") : ''
 }
 
+/**
+ * Escape string to insert to DB
+ * @param {string} s
+ */
+function escapeString(s) {
+  s = replaceAll(s, "'", "''")
+  s = replaceAll(s, "\r", '')
+  s = replaceAll(s, "\n", "' ||\n'")
+  return `'${s}'`
+}
+
+/**
+ * Returns SQL query to store the state in the system state table
+ * @param state
+ * @returns {string}
+ */
+function getStateSaveSql (state) {
+  return `\nINSERT INTO "pgascode"."state" ("state") VALUES (${escapeString(JSON.stringify(state, null, 2))});\n`
+}
+
+/**
+ * Returns config object keys without directory context
+ * @param {Object} cfg
+ * @returns {Object}
+ */
+function cfgKeys(cfg) {
+  const result = {...cfg}
+  delete result.__dirName
+  return Object.keys(result)
+}
+
+/**
+ * Returns config without directory context
+ * @param cfg
+ * @returns {*[]|*}
+ */
+function filterConfig(cfg) {
+  if (isObject(cfg)) {
+    const result = {...cfg}
+    delete result.__dirName
+    for (const name of Object.keys(result)) {
+      result[name] = filterConfig(result[name])
+    }
+    return result
+  } else if (isArray(cfg)) {
+    const result = [...cfg]
+    for (let i = 0; i < result.length; i++) {
+      result[i] = filterConfig(result[i])
+    }
+    return result
+  }
+  return cfg
+}
 
 export {
   prepareArgs,
   escapeComment,
+  getStateSaveSql,
+  cfgKeys,
+  filterConfig,
 }

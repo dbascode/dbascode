@@ -36,40 +36,51 @@ class AbstractDbObject {
    * @type {string[]}
    */
   _childrenProps = []
-  _isMultiple = false
 
 
   /**
    * Constructor
    * @param {String} name
    * @param {AbstractDbObject} [parent]
+   * @param {boolean} [isSimpleChild]
    */
   constructor (
     name,
     parent,
+    isSimpleChild
   ) {
     this.name = name
     this._parent = parent
     if (parent) {
-      parent.addChild(this)
+      parent.addChild(this, isSimpleChild)
     }
   }
 
-  getParentProp() {
+  /**
+   * Returns parent's property where this object should be stored
+   * @param isSimpleChild
+   * @returns {string}
+   */
+  getParentProp(isSimpleChild) {
     let prop = this.constructor.name
     prop = prop[0].toLowerCase() + prop.substr(1)
     const lastChar = prop[prop.length - 1]
-    if (!this._isMultiple) {
+    if (!isSimpleChild) {
       prop += (['s', 'x'].indexOf(lastChar) >= 0) ? 'es' : 's'
     }
     return prop
   }
 
-  addChild (instance) {
+  /**
+   * Add a child to this object
+   * @param {AbstractDbObject} instance
+   * @param {boolean} [isSimpleChild]
+   */
+  addChild (instance, isSimpleChild) {
     if (!instance instanceof AbstractDbObject) {
       throw new Error(`Child object must be a DB object`)
     }
-    const prop = instance.getParentProp()
+    const prop = instance.getParentProp(isSimpleChild)
     const p = this[prop]
     if (isArray(p)) {
       p.push(instance)

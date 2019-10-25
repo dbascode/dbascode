@@ -9,13 +9,13 @@ import isUndefined from 'lodash-es/isUndefined'
 import isObject from 'lodash-es/isObject'
 import { lookupClosestLocale } from '../utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
+import { cfgKeys, filterConfig } from './utils'
 
 /**
  * Initial rows in a table
  */
 class Rows extends AbstractSchemaObject {
   rows
-  _isMultiple = true
 
   /**
    * Constructor
@@ -26,7 +26,7 @@ class Rows extends AbstractSchemaObject {
     rows,
     parent = undefined
   ) {
-    super('', parent)
+    super('', parent, true)
     this.rows = rows
   }
 
@@ -41,7 +41,7 @@ class Rows extends AbstractSchemaObject {
       return null
     }
     const result = new Rows(
-      rows,
+      filterConfig(rows),
       parent,
     )
     return result.getDb().pluginOnObjectConfigured(result, rows)
@@ -50,7 +50,7 @@ class Rows extends AbstractSchemaObject {
   getCreateSql () {
     const sqlValues = []
     const columns = this._parent.getAllColumns()
-    const colNames = Object.keys(columns)
+    const colNames = cfgKeys(columns)
     for (const row of this.rows) {
       const values = []
       for (const column of Object.values(columns)) {

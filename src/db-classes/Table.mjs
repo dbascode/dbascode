@@ -13,7 +13,7 @@ import Trigger from './Trigger'
 import Index from './Index'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
-import { escapeComment, prepareArgs } from './utils'
+import { cfgKeys, escapeComment, filterConfig, prepareArgs } from './utils'
 
 /**
  * Table object
@@ -105,7 +105,7 @@ class Table extends AbstractSchemaObject {
     for (const indexDef of cfg.unique_keys || []) {
       uniqueKeys.push(isArray(indexDef) ? indexDef : [indexDef])
     }
-    for (const op of Object.keys(cfg.row_level_security || {})) {
+    for (const op of cfgKeys(cfg.row_level_security || {})) {
       rowLevelSecurity[op] = cfg.row_level_security[op]
     }
 
@@ -115,14 +115,14 @@ class Table extends AbstractSchemaObject {
       inherits: inherits,
       comment: cfg.comment,
       primaryKey: isString(cfg.primary_key) ? [cfg.primary_key] : (cfg.primary_key || []),
-      defaultAcl: cfg.default_acl,
+      defaultAcl: filterConfig(cfg.default_acl),
       skipIndexes: !!cfg.skip_indexes,
       skipTriggers: !!cfg.skip_triggers,
       skipRLS: !!cfg.skip_rls,
       rowLevelSecurity,
       uniqueKeys,
     }))
-    for (const name of Object.keys(cfg.columns || {})) {
+    for (const name of cfgKeys(cfg.columns || {})) {
       const column = Column.createFromCfg(name, cfg.columns[name], result)
       if (column.isAutoIncrement) {
         result.autoIncSeqRequired = true
@@ -138,7 +138,7 @@ class Table extends AbstractSchemaObject {
         })
       }
     }
-    for (const name of Object.keys(cfg.triggers || {})) {
+    for (const name of cfgKeys(cfg.triggers || {})) {
       Trigger.createFromCfg(name, cfg.triggers[name], result)
     }
     if (inherits) {
@@ -199,7 +199,7 @@ class Table extends AbstractSchemaObject {
     const tableDef = []
     const foreignKeys = []
     let autoIncSeqColumn
-    for (const columnName of Object.keys(this.columns)) {
+    for (const columnName of cfgKeys(this.columns)) {
       const column = this.columns[columnName]
       if (column.isInherited) {
         continue
@@ -243,7 +243,7 @@ class Table extends AbstractSchemaObject {
     }
 
     const rls = this.getRowLevelSecurity()
-    if (!this.skipRLS && Object.keys(rls).length > 0) {
+    if (!this.skipRLS && cfgKeys(rls).length > 0) {
       result += `ALTER TABLE ${this.getParentedName(true)} ENABLE ROW LEVEL SECURITY;\n`
       for (const op in rls) {
         if (!rls.hasOwnProperty(op)) {

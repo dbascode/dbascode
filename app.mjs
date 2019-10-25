@@ -16,6 +16,7 @@ import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
 import PostgraphilePlugin from './src/plugins/PostgraphilePlugin'
 import cp from 'child_process'
+import { getStateSaveSql } from './src/db-classes/utils'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -25,6 +26,8 @@ const projectDir = __dirname
 const showChangesCmd = 'show-changes'
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
+
+const defaultConfigFile = path.join(__dirname, 'default-sys', 'db.yml')
 
 const cliConfig = yargs
   .command({
@@ -109,7 +112,7 @@ if (command === planCmd || command === showChangesCmd || command === migrateCmd)
   const configFile = path.join(cliConfig.source, 'db.yml')
   const outputDir = cliConfig.stateDir
   const migrationsDir = cliConfig.migrationDir
-  const currentState = loadConfig(configFile)
+  const currentState = loadConfig([defaultConfigFile, configFile])
   const currentStateId = (new Date()).getTime()
   const migrationSqlFile = cliConfig.migrationFile
     ? cliConfig.migrationFile
@@ -126,7 +129,7 @@ if (command === planCmd || command === showChangesCmd || command === migrateCmd)
 
   const states = getFileList(path.join(path.dirname(currentStateDumpFile), 'state*.json'));
   const previousStateFile = states.sort().pop()
-  const previousState = previousStateFile ? loadConfig(previousStateFile) : null
+  const previousState = previousStateFile ? loadConfig([previousStateFile]) : null
   const dbOverrides = {
     defaultLocale: cliConfig.defaultLocale,
     rootUserName: cliConfig.dbUser,
@@ -159,11 +162,12 @@ if (command === planCmd || command === showChangesCmd || command === migrateCmd)
     }
   }
   if (command === planCmd || command === migrateCmd) {
-    const sqlDump = currentDbTree.getChangesSql(previousDbTree, changes)
+    let sqlDump = currentDbTree.getChangesSql(previousDbTree, changes)
     if (changes.hasChanges()) {
       if (sqlDump.length === 0) {
         throw new Error('Changes in state detected, but SQL dump is empty.')
       }
+      sqlDump += getStateSaveSql(currentState)
       if (command === migrateCmd || command === planCmd && cliConfig.migrationFile) {
         console.log(`Writing SQL migration to ${migrationSqlFile}...`)
         fs.writeFileSync(migrationSqlFile, sqlDump)

@@ -1,0 +1,19 @@
+# Internal routines for PgAsCode support in the DB
+
+schemas:
+  pgascode:
+    tables:
+      state:
+        comment: Current state storage for PgAsCode
+        omit: true
+        columns:
+          id:
+            type: int
+            autoincrement: true
+          date:
+            type: timestamp with time zone
+            default: now()
+          state:
+            type: text
+        indexes:
+          - date
