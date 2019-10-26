@@ -63,11 +63,20 @@ function escapeString(s) {
 
 /**
  * Returns SQL query to store the state in the system state table
- * @param state
+ * @param {number} id
+ * @param {Object} state
  * @returns {string}
  */
-function getStateSaveSql (state) {
-  return `\nINSERT INTO "pgascode"."state" ("state") VALUES (${escapeString(JSON.stringify(state, null, 2))});\n`
+function getStateSaveSql (id, state) {
+  return `\nINSERT INTO "pgascode"."state" ("id", "state") VALUES (${id}, ${escapeString(JSON.stringify(state, null, 2))});\n`
+}
+
+/**
+ * Returns SQL to get the last state of the DB
+ * @returns {string}
+ */
+function getLoadLastStateSql () {
+  return `SELECT * FROM "pgascode"."state" ORDER BY id DESC LIMIT 1`
 }
 
 /**
@@ -87,17 +96,17 @@ function cfgKeys(cfg) {
  * @returns {*[]|*}
  */
 function filterConfig(cfg) {
-  if (isObject(cfg)) {
+  if (isArray(cfg)) {
+    const result = [...cfg]
+    for (let i = 0; i < result.length; i++) {
+      result[i] = filterConfig(result[i])
+    }
+    return result
+  } else if (isObject(cfg)) {
     const result = {...cfg}
     delete result.__dirName
     for (const name of Object.keys(result)) {
       result[name] = filterConfig(result[name])
-    }
-    return result
-  } else if (isArray(cfg)) {
-    const result = [...cfg]
-    for (let i = 0; i < result.length; i++) {
-      result[i] = filterConfig(result[i])
     }
     return result
   }
@@ -108,6 +117,7 @@ export {
   prepareArgs,
   escapeComment,
   getStateSaveSql,
+  getLoadLastStateSql,
   cfgKeys,
   filterConfig,
 }

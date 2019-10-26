@@ -7,16 +7,13 @@
 import fs from 'fs'
 import path from 'path'
 import yargs from 'yargs'
-import {
-  convertPathToWsl,
-  getFileList,
-} from './src/utils'
 import DataBase from './src/db-classes/DataBase'
 import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
 import PostgraphilePlugin from './src/plugins/PostgraphilePlugin'
-import cp from 'child_process'
-import { getStateSaveSql } from './src/db-classes/utils'
+import { getLoadLastStateSql, getStateSaveSql } from './src/db-classes/utils'
+import { executeSql, executeSqlJson } from './src/psql'
+import os from 'os'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -59,11 +56,11 @@ const cliConfig = yargs
     }
   })
   .option('db-host', {
-    default: process.env.DB_NAME,
+    default: process.env.DB_HOST,
     describe: 'Database host name',
   })
   .option('db-port', {
-    default: process.env.DB_NAME || 5432,
+    default: process.env.DB_PORT || 5432,
     describe: 'Database port',
   })
   .option('db-name', {
@@ -82,21 +79,13 @@ const cliConfig = yargs
     default: process.env.DEFAULT_LOCALE || 'en-US',
     describe: 'Default locale to use in multi-language strings',
   })
-  .option('state-dir', {
-    default: process.env.STATE_DIR || path.join(projectDir, 'output'),
-    describe: 'Directory to save current state to. Unused if the `state-file` option is set.',
+  .option('output', {
+    default: process.env.OUTPUT || path.join(projectDir, 'plan.pgascode'),
+    describe: 'Plan file to store migration data on the `plan` command',
   })
-  .option('state-file', {
-    default: process.env.STATE_FILE,
-    describe: 'File path to save current state to.',
-  })
-  .option('migration-dir', {
-    default: process.env.MIGRATION_DIR || path.join(projectDir, 'migrations'),
-    describe: 'Directory to save SQL migration files to. Unused if the `migration-file` option is set.',
-  })
-  .option('migration-file', {
-    default: process.env.MIGRATION_FILE,
-    describe: 'File path to save SQL migration to',
+  .option('plan', {
+    default: process.env.PLAN || path.join(projectDir, 'plan.pgascode'),
+    describe: 'Plan file to load migration data on the `migrate` command',
   })
   .option('wsl', {
     type: 'boolean',
@@ -108,136 +97,159 @@ const cliConfig = yargs
 
 const command = cliConfig._[0]
 
-if (command === planCmd || command === showChangesCmd || command === migrateCmd) {
-  const configFile = path.join(cliConfig.source, 'db.yml')
-  const outputDir = cliConfig.stateDir
-  const migrationsDir = cliConfig.migrationDir
-  const currentState = loadConfig([defaultConfigFile, configFile])
-  const currentStateId = (new Date()).getTime()
-  const migrationSqlFile = cliConfig.migrationFile
-    ? cliConfig.migrationFile
-    : path.join(migrationsDir, `migration${currentStateId}.sql`)
-  const currentStateDumpFile = cliConfig.stateFile
-    ? cliConfig.stateFile
-    : path.join(outputDir, `state${currentStateId}.json`)
-  if (!fs.existsSync(path.dirname(migrationSqlFile))) {
-    fs.mkdirSync(path.dirname(migrationSqlFile))
+function loadLastStateFromDB() {
+  const cfg = {
+    dbHost: cliConfig.dbHost,
+    dbPort: cliConfig.dbPort,
+    dbName: cliConfig.dbName,
+    dbUser: cliConfig.dbUser,
+    dbPassword: cliConfig.dbPassword,
+    wsl: cliConfig.wsl,
   }
-  if (!fs.existsSync(path.dirname(currentStateDumpFile))) {
-    fs.mkdirSync(path.dirname(currentStateDumpFile))
+  let result = executeSqlJson('SELECT 1', cfg)
+  if (result.exitCode !== 0) {
+    throw new Error('Can not connect to DB: ' + result.stderr)
   }
+  result = executeSqlJson(getLoadLastStateSql(), cfg)
+  if (result.exitCode !== 0) {
+    // Assume the state table doesn't exists.
+    return {}
+  }
+  return result.result
+}
 
-  const states = getFileList(path.join(path.dirname(currentStateDumpFile), 'state*.json'));
-  const previousStateFile = states.sort().pop()
-  const previousState = previousStateFile ? loadConfig([previousStateFile]) : null
+function loadCurrentState () {
+  const configFile = path.join(cliConfig.source, 'db.yml')
+  return loadConfig([defaultConfigFile, configFile])
+}
+
+function loadChanges(prevState, curState) {
   const dbOverrides = {
     defaultLocale: cliConfig.defaultLocale,
     rootUserName: cliConfig.dbUser,
     rootPassword: cliConfig.dbPassword,
     dbName: cliConfig.dbName,
   }
-
   const currentDbTree = DataBase.createFromCfg(
-    currentState,
+    curState,
     dbOverrides,
     [
       new PostgraphilePlugin,
     ]
   )
   const previousDbTree = DataBase.createFromCfg(
-    previousState,
+    prevState,
     dbOverrides,
     [
       new PostgraphilePlugin,
     ]
   )
-
   const changes = currentDbTree.hasChanges(previousDbTree, true)
+  return [
+    changes,
+    previousDbTree,
+    currentDbTree,
+  ]
+}
 
-  if (command === planCmd || command === showChangesCmd) {
-    if (changes.hasChanges()) {
-      console.log(changes.prettyPrint(true))
-    } else {
-      console.log('No changes')
+function getMigrationSql (changes, prevTree, curTree) {
+  let sqlDump = curTree.getChangesSql(prevTree, changes)
+  if (changes.hasChanges()) {
+    if (sqlDump.length === 0) {
+      throw new Error('Changes in state detected, but SQL dump is empty.')
     }
   }
-  if (command === planCmd || command === migrateCmd) {
-    let sqlDump = currentDbTree.getChangesSql(previousDbTree, changes)
-    if (changes.hasChanges()) {
-      if (sqlDump.length === 0) {
-        throw new Error('Changes in state detected, but SQL dump is empty.')
-      }
-      sqlDump += getStateSaveSql(currentState)
-      if (command === migrateCmd || command === planCmd && cliConfig.migrationFile) {
-        console.log(`Writing SQL migration to ${migrationSqlFile}...`)
-        fs.writeFileSync(migrationSqlFile, sqlDump)
-        console.log('Done')
-      }
-      if (command === planCmd && cliConfig.stateFile) {
-        console.log(`Writing new state to ${currentStateDumpFile}...`)
-        fs.writeFileSync(currentStateDumpFile, JSON.stringify(currentState, null, 2))
-        console.log('All done')
-      }
+  return sqlDump
+}
 
-      if (command === migrateCmd) {
-        const commonCmd = [
-          '--dbname=' + currentDbTree.name,
-          '--host=' + cliConfig.dbHost,
-          '--port=' + cliConfig.dbPort,
-          '--username=' + currentDbTree._rootUserName,
-          '--file=' + (cliConfig.wsl ? convertPathToWsl(migrationSqlFile) : migrationSqlFile),
-          '--single-transaction',
-        ]
-        const env = {
-          PGPASSWORD: currentDbTree._rootPassword,
-        }
-        let ls
-        console.log(`Running SQL migration...`)
-        if (cliConfig.wsl) {
-          ls = cp.spawn(
-            'bash',
-            [
-              '-c',
-              `PGPASSWORD=${currentDbTree._rootPassword} psql ${commonCmd.join(' ')}`
-            ],
-          )
-        } else {
-          ls = cp.spawn(
-            'psql',
-            commonCmd,
-            {env},
-          )
-        }
+function disposeTrees (prevTree, curTree) {
+  curTree.dispose()
+  if (prevTree) {
+    prevTree.dispose()
+  }
+}
 
-        ls.stdout.on('data', data => {
-          console.log(`stdout: ${data}`);
-        })
 
-        ls.stderr.on('data', data => {
-          console.log(`stderr: ${data}`);
-        })
-
-        ls.on('close', code => {
-          if (code === 0) {
-            console.log(`Done SQL.`)
-            console.log(`Writing new state to ${currentStateDumpFile}...`)
-            fs.writeFileSync(currentStateDumpFile, JSON.stringify(currentState, null, 2))
-            console.log('All done')
-          } else {
-            console.log(`Failed to execute SQL (exit code: ${code})`);
-          }
-        })
-      }
-    } else {
-      console.log('No changes')
+switch (command) {
+  case planCmd: {
+    console.log('Creating migration plan...')
+    console.log('Loading current DB state...')
+    const prevStateData = loadLastStateFromDB()
+    console.log('Loading new state...')
+    const curState = loadCurrentState()
+    const newStateId = prevStateData.id + 1
+    const [changes, prevTree, curTree] = loadChanges(prevStateData.state, curState)
+    const sql = getMigrationSql(changes, prevTree, curTree)
+    const plan = {
+      id: newStateId,
+      newState: curState,
+      migration: sql,
     }
+    console.log('Writing plan...')
+    fs.writeFileSync(cliConfig.output, JSON.stringify(plan, null, 2))
+    console.log('Changes to be made:')
+    console.log(changes.prettyPrint(true))
+    console.log('Done')
+    disposeTrees(prevTree, curTree)
+    break
   }
 
-  currentDbTree.dispose()
-  if (previousDbTree) {
-    previousDbTree.dispose()
+  case showChangesCmd: {
+    console.log('Loading changes...')
+    console.log('Loading current DB state...')
+    const prevStateData = loadLastStateFromDB()
+    console.log('Loading new state...')
+    const curState = loadCurrentState()
+    const [changes, prevTree, curTree] = loadChanges(prevStateData.state, curState)
+    const sql = getMigrationSql(changes, prevTree, curTree)
+    console.log(`Current DB version: ${prevStateData.id + 0}`)
+    console.log('Changes to be made:')
+    console.log(changes.prettyPrint(true))
+    console.log('SQL to execute:')
+    console.log(sql)
+    console.log('Done')
+    disposeTrees(prevTree, curTree)
+    break
   }
-} else {
-  console.log(`Unknown command '${command}'`)
-  process.exit(1)
+
+  case migrateCmd: {
+    let plan
+    if (cliConfig.plan) {
+      console.log('Reading migration plan...')
+      plan = JSON.parse(fs.readFileSync(cliConfig.plan).toString())
+    } else {
+      console.log('Creating migration plan...')
+      console.log('Loading current DB state...')
+      const prevStateData = loadLastStateFromDB()
+      console.log('Loading new state...')
+      const curState = loadCurrentState()
+      const newStateId = prevStateData.id + 1
+      const [changes, prevTree, curTree] = loadChanges(prevStateData.state, curState)
+      const sql = getMigrationSql(changes, prevTree, curTree, curState, newStateId)
+      const plan = {
+        id: newStateId,
+        newState: curState,
+        migration: sql,
+      }
+      disposeTrees(prevTree, curTree)
+    }
+    console.log('Executing SQL migration...')
+    const tmpDumpFile = path.join(os.tmpdir(), `pgascode${process.pid}.sql`)
+    try {
+      fs.writeFileSync(
+        tmpDumpFile,
+        plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState),
+      )
+      const result = executeSql(tmpDumpFile, {isFile: true})
+      console.log(result.stdout)
+    } finally {
+      fs.unlinkSync(tmpDumpFile)
+    }
+    console.log('Done')
+    break
+  }
+
+  default:
+    console.log(`Unknown command '${command}'`)
+    process.exit(1)
 }

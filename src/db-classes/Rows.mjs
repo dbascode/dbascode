@@ -49,8 +49,8 @@ class Rows extends AbstractSchemaObject {
 
   getCreateSql () {
     const sqlValues = []
-    const columns = this._parent.getAllColumns()
-    const colNames = cfgKeys(columns)
+    const columns = this._parent.columns
+    const colNames = Object.keys(columns)
     for (const row of this.rows) {
       const values = []
       for (const column of Object.values(columns)) {

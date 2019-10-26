@@ -198,7 +198,11 @@ class AbstractDbObject {
       if (collection === undefined) {
         continue
       }
-      const loop = isArray(collection) ? collection : Object.values(collection)
+      const loop = isArray(collection)
+        ? collection
+        : (collection instanceof AbstractDbObject
+          ? [collection]
+          : Object.values(collection))
       for (const child of dropping ? reverse(loop) : loop) {
         result.push(child.getCreateOrDropSql(what, withParent))
       }

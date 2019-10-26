@@ -207,6 +207,12 @@ function convertPathToWsl (path) {
   return p.join('/')
 }
 
+function escapeShellArg (arg) {
+  // arg = `'${arg.replace(/'/g, `'\\''`)}'`;
+  arg = replaceAll(arg, '"', '\"')
+  return `"${arg}"`
+}
+
 
 export {
   checkFiles,
@@ -226,4 +232,5 @@ export {
   objectIntersectionKeys,
   circularSafeStringify,
   convertPathToWsl,
+  escapeShellArg,
 }
