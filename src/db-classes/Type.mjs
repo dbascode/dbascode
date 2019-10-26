@@ -6,8 +6,10 @@
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
 import Field from './Field'
-import { cfgKeys } from './utils'
 
+/**
+ * DB Type object
+ */
 class Type extends AbstractSchemaObject {
   isEnum
   fields = []
@@ -54,7 +56,7 @@ class Type extends AbstractSchemaObject {
     })
     if (cfg.fields) {
       result.isEnum = false
-      for (const name of cfgKeys(cfg.fields)) {
+      for (const name of Object.keys(cfg.fields)) {
         Field.createFromCfg(name, cfg.fields[name], result)
       }
     } else if (cfg.enum) {

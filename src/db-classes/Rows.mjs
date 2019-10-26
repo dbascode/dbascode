@@ -9,7 +9,6 @@ import isUndefined from 'lodash-es/isUndefined'
 import isObject from 'lodash-es/isObject'
 import { lookupClosestLocale } from '../utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import { cfgKeys, filterConfig } from './utils'
 
 /**
  * Initial rows in a table
@@ -41,7 +40,7 @@ class Rows extends AbstractSchemaObject {
       return null
     }
     const result = new Rows(
-      filterConfig(rows),
+      rows,
       parent,
     )
     return result.getDb().pluginOnObjectConfigured(result, rows)
@@ -59,9 +58,9 @@ class Rows extends AbstractSchemaObject {
           if (column.allowNull) {
             values.push('NULL')
           } else {
-            if (this.isFieldText(column.type)) {
+            if (column.isTextual()) {
               values.push("''")
-            } else if (this.isFieldNumeric(column.type)) {
+            } else if (column.isNumeric()) {
               values.push('0')
             } else {
               throw new Error(`Can not set default value for field ${this._parent.getParentedName()}.${column.name}`)

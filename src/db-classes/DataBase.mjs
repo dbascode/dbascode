@@ -11,7 +11,6 @@ import Schema from './Schema'
 import {
   dispose,
 } from '../utils'
-import { cfgKeys } from './utils'
 
 /**
  * Database object
@@ -83,10 +82,10 @@ class DataBase extends AbstractDbObject {
     for (const plugin of plugins) {
       result.addPlugin(plugin)
     }
-    for (const name of cfgKeys(cfg.roles || {})) {
+    for (const name of Object.keys(cfg.roles || {})) {
       Role.createFromCfg(name, cfg.roles[name], result)
     }
-    for (const name of cfgKeys(cfg.schemas || {})) {
+    for (const name of Object.keys(cfg.schemas || {})) {
       Schema.createFromCfg(name, cfg.schemas[name], result)
     }
     return result

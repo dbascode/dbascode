@@ -10,7 +10,6 @@ import Function from './Function'
 import Table from './Table'
 import isEmpty from 'lodash-es/isEmpty'
 import { arrayContainsEntirely } from '../utils'
-import { cfgKeys } from './utils'
 
 /**
  * Schema object.
@@ -71,16 +70,16 @@ class Schema extends AbstractDbObject {
       name,
       parent,
     })
-    for (const name of cfgKeys(cfg.types || {})) {
+    for (const name of Object.keys(cfg.types || {})) {
       Type.createFromCfg(name, cfg.types[name], result);
     }
-    for (const name of cfgKeys(cfg.functions || {})) {
+    for (const name of Object.keys(cfg.functions || {})) {
       Function.createFromCfg(name, cfg.functions[name], result);
     }
 
     // Import tables following their dependencies
     let restMap = {}
-    cfgKeys(cfg.tables || {}).forEach(name => restMap[name] = 1)
+    Object.keys(cfg.tables || {}).forEach(name => restMap[name] = 1)
     do {
       const newRestMap = {}
       for (const tableName of Object.keys(restMap)) {

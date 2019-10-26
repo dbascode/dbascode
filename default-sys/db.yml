@@ -9,11 +9,14 @@ schemas:
         columns:
           id:
             type: int
-            autoincrement: true
           date:
             type: timestamp with time zone
-            default: now()
+            default:
+              value: now()
+              raw: true
           state:
             type: text
         indexes:
           - date
+        unique_keys:
+          - id

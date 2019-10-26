@@ -18,34 +18,33 @@ function executeSql (query, config) {
     commonCmd.push('-c')
     commonCmd.push(config.wsl ? escapeShellArg(query) : query)
   }
+  let result
   if (config.wsl) {
-    const result = cp.spawnSync(
+    result = cp.spawnSync(
       'bash',
       [
         '-c',
-        `PGPASSWORD=${config.dbPassword || ''} psql ${commonCmd.join(' ')}`
+        `PGPASSWORD=${config.dbPassword || ''} ON_ERROR_STOP=on psql ${commonCmd.join(' ')}`
       ],
     )
-    return {
-      exitCode: result.status,
-      stdout: result.stdout.toString(),
-      stderr: result.stderr.toString(),
-    }
   } else {
-    const result = cp.spawnSync(
+    result = cp.spawnSync(
       'psql',
       commonCmd,
       {
         env: {
           PGPASSWORD: config.dbPassword,
+          ON_ERROR_STOP: 'on',
         }
       },
     )
-    return {
-      exitCode: Number(result.status),
-      stdout: result.stdout.toString(),
-      stderr: result.stderr.toString(),
-    }
+  }
+  const err = result.stderr.toString()
+  return {
+    // When using transaction (-t key), psql exits with zero exit code even if transaction fails.
+    exitCode: err.length === 0 ? result.status : -1,
+    stdout: result.stdout.toString(),
+    stderr: err,
   }
 }
 
@@ -58,9 +57,10 @@ function executeSqlJson (queryString, config) {
       isFile: false,
     }
   )
+  const res = result.stdout ? result.stdout.trim() : null
   return {
     ...result,
-    result: result.stdout ? JSON.parse(result.stdout) : null,
+    result: res ? JSON.parse(res) : [],
   }
 }
 

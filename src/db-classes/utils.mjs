@@ -17,7 +17,7 @@ import { replaceAll } from '../utils'
  * @returns {*}
  */
 function prepareArgs (obj, args) {
-  if (!args.parent) {
+  if (!obj) {
     return args
   }
   for (const prop of Object.keys(args)) {
@@ -57,7 +57,7 @@ function escapeComment (text) {
 function escapeString(s) {
   s = replaceAll(s, "'", "''")
   s = replaceAll(s, "\r", '')
-  s = replaceAll(s, "\n", "' ||\n'")
+  // s = replaceAll(s, "\n", "' ||\n'")
   return `'${s}'`
 }
 
@@ -79,45 +79,10 @@ function getLoadLastStateSql () {
   return `SELECT * FROM "pgascode"."state" ORDER BY id DESC LIMIT 1`
 }
 
-/**
- * Returns config object keys without directory context
- * @param {Object} cfg
- * @returns {Object}
- */
-function cfgKeys(cfg) {
-  const result = {...cfg}
-  delete result.__dirName
-  return Object.keys(result)
-}
-
-/**
- * Returns config without directory context
- * @param cfg
- * @returns {*[]|*}
- */
-function filterConfig(cfg) {
-  if (isArray(cfg)) {
-    const result = [...cfg]
-    for (let i = 0; i < result.length; i++) {
-      result[i] = filterConfig(result[i])
-    }
-    return result
-  } else if (isObject(cfg)) {
-    const result = {...cfg}
-    delete result.__dirName
-    for (const name of Object.keys(result)) {
-      result[name] = filterConfig(result[name])
-    }
-    return result
-  }
-  return cfg
-}
-
 export {
   prepareArgs,
   escapeComment,
+  escapeString,
   getStateSaveSql,
   getLoadLastStateSql,
-  cfgKeys,
-  filterConfig,
 }

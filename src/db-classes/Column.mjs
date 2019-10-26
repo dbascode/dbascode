@@ -5,11 +5,11 @@
  * Time: 15:53
  */
 
-import isBoolean from 'lodash-es/isBoolean'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
 import ForeignKey from './ForeignKey'
-import { escapeComment, prepareArgs } from './utils'
+import { escapeComment, escapeString, prepareArgs } from './utils'
+import isObject from 'lodash-es/isObject'
 
 /**
  *
@@ -18,6 +18,10 @@ class Column extends AbstractSchemaObject {
   type
   foreignKey = undefined
   allowNull = false
+  /**
+   * Raw default value
+   * @type {*}
+   */
   defaultValue = undefined
   isAutoIncrement = false
   isInherited = false
@@ -73,6 +77,19 @@ class Column extends AbstractSchemaObject {
       return null
     }
     const config = isString(cfg) ? { type: cfg } : cfg
+    let defaultValue
+    if (config.default) {
+      const def = isObject(config.default) ? config.default : {value: config.default, raw: false}
+      if (def.raw) {
+        defaultValue = def.value
+      } else {
+        if (isTextual(config.type)) {
+          defaultValue = escapeString(def.value)
+        } else {
+          defaultValue = def.value
+        }
+      }
+    }
     const result = new Column(prepareArgs(parent, {
       name,
       parent,
@@ -80,7 +97,7 @@ class Column extends AbstractSchemaObject {
       allowNull: !!config.allow_null,
       isIntl: !!config.intl,
       isAutoIncrement: !!config.autoincrement,
-      defaultValue: config.default,
+      defaultValue,
     }))
     if (config.foreign_key) {
       ForeignKey.createFromCfg(name, config.foreign_key, result)
@@ -184,6 +201,19 @@ class Column extends AbstractSchemaObject {
       return ''
     }
   }
+
+  isTextual () {
+    return isTextual(this.type)
+  }
+
+  isNumeric () {
+    return (this.type.toLowerCase().indexOf('int') >= 0) ||
+      (this.type.toLowerCase().indexOf('numeric') >= 0)
+  }
+}
+
+function isTextual (type) {
+  return type.toLowerCase().indexOf('text') >= 0
 }
 
 export default Column

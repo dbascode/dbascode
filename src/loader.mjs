@@ -18,6 +18,16 @@ import { objectIntersectionKeys } from './utils'
  * @returns {*}
  */
 function loadConfig(configFiles) {
+  const cfg = doLoadConfig(configFiles)
+  return filterConfig(cfg)
+}
+
+/**
+ * Load the whole DB config with postprocessing. Config files are merged and loaded as the single config.
+ * @param {string[]} configFiles
+ * @returns {*}
+ */
+function doLoadConfig(configFiles) {
   let cfg = {}
   for (const configFile of configFiles) {
     const fileCfg =
@@ -78,6 +88,29 @@ function recursePostProcess(cfg, dir) {
     } else if (cfg.substr(0, 6) === '$file ') {
       return fs.readFileSync(path.join(dir, cfg.substr(6))).toString()
     }
+  }
+  return cfg
+}
+
+/**
+ * Returns config without directory context
+ * @param cfg
+ * @returns {*[]|*}
+ */
+function filterConfig(cfg) {
+  if (isArray(cfg)) {
+    const result = [...cfg]
+    for (let i = 0; i < result.length; i++) {
+      result[i] = filterConfig(result[i])
+    }
+    return result
+  } else if (isObject(cfg)) {
+    const result = {...cfg}
+    delete result.__dirName
+    for (const name of Object.keys(result)) {
+      result[name] = filterConfig(result[name])
+    }
+    return result
   }
   return cfg
 }

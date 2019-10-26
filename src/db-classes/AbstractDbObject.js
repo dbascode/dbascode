@@ -386,6 +386,8 @@ function filterProps (obj, props, context) {
     .filter(prop => !isFunction(obj[prop]))
     // Don't compare private props
     .filter(prop => prop[0] !== '_')
+    // remove inherits
+    .filter(prop => prop !== 'inherits')
     // Don't compare DB children if not deep
     .filter(prop => context.deep ? true : !isChildren(obj, prop))
 }
