@@ -20,7 +20,6 @@ const __dirname = path.dirname(__filename)
 
 const projectDir = __dirname
 
-const showChangesCmd = 'show-changes'
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
 
@@ -40,15 +39,6 @@ const cliConfig = yargs
     command: `${planCmd} <source>`,
     desc: 'Displays changes without performing actual migration. If the `migration-file` or `state-file` ' +
       'options are set, an SQL dump and current state data will be saved.',
-    builder: yargs => {
-      yargs.positional('source', {
-        describe: 'Directory to read database state from',
-      })
-    }
-  })
-  .command({
-    command: `${showChangesCmd} <source>`,
-    desc: 'Show changes without creating any files',
     builder: yargs => {
       yargs.positional('source', {
         describe: 'Directory to read database state from',
@@ -80,7 +70,7 @@ const cliConfig = yargs
     describe: 'Default locale to use in multi-language strings',
   })
   .option('output', {
-    default: process.env.OUTPUT || path.join(projectDir, 'plan.pgascode'),
+    default: process.env.OUTPUT,
     describe: 'Plan file to store migration data on the `plan` command',
   })
   .option('plan', {
@@ -207,23 +197,36 @@ function saveTempSqlFile(sql) {
   return tmpDumpFile
 }
 
+function executeSqlDump (sql) {
+  const tmpDumpFile = saveTempSqlFile(sql)
+  try {
+    const result = executeSql(tmpDumpFile, { ...dbQueryCfg, isFile: true })
+    console.log(result.stderr ? result.stderr : result.stdout)
+    if (result.exitCode === 0) {
+      console.log('Done')
+    } else {
+      console.log('Migration failed')
+      process.exit(1)
+    }
+  } finally {
+    fs.unlinkSync(tmpDumpFile)
+  }
+}
+
 
 switch (command) {
   case planCmd: {
-    console.log('Creating migration plan...')
-    const [plan, changes] = createPlan()
-    console.log('Writing plan...')
-    fs.writeFileSync(cliConfig.output, JSON.stringify(plan, null, 2))
-    console.log('Changes to be made:')
-    console.log(changes.prettyPrint(true))
-    console.log('Done')
-    break
-  }
-
-  case showChangesCmd: {
     console.log('Loading changes...')
     const [plan, changes] = createPlan()
-    console.log(`Current DB version: ${plan.id}`)
+    console.log(`Current DB version: ${plan.id - 1}`)
+    if (!changes.hasChanges()) {
+      console.log('No changes detected. Nothing to do.')
+      break
+    }
+    if (cliConfig.output) {
+      console.log(`Writing plan to '${cliConfig.output}'...`)
+      fs.writeFileSync(cliConfig.output, JSON.stringify(plan, null, 2))
+    }
     console.log('Changes to be made:')
     console.log(changes.prettyPrint(true))
     console.log('SQL to execute:')
@@ -239,22 +242,15 @@ switch (command) {
       plan = JSON.parse(fs.readFileSync(cliConfig.plan).toString())
     } else {
       console.log('Input plan not set. Creating migration plan...')
-      plan = createPlan()[0]
+      const [p, changes] = createPlan()
+      plan = p
+      if (!changes.hasChanges()) {
+        console.log('No changes detected. Nothing to do.')
+        break
+      }
     }
     console.log('Executing SQL migration...')
-    const tmpDumpFile = saveTempSqlFile(plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState))
-    try {
-      const result = executeSql(tmpDumpFile, {...dbQueryCfg, isFile: true })
-      console.log(result.stderr ? result.stderr : result.stdout)
-      if (result.exitCode === 0) {
-        console.log('Done')
-      } else {
-        console.log('Migration failed')
-        process.exit(1)
-      }
-    } finally {
-      fs.unlinkSync(tmpDumpFile)
-    }
+    executeSqlDump(plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState))
     break
   }
 
