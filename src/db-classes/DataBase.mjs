@@ -77,7 +77,8 @@ class DataBase extends AbstractDbObject {
       defaultLocale: overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale,
       rootUserName: overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name,
       rootPassword: overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password,
-      name: overrides.dbName ? overrides.dbName : ''
+      name: overrides.dbName ? overrides.dbName : '',
+      extensions: cfg.extensions,
     })
     for (const plugin of plugins) {
       result.addPlugin(plugin)
