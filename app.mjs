@@ -27,11 +27,16 @@ const defaultConfigFile = path.join(__dirname, 'default-sys', 'db.yml')
 
 const cliConfig = yargs
   .command({
-    command: `${migrateCmd} <source>`,
+    command: `${migrateCmd}`,
     desc: 'Create SQL migrations based on config differences',
     builder: yargs => {
-      yargs.positional('source', {
-        describe: 'Directory to read database state from',
+      yargs.option('source', {
+        default: process.env.SOURCE,
+        describe: 'Directory to read database state from on the `migrate` command',
+      })
+      .option('plan', {
+        default: process.env.PLAN,
+        describe: 'Plan file to load migration data on the `migrate` command',
       })
     }
   })
@@ -42,6 +47,10 @@ const cliConfig = yargs
     builder: yargs => {
       yargs.positional('source', {
         describe: 'Directory to read database state from',
+      })
+      .option('output', {
+        default: process.env.OUTPUT,
+        describe: 'Plan file to store migration data on the `plan` command',
       })
     }
   })
@@ -68,14 +77,6 @@ const cliConfig = yargs
   .option('default-locale', {
     default: process.env.DEFAULT_LOCALE || 'en-US',
     describe: 'Default locale to use in multi-language strings',
-  })
-  .option('output', {
-    default: process.env.OUTPUT,
-    describe: 'Plan file to store migration data on the `plan` command',
-  })
-  .option('plan', {
-    default: process.env.PLAN,
-    describe: 'Plan file to load migration data on the `migrate` command',
   })
   .option('wsl', {
     type: 'boolean',
@@ -237,6 +238,9 @@ switch (command) {
 
   case migrateCmd: {
     let plan
+    if (!cliConfig.plan && !cliConfig.source) {
+      throw new Error('Either `plan` or `source` option must be specified to migrate.')
+    }
     if (cliConfig.plan) {
       console.log('Reading migration plan...')
       plan = JSON.parse(fs.readFileSync(cliConfig.plan).toString())
