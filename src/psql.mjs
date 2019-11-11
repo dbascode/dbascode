@@ -8,6 +8,8 @@ function executeSql (query, config) {
     '--port=' + (config.dbPort || ''),
     '--username=' + (config.dbUser || ''),
     '--single-transaction',
+    '-v',
+    'ON_ERROR_STOP=1'
   ]
   if (config.plainResult) {
     commonCmd.push('-t')
@@ -24,7 +26,7 @@ function executeSql (query, config) {
       'bash',
       [
         '-c',
-        `PGPASSWORD=${config.dbPassword || ''} ON_ERROR_STOP=on psql ${commonCmd.join(' ')}`
+        `PGPASSWORD=${config.dbPassword || ''} psql ${commonCmd.join(' ')}`
       ],
     )
   } else {
@@ -34,15 +36,13 @@ function executeSql (query, config) {
       {
         env: {
           PGPASSWORD: config.dbPassword,
-          ON_ERROR_STOP: 'on',
         }
       },
     )
   }
   const err = result.stderr.toString()
   return {
-    // When using transaction (-t key), psql exits with zero exit code even if transaction fails.
-    exitCode: err.length === 0 ? result.status : -1,
+    exitCode: result.status,
     stdout: result.stdout.toString(),
     stderr: err,
   }

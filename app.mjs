@@ -200,17 +200,20 @@ function saveTempSqlFile(sql) {
 
 function executeSqlDump (sql) {
   const tmpDumpFile = saveTempSqlFile(sql)
+  let result = {}
   try {
-    const result = executeSql(tmpDumpFile, { ...dbQueryCfg, isFile: true })
+    result = executeSql(tmpDumpFile, { ...dbQueryCfg, isFile: true })
     console.log(result.stderr ? result.stderr : result.stdout)
     if (result.exitCode === 0) {
       console.log('Done')
     } else {
       console.log('Migration failed')
-      process.exit(1)
     }
   } finally {
     fs.unlinkSync(tmpDumpFile)
+    if (result.exitCode !== 0) {
+      process.exit(result.exitCode)
+    }
   }
 }
 
