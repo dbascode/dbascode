@@ -225,6 +225,9 @@ switch (command) {
     console.log(`Current DB version: ${plan.id - 1}`)
     if (!changes.hasChanges()) {
       console.log('No changes detected. Nothing to do.')
+      if (cliConfig.output) {
+        fs.writeFileSync(cliConfig.output, JSON.stringify({noChanges: true}, null, 2))
+      }
       break
     }
     if (cliConfig.output) {
@@ -247,6 +250,11 @@ switch (command) {
     if (cliConfig.plan) {
       console.log('Reading migration plan...')
       plan = JSON.parse(fs.readFileSync(cliConfig.plan).toString())
+      if (plan.noChanges) {
+        console.log('Reading migration plan...')
+        console.log('No changes. Nothing to do.')
+        break;
+      }
     } else {
       console.log('Input plan not set. Creating migration plan...')
       const [p, changes] = createPlan()
