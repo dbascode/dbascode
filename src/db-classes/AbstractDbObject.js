@@ -10,6 +10,7 @@ import isArray from 'lodash-es/isArray'
 import isObject from 'lodash-es/isObject'
 import ChangesContext from './ChangesContext'
 import reverse from 'lodash-es/reverse'
+import { parseArrayProp } from './utils'
 
 /**
  * Base class for all DB objects
@@ -141,11 +142,10 @@ class AbstractDbObject {
       let lastObjPath = []
       let pathFromLastObj = []
       for (const name of path ? path.split('.') : []) {
-        const matches = name.match(/[\w-]+(\[(\d+)\]|)/)
-        if (matches && matches[2] !== undefined) {
-          const [propName, i] = matches
-          objCur = objCur ? objCur[propName][Number(i)] : undefined
-          objOld = objOld ? objOld[propName][Number(i)] : undefined
+        const prop = parseArrayProp(name)
+        if (prop.index !== null) {
+          objCur = objCur ? objCur[prop.name][prop.index] : undefined
+          objOld = objOld ? objOld[prop.name][prop.index] : undefined
         } else {
           objCur = objCur ? objCur[name] : undefined
           objOld = objOld ? objOld[name] : undefined
@@ -159,37 +159,55 @@ class AbstractDbObject {
           pathFromLastObj.push(name)
         }
       }
-      if (changed[lastObjPath.join('.')]) {
+      const lastObjPathStr = lastObjPath.join('.')
+      if (changed[lastObjPathStr]) {
         continue
       }
-      changed[lastObjPath.join('.')] = 1
+      changed[lastObjPathStr] = 1
+      const changedPropertyPath = pathFromLastObj.join('.')
       if (!curUndefined && !oldUndefined) {
-        result.push(lastDbObjCur.getAlterSql(lastDbObjOld))
+        result.push(lastDbObjCur.getAlterSql(lastDbObjOld, changedPropertyPath))
       } else if (!curUndefined && oldUndefined) {
-        result = [...result, ...lastDbObjCur.getCreateOrDropSql('create')]
+        result = [...result, ...lastDbObjCur.getCreateOrDropSql('create', changedPropertyPath)]
       } else if (curUndefined && !oldUndefined) {
-        result = [...result, ...lastDbObjOld.getCreateOrDropSql('drop', false)]
+        result = [...result, ...lastDbObjOld.getCreateOrDropSql('drop', changedPropertyPath)]
       }
     }
     return result.join('')
   }
 
-  getCreateOrDropSql(what, withParent = false) {
+  /**
+   * Returns CREATE or DROP SQL statement for the object
+   * @param {string} what `create` or `drop` value to choose operation required
+   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
+   * @param {boolean} withParent - If this object is creating at the same time as it's parent
+   * @returns {string}
+   */
+  getCreateOrDropSql(what, changedPropPath, withParent = false) {
     let changes = []
     if (what === 'create') {
-      changes = [
-        this.getCreateSql(withParent),
-        ...this.getChildrenCreateOrDropSql(what, true)
-      ]
+      changes = [this.getCreateSql(withParent, changedPropPath)]
+      if (!changedPropPath) {
+        // If the whole object was changed then get changes for its children.
+        // If only a specific property changed then no need to iterate children - they are already
+        // iterated during changes calculation.
+        changes = changes.concat(this.getChildrenCreateOrDropSql(what, true))
+      }
     } else if (what === 'drop') {
-      changes = [
-        ...this.getChildrenCreateOrDropSql(what, true),
-        this.getDropSql(withParent),
-      ]
+      if (!changedPropPath) {
+        changes = this.getChildrenCreateOrDropSql(what, true)
+      }
+      changes.push(this.getDropSql(withParent, changedPropPath))
     }
     return changes.join('')
   }
 
+  /**
+   * Returns CREATE or DROP SQL statement for the object children
+   * @param {string} what `create` or `drop` value to choose operation required
+   * @param {boolean} withParent - If this object is creating at the same time as it's parent
+   * @returns {string[]}
+   */
   getChildrenCreateOrDropSql (what, withParent) {
     const result = []
     const dropping = what === 'drop'
@@ -204,7 +222,7 @@ class AbstractDbObject {
           ? [collection]
           : Object.values(collection))
       for (const child of dropping ? reverse(loop) : loop) {
-        result.push(child.getCreateOrDropSql(what, withParent))
+        result.push(child.getCreateOrDropSql(what, '', withParent))
       }
     }
     return result
@@ -218,9 +236,10 @@ class AbstractDbObject {
    * Returns SQL for object creation
    * @protected
    * @param {boolean} withParent
+   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
    * @returns {string}
    */
-  getCreateSql (withParent) {
+  getCreateSql (withParent, changedPropPath) {
     return ''
   }
 
@@ -228,19 +247,21 @@ class AbstractDbObject {
    * Returns SQL for object deletion
    * @protected
    * @param {boolean} withParent
+   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
    * @returns {string}
    */
-  getDropSql (withParent) {
+  getDropSql (withParent, changedPropPath) {
     return ''
   }
 
   /**
-   * Returns SQL for object update]
+   * Returns SQL for object update
    * @protected
    * @param {AbstractDbObject} compared
+   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
    * @returns {string}
    */
-  getAlterSql (compared) {
+  getAlterSql (compared, changedPropPath) {
     return ''
   }
 

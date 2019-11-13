@@ -13,7 +13,11 @@ import Trigger from './Trigger'
 import Index from './Index'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
-import { escapeComment, prepareArgs } from './utils'
+import {
+  escapeComment,
+  parseArrayProp,
+  prepareArgs,
+} from './utils'
 
 /**
  * Table object
@@ -194,7 +198,66 @@ class Table extends AbstractSchemaObject {
     return Object.keys(dependOnMap)
   }
 
-  getCreateSql (withParent) {
+  /**
+   * Returns common part of the unique key SQL definition
+   * @param {string[]} names - column names in the key
+   * @returns {string}
+   */
+  getUniqueKeyDefinition (names) {
+    return `CONSTRAINT "${this.getUniqueKeyName(names)}" UNIQUE ("${names.join('", "')}")`
+  }
+
+  /**
+   * Returns unique key name for the given list of columns
+   * @param {string[]} names
+   * @returns {string}
+   */
+  getUniqueKeyName (names) {
+    return `${this.name}_${names.join('_')}`
+  }
+
+  /**
+   * Returns unique key name by its idx
+   * @param {number} idx
+   * @returns {string}
+   */
+  getUniqueKeyNameByIdx (idx) {
+    return this.getUniqueKeyName(this.uniqueKeys[idx])
+  }
+
+  getRowLevelSecurity () {
+    return {...this.inherits ? this.inherits.getRowLevelSecurity() : {}, ...this.rowLevelSecurity}
+  }
+
+  getChildrenForSql (prop, what, withParent) {
+    if (what === 'drop' && withParent) {
+      return super.getChildrenForSql(prop)
+    }
+    switch (prop) {
+      // case 'columns': return filterInheritedSet(this.columns)
+      case 'triggers': return this.skipTriggers ? {} : this.triggers
+      case 'indexes': return this.skipIndexes ? [] : this.indexes
+      default: return super.getChildrenForSql(prop)
+    }
+  }
+
+  getComment() {
+    return escapeComment(this.comment)
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getCreateSql (withParent, changedPropPath) {
+    if (changedPropPath) {
+      const prop = parseArrayProp(changedPropPath)
+      switch (prop.name) {
+        case 'uniqueKeys':
+          return `ALTER TABLE ${this.getParentedName(true)} ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`
+        default:
+          throw new Error(`Create SQL for property ${changedPropPath} is not implemented`)
+      }
+    }
     let result = `CREATE TABLE ${this.getParentedName(true)} (\n`
     const tableDef = []
     const foreignKeys = []
@@ -217,7 +280,7 @@ class Table extends AbstractSchemaObject {
     }
     if (this.uniqueKeys.length > 0) {
       for (const names of this.uniqueKeys) {
-        tableDef.push(`CONSTRAINT "${this.name}_${names.join('_')}" UNIQUE ("${names.join('", "')}")`)
+        tableDef.push(this.getUniqueKeyDefinition(names))
       }
     }
     if (foreignKeys.length > 0) {
@@ -256,38 +319,41 @@ class Table extends AbstractSchemaObject {
     return result
   }
 
-  getRowLevelSecurity () {
-    return {...this.inherits ? this.inherits.getRowLevelSecurity() : {}, ...this.rowLevelSecurity}
-  }
-
-  getChildrenForSql (prop, what, withParent) {
-    if (what === 'drop' && withParent) {
-      return super.getChildrenForSql(prop)
+  /**
+   * @inheritDoc
+   */
+  getDropSql (withParent, changedPropPath) {
+    if (changedPropPath) {
+      const prop = parseArrayProp(changedPropPath)
+      switch (prop.name) {
+        case 'uniqueKeys':
+          return `ALTER TABLE ${this.getQuotedName()} DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)};";`
+        default:
+          throw new Error(`Alter SQL for property ${changedPropPath} is not implemented`)
+      }
     }
-    switch (prop) {
-      // case 'columns': return filterInheritedSet(this.columns)
-      case 'triggers': return this.skipTriggers ? {} : this.triggers
-      case 'indexes': return this.skipIndexes ? [] : this.indexes
-      default: return super.getChildrenForSql(prop)
-    }
-  }
-
-  getComment() {
-    return escapeComment(this.comment)
-  }
-
-  getDropSql (withParent) {
     return `DROP TABLE "${this.name}";\n`
   }
 
   /**
-   *
-   * @param {Table} compared
+   * Returns SQL for object update
+   * @protected
+   * @param {Table} compared - previous object
+   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
    * @returns {string}
    */
-  getAlterSql (compared) {
-    const result = []
-    return result.join()
+  getAlterSql (compared, changedPropPath) {
+    if (changedPropPath) {
+      const prop = parseArrayProp(changedPropPath)
+      switch (prop.name) {
+        case 'uniqueKeys':
+          return `ALTER TABLE ${this.getQuotedName()} DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)};";
+                    ALTER TABLE ${this.getQuotedName()} ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`
+        default:
+          throw new Error(`Alter SQL for property ${changedPropPath} is not implemented`)
+      }
+    }
+    throw new Error('Alter SQL is not implemented');
   }
 }
 

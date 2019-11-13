@@ -16,7 +16,7 @@ import { replaceAll } from '../utils'
  * @param {Object.<string, *>} args
  * @returns {*}
  */
-function prepareArgs (obj, args) {
+export function prepareArgs (obj, args) {
   if (!obj) {
     return args
   }
@@ -46,7 +46,7 @@ function recurseProcessCalculations (obj, value) {
   return value
 }
 
-function escapeComment (text) {
+export function escapeComment (text) {
   return text ? text.split("'").join("''") : ''
 }
 
@@ -54,7 +54,7 @@ function escapeComment (text) {
  * Escape string to insert to DB
  * @param {string} s
  */
-function escapeString(s) {
+export function escapeString(s) {
   s = replaceAll(s, "'", "''")
   s = replaceAll(s, "\r", '')
   // s = replaceAll(s, "\n", "' ||\n'")
@@ -65,9 +65,14 @@ function escapeString(s) {
  * Returns SQL query to store the state in the system state table
  * @param {number} id
  * @param {Object} state
+ * @param {boolean} addSql Whether to add current SQL migration text to the saved state
  * @returns {string}
  */
-function getStateSaveSql (id, state) {
+export function getStateSaveSql (id, state, addSql = false) {
+  if (!addSql) {
+    state = {...state}
+    delete state.migration
+  }
   return `\nINSERT INTO "pgascode"."state" ("id", "state") VALUES (${id}, ${escapeString(JSON.stringify(state, null, 2))});\n`
 }
 
@@ -75,14 +80,27 @@ function getStateSaveSql (id, state) {
  * Returns SQL to get the last state of the DB
  * @returns {string}
  */
-function getLoadLastStateSql () {
+export function getLoadLastStateSql () {
   return `SELECT * FROM "pgascode"."state" ORDER BY id DESC LIMIT 1`
 }
 
-export {
-  prepareArgs,
-  escapeComment,
-  escapeString,
-  getStateSaveSql,
-  getLoadLastStateSql,
+/**
+ * Parses property name into name itself and array index if any
+ * @param name
+ */
+export function parseArrayProp (name) {
+  const matches = name.match(/([\w-]+)(\[(\d+)\]|)/)
+  if (matches && matches[3] !== undefined) {
+    const [,propName,, index] = matches
+    return {
+      name: propName,
+      index: Number(index),
+    }
+  } else {
+    return {
+      name,
+      index: null,
+    }
+  }
+
 }
