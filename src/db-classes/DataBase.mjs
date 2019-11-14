@@ -113,6 +113,9 @@ class DataBase extends AbstractDbObject {
     dispose(this)
   }
 
+  /**
+   * @inheritDoc
+   */
   getCalculators () {
     return {
       rootUserName: this._rootUserName,
