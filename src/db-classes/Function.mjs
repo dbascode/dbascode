@@ -6,6 +6,8 @@
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
 import { prepareArgs } from './utils'
+import isString from 'lodash-es/isString'
+import isObject from 'lodash-es/isObject'
 
 /**
  * Function, Procedure, or Trigger Function object
@@ -18,8 +20,10 @@ class Function extends AbstractSchemaObject {
   stability = 'volatile'
   parallelSafety = 'unsafe'
   code = ''
-  args = ''
+  args = {}
   isLeakProof = false
+  allowExecute = []
+  denyExecute = []
 
   /**
    *
@@ -33,8 +37,10 @@ class Function extends AbstractSchemaObject {
    * @param {string} [parallelSafety]
    * @param {Schema} [parent]
    * @param {string} code
-   * @param {string} [args]
+   * @param {object} [args]
    * @param {boolean} isLeakProof
+   * @param {string[]} [allowExecute]
+   * @param {string[]} [denyExecute]
    */
   constructor (
     {
@@ -47,8 +53,10 @@ class Function extends AbstractSchemaObject {
       parallelSafety = 'unsafe',
       parent = undefined,
       code = '',
-      args = '',
+      args = {},
       isLeakProof = false,
+      allowExecute = [],
+      denyExecute = [],
     }
   ) {
     super(name, parent)
@@ -61,6 +69,8 @@ class Function extends AbstractSchemaObject {
     this.parallelSafety = parallelSafety
     this.code = code
     this.args = args
+    this.allowExecute = allowExecute
+    this.denyExecute = denyExecute
   }
 
   /**
@@ -86,6 +96,8 @@ class Function extends AbstractSchemaObject {
       parallelSafety: !!cfg.parallel_safety,
       args: cfg.arguments,
       isLeakProof: cfg.leakproof,
+      allowExecute: cfg.allow_execute,
+      denyExecute: cfg.deny_execute,
     }))
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
@@ -98,22 +110,134 @@ class Function extends AbstractSchemaObject {
     return `PARALLEL ${this.parallelSafety.toUpperCase()}`
   }
 
-  getCreateSql () {
-    const type = this.returns ? 'FUNCTION' : 'PROCEDURE'
+  /**
+   * Returns function type (PROCEDURE or FUNCTION) to use in SQL
+   * @returns {string}
+   */
+  getFunctionType () {
+    return this.returns ? 'FUNCTION' : 'PROCEDURE'
+  }
+
+  /**
+   * Returns SQL with GRANT/REVOKE statements
+   * @returns {string}
+   */
+  getGrants () {
+    const result = []
+    for (let role of this.allowExecute) {
+      if (role.toLowerCase() !== 'public') {
+        role = `"${role}"`
+      }
+      result.push(
+        `GRANT EXECUTE ON ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getArgTypesList()}) TO ${role};`
+      )
+    }
+    for (let role of this.denyExecute) {
+      if (role.toLowerCase() !== 'public') {
+        role = `"${role}"`
+      }
+      result.push(
+        `REVOKE ALL ON ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getArgTypesList()}) FROM ${role};`
+      )
+    }
+    return result.join("\n");
+  }
+
+  /**
+   * Returns raw string to be used as the list of function arguments in the function definition SQL
+   * @returns {string}
+   */
+  getFunctionArgs () {
+    const result = []
+    for (const argName of Object.keys(this.args)) {
+      result.push(`"${argName}" ${this.getArgType(this.args[argName])}`)
+    }
+    return result.join(', ')
+  }
+
+  /**
+   * Returns raw string with the list of argument types to be used in GRANT/REVOKE/DROP SQL statements
+   * @returns {string}
+   */
+  getArgTypesList () {
+    const result = []
+    for (const argName of Object.keys(this.args)) {
+      result.push(this.getArgType(this.args[argName]))
+    }
+    return result.join(', ')
+  }
+
+  /**
+   * Returns raw argument type string for SQL
+   * @param definition
+   * @returns {string}
+   */
+  getArgType (definition) {
+    if (isString(definition)) {
+      return definition
+    } else if (isObject(definition)) {
+      return definition.schema ? `"${definition.schema}".${definition.type}` : definition.type
+    }
+    throw new Error(`Unknown argument type definition format: ${JSON.stringify(definition)}`)
+  }
+
+  /**
+   * Returns full function create SQL
+   * @returns {string}
+   */
+  getCreate () {
     const returns = this.returns ? `RETURNS ${this.returns}` : ''
     const cost = this.cost ? `COST ${this.cost}` : ''
     const leakProof = this.isLeakProof ? 'LEAKPROOF' : 'NOT LEAKPROOF'
     const securityDefiner = this.isSecurityDefiner ? 'SECURITY DEFINER' : ''
     return (
-`CREATE ${type} ${this.getParentedName(true)}(${this.args})
+`CREATE ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getFunctionArgs()})
   ${returns}
   LANGUAGE '${this.language}'
   ${cost} ${this.getStabilitySql()} ${leakProof} ${securityDefiner}
 AS $BODY$
 ${this.code}
 $BODY$;
+${this.getGrants()}
 `
     )
+  }
+
+  /**
+   * Returns function DROP statement
+   * @returns {string}
+   */
+  getDrop () {
+    return `DROP ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getArgTypesList()});`;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getCreateSql (withParent, changedPropPath) {
+    if (changedPropPath) {
+      return this.getDrop() + this.getCreate()
+    } else {
+      return this.getCreate()
+    }
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getDropSql (withParent, changedPropPath) {
+    if (changedPropPath) {
+      return this.getDrop() + this.getCreate()
+    } else {
+      return this.getDrop();
+    }
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getAlterSql (compared, changedPropPath) {
+    return this.getDrop() + this.getCreate()
   }
 }
 
