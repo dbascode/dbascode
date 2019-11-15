@@ -154,7 +154,7 @@ function loadChanges(prevState, curState) {
 function getMigrationSql (changes, prevTree, curTree) {
   let sqlDump = curTree.getChangesSql(prevTree, changes)
   if (changes.hasChanges()) {
-    if (sqlDump.length === 0) {
+    if (sqlDump.trim().length === 0) {
       throw new Error('Changes in state detected, but SQL dump is empty.')
     }
   }

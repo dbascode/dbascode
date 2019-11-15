@@ -39,6 +39,8 @@ class Schema extends AbstractDbObject {
    * @param {Object.<string, Function>} [functions]
    * @param {Object.<string, Type>} [types]
    * @param {DataBase} [parent]
+   * @param {object} [grant]
+   * @param {object} [revoke]
    */
   constructor (
     {
@@ -47,9 +49,11 @@ class Schema extends AbstractDbObject {
       functions = {},
       types = {},
       parent = undefined,
+      grant = {},
+      revoke = {},
     }
   ) {
-    super(name, parent)
+    super(name, parent, false, grant, revoke)
     this.types = types
     this.tables = tables
     this.functions = functions
@@ -69,6 +73,8 @@ class Schema extends AbstractDbObject {
     const result = new Schema({
       name,
       parent,
+      grant: cfg.grant,
+      revoke: cfg.revoke,
     })
     for (const name of Object.keys(cfg.types || {})) {
       Type.createFromCfg(name, cfg.types[name], result);
@@ -99,12 +105,25 @@ class Schema extends AbstractDbObject {
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
-  getCreateSql () {
-    return `CREATE SCHEMA ${this.getQuotedName()};\n`
+  /**
+   * @inheritDoc
+   */
+  getCreateSql (withParent) {
+    return `CREATE SCHEMA ${this.getQuotedName()};`
   }
 
-  getDropSql () {
-    return `DROP SCHEMA ${this.getQuotedName()} CASCADE;\n`
+  /**
+   * @inheritDoc
+   */
+  getDropSql (withParent) {
+    return `DROP SCHEMA ${this.getQuotedName()} CASCADE;`
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getObjectIdentifier () {
+    return this.getQuotedName()
   }
 
   /**

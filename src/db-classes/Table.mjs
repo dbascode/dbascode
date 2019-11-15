@@ -57,6 +57,8 @@ class Table extends AbstractSchemaObject {
    * @param {boolean} skipIndexes
    * @param {boolean} skipTriggers
    * @param {boolean} skipRLS
+   * @param {object} [grant]
+   * @param {object} [revoke]
    */
   constructor (
     {
@@ -75,8 +77,10 @@ class Table extends AbstractSchemaObject {
       skipTriggers = false,
       skipIndexes = false,
       skipRLS = false,
+      grant = {},
+      revoke = {},
     }) {
-    super(name, parent)
+    super(name, parent, false, grant, revoke)
     this.columns = columns
     this.comment = comment
     this.uniqueKeys = uniqueKeys
@@ -125,6 +129,8 @@ class Table extends AbstractSchemaObject {
       skipRLS: !!cfg.skip_rls,
       rowLevelSecurity,
       uniqueKeys,
+      grant: cfg.grant,
+      revoke: cfg.revoke,
     }))
     for (const name of Object.keys(cfg.columns || {})) {
       const column = Column.createFromCfg(name, cfg.columns[name], result)
@@ -234,7 +240,6 @@ class Table extends AbstractSchemaObject {
       return super.getChildrenForSql(prop)
     }
     switch (prop) {
-      // case 'columns': return filterInheritedSet(this.columns)
       case 'triggers': return this.skipTriggers ? {} : this.triggers
       case 'indexes': return this.skipIndexes ? [] : this.indexes
       default: return super.getChildrenForSql(prop)
@@ -248,16 +253,7 @@ class Table extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getCreateSql (withParent, changedPropPath) {
-    if (changedPropPath) {
-      const prop = parseArrayProp(changedPropPath)
-      switch (prop.name) {
-        case 'uniqueKeys':
-          return `ALTER TABLE ${this.getParentedName(true)} ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`
-        default:
-          throw new Error(`Create SQL for property ${changedPropPath} is not implemented`)
-      }
-    }
+  getCreateSql (withParent) {
     let result = `CREATE TABLE ${this.getParentedName(true)} (\n`
     const tableDef = []
     const foreignKeys = []
@@ -320,57 +316,28 @@ class Table extends AbstractSchemaObject {
   }
 
   /**
-   * @inheritDoc
-   */
-  getDropSql (withParent, changedPropPath) {
-    if (changedPropPath) {
-      const prop = parseArrayProp(changedPropPath)
-      switch (prop.name) {
-        case 'uniqueKeys':
-          return `ALTER TABLE ${this.getQuotedName()} DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)};";`
-        default:
-          throw new Error(`Alter SQL for property ${changedPropPath} is not implemented`)
-      }
-    }
-    return `DROP TABLE "${this.name}";\n`
-  }
-
-  /**
    * Returns SQL for object update
    * @protected
-   * @param {Table} compared - previous object
-   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
+   * @param {Table} compared
+   * @param {object} changes - dot-separated paths to the changed properties with ald and new values (empty if the whole object changed)
    * @returns {string}
    */
-  getAlterSql (compared, changedPropPath) {
-    if (changedPropPath) {
-      const prop = parseArrayProp(changedPropPath)
+  getAlterSql (compared, changes) {
+    const result = []
+    for (let prop of Object.keys(changes)) {
+      prop = parseArrayProp(prop)
       switch (prop.name) {
         case 'uniqueKeys':
-          return `ALTER TABLE ${this.getQuotedName()} DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)};";
-                    ALTER TABLE ${this.getQuotedName()} ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`
-        default:
-          throw new Error(`Alter SQL for property ${changedPropPath} is not implemented`)
+          if (changes.old) {
+            result.push(`ALTER TABLE ${this.getQuotedName()} DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)}";`)
+          }
+          if (changes.cur) {
+            result.push(`ALTER TABLE ${this.getQuotedName()} ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`)
+          }
       }
     }
-    throw new Error('Alter SQL is not implemented');
+    return result.join("\n")
   }
-}
-
-function filterInheritedSet(collection) {
-  const result = {}
-  Object.values(collection)
-    .filter(item => !item.isInherited)
-    .forEach(item => result[item.name] = item)
-  return result
-}
-
-function filterInheritedAry(collection) {
-  const result = []
-  collection
-    .filter(item => !item.isInherited)
-    .forEach(item => result.push(item))
-  return result
 }
 
 export default Table

@@ -11,6 +11,9 @@ import isObject from 'lodash-es/isObject'
 import ChangesContext from './ChangesContext'
 import reverse from 'lodash-es/reverse'
 import { parseArrayProp } from './utils'
+import isEmpty from 'lodash-es/isEmpty'
+import difference from 'lodash-es/difference'
+import { objectDifferenceKeys, objectIntersectionKeys, replaceAll } from '../utils'
 
 /**
  * Base class for all DB objects
@@ -37,6 +40,16 @@ class AbstractDbObject {
    * @type {string[]}
    */
   _childrenProps = []
+  /**
+   * Grant permissions config
+   * @type {object}
+   */
+  grant = {}
+  /**
+   * Revoke permissions config
+   * @type {object}
+   */
+  revoke = {}
 
 
   /**
@@ -44,14 +57,20 @@ class AbstractDbObject {
    * @param {String} name
    * @param {AbstractDbObject} [parent]
    * @param {boolean} [isSimpleChild]
+   * @param {object} grant
+   * @param {object} revoke
    */
   constructor (
     name,
     parent,
-    isSimpleChild
+    isSimpleChild,
+    grant,
+    revoke,
   ) {
     this.name = name
     this._parent = parent
+    this.grant = grant
+    this.revoke = revoke
     if (parent) {
       parent.addChild(this, isSimpleChild)
     }
@@ -130,17 +149,14 @@ class AbstractDbObject {
    * @param {ChangesContext} changes
    */
   getChangesSql (previous, changes) {
-    let result = []
-    const changed = {}
+    const changedObjects = {}
     for (const [path, old, cur] of changes.changes) {
-      const curUndefined = cur === undefined
-      const oldUndefined = old === undefined
       let objCur = this
       let objOld = previous
       let lastDbObjCur = objCur
       let lastDbObjOld = objOld
-      let lastObjPath = []
-      let pathFromLastObj = []
+      let objectPathAry = []
+      let propertyPathAry = []
       for (const name of path ? path.split('.') : []) {
         const prop = parseArrayProp(name)
         if (prop.index !== null) {
@@ -153,65 +169,148 @@ class AbstractDbObject {
         if (objCur instanceof AbstractDbObject || objOld instanceof AbstractDbObject) {
           lastDbObjCur = objCur
           lastDbObjOld = objOld
-          lastObjPath = [...lastObjPath, ...pathFromLastObj, name]
-          pathFromLastObj = []
+          objectPathAry = [...objectPathAry, ...propertyPathAry, name]
+          propertyPathAry = []
         } else {
-          pathFromLastObj.push(name)
+          propertyPathAry.push(name)
         }
       }
-      const lastObjPathStr = lastObjPath.join('.')
-      if (changed[lastObjPathStr]) {
-        continue
+      const objectPath = objectPathAry.join('.')
+      const propertyPath = propertyPathAry.join('.')
+
+      if (!changedObjects[objectPath]) {
+        changedObjects[objectPath] = {
+          old: lastDbObjOld,
+          cur: lastDbObjCur,
+          changedProps: {},
+        }
       }
-      changed[lastObjPathStr] = 1
-      const changedPropertyPath = pathFromLastObj.join('.')
+      const changedValue = {
+        old,
+        cur,
+      }
+
+      const curUndefined = lastDbObjCur === undefined
+      const oldUndefined = lastDbObjOld === undefined
+
       if (!curUndefined && !oldUndefined) {
-        result.push(lastDbObjCur.getAlterSql(lastDbObjOld, changedPropertyPath))
+        changedObjects[objectPath].changedProps[propertyPath] = changedValue
       } else if (!curUndefined && oldUndefined) {
-        result = [...result, ...lastDbObjCur.getCreateOrDropSql('create', changedPropertyPath)]
+        changedObjects[objectPath].create = true
       } else if (curUndefined && !oldUndefined) {
-        result = [...result, ...lastDbObjOld.getCreateOrDropSql('drop', changedPropertyPath)]
+        changedObjects[objectPath].drop = true
       }
     }
-    return result.join('')
+
+    let result = []
+    for (const path of Object.keys(changedObjects)) {
+      const changedObject = changedObjects[path]
+
+      if (!isEmpty(changedObject.changedProps)) {
+        result.push(changedObject.cur.getAlterSql(changedObject.old, changedObject.changedProps))
+      } else if (changedObject.create) {
+        result.push(changedObject.cur.getCreateOrDropSql('create'))
+      } else if (changedObject.drop) {
+        result.push(changedObject.old.getCreateOrDropSql('drop'))
+      }
+      result.push(this.getPermissionsChangesSql(changedObject))
+    }
+    return result.join("\n")
+  }
+
+  /**
+   * Returns SQL for permissions update
+   * @param {object} changedObject
+   * @returns {string}
+   */
+  getPermissionsChangesSql (changedObject) {
+    const {old, cur} = changedObject
+    let changePermissions = changedObject.create
+    if (!changePermissions) {
+      for (const prop of Object.keys(changedObject.changedProps)) {
+        if (prop.substr(0, 5) === 'grant' || prop.substr(0, 6) === 'revoke') {
+          changePermissions = true
+          break
+        }
+      }
+    }
+    if (!changePermissions) {
+      return ''
+    }
+    const result = []
+    const curGrant = cur ? cur.grant : {}, curRevoke = cur ? cur.revoke : {}
+    const oldGrant = old ? old.grant : {}, oldRevoke = old ? old.revoke : {}
+    const addGrantOps = objectDifferenceKeys(curGrant, oldGrant)
+    const removeGrantOps = objectDifferenceKeys(oldGrant, curGrant)
+    const addRevokeOps = objectDifferenceKeys(curRevoke, oldRevoke)
+    const removeRevokeOps = objectDifferenceKeys(oldRevoke, curRevoke)
+    const sameGrantOps = objectIntersectionKeys(curGrant, oldGrant)
+    const sameRevokeOps = objectIntersectionKeys(curRevoke, oldRevoke)
+
+    for (const op of addGrantOps) {
+      for (const role of curGrant[op]) {
+        result.push(cur.getPermissionSql('GRANT', op, role))
+      }
+    }
+    for (const op of removeGrantOps) {
+      for (const role of oldGrant[op]) {
+        result.push(old.getPermissionSql('REVOKE', op, role))
+      }
+    }
+    for (const op of addRevokeOps) {
+      for (const role of curRevoke[op]) {
+        result.push(cur.getPermissionSql('REVOKE', op, role))
+      }
+    }
+    for (const op of sameGrantOps) {
+      const addGrantRoles = difference(curGrant[op], oldGrant[op])
+      const removeGrantRoles = difference(oldGrant[op], curGrant[op])
+      for (const role of addGrantRoles) {
+        result.push(cur.getPermissionSql('GRANT', op, role))
+      }
+      for (const role of removeGrantRoles) {
+        result.push(cur.getPermissionSql('REVOKE', op, role))
+      }
+    }
+    for (const op of sameRevokeOps) {
+      const addRevokeRoles = difference(curRevoke[op], oldRevoke[op])
+      const removeRevokeRoles = difference(oldRevoke[op], curRevoke[op])
+      for (const role of addRevokeRoles) {
+        result.push(cur.getPermissionSql('REVOKE', op, role))
+      }
+    }
+    return result.join("\n")
   }
 
   /**
    * Returns CREATE or DROP SQL statement for the object
    * @param {string} what `create` or `drop` value to choose operation required
-   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
    * @param {boolean} withParent - If this object is creating at the same time as it's parent
    * @returns {string}
    */
-  getCreateOrDropSql(what, changedPropPath, withParent = false) {
-    let changes = []
-    if (what === 'create') {
-      changes = [this.getCreateSql(withParent, changedPropPath)]
-      if (!changedPropPath) {
-        // If the whole object was changed then get changes for its children.
-        // If only a specific property changed then no need to iterate children - they are already
-        // iterated during changes calculation.
-        changes = changes.concat(this.getChildrenCreateOrDropSql(what, true))
-      }
-    } else if (what === 'drop') {
-      if (!changedPropPath) {
-        changes = this.getChildrenCreateOrDropSql(what, true)
-      }
-      changes.push(this.getDropSql(withParent, changedPropPath))
+  getCreateOrDropSql(what, withParent = false) {
+    let result = []
+    const creating = what === 'create'
+    if (creating) {
+      result.push(this.getCreateSql(withParent))
+      result.push(this.getChildrenCreateOrDropSql(what, true))
+    } else {
+      result.push(this.getChildrenCreateOrDropSql(what, true))
+      result.push(this.getDropSql(withParent))
     }
-    return changes.join('')
+    return result.join('')
   }
 
   /**
    * Returns CREATE or DROP SQL statement for the object children
    * @param {string} what `create` or `drop` value to choose operation required
    * @param {boolean} withParent - If this object is creating at the same time as it's parent
-   * @returns {string[]}
+   * @returns {string}
    */
   getChildrenCreateOrDropSql (what, withParent) {
     const result = []
-    const dropping = what === 'drop'
-    for (const prop of dropping ? reverse(this._childrenProps) : this._childrenProps) {
+    const creating = what === 'create'
+    for (const prop of creating ? this._childrenProps : reverse(this._childrenProps)) {
       const collection = this.getChildrenForSql(prop, what, withParent)
       if (collection === undefined) {
         continue
@@ -221,11 +320,11 @@ class AbstractDbObject {
         : (collection instanceof AbstractDbObject
           ? [collection]
           : Object.values(collection))
-      for (const child of dropping ? reverse(loop) : loop) {
-        result.push(child.getCreateOrDropSql(what, '', withParent))
+      for (const child of creating ? loop : reverse(loop)) {
+        result.push(child.getCreateOrDropSql(what, withParent))
       }
     }
-    return result
+    return result.join("\n")
   }
 
   getChildrenForSql (prop, what, withParent) {
@@ -235,33 +334,86 @@ class AbstractDbObject {
   /**
    * Returns SQL for object creation
    * @protected
-   * @param {boolean} withParent
-   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
+   * @param {boolean} withParent - is object creating within it's parent
    * @returns {string}
    */
-  getCreateSql (withParent, changedPropPath) {
+  getCreateSql (withParent) {
     return ''
   }
 
   /**
    * Returns SQL for object deletion
    * @protected
-   * @param {boolean} withParent
-   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
+   * @param {boolean} withParent - is object creating within it's parent
    * @returns {string}
    */
-  getDropSql (withParent, changedPropPath) {
-    return ''
+  getDropSql (withParent) {
+    return `DROP ${this.getObjectClass()} ${this.getObjectIdentifier()};`
+  }
+
+  /**
+   * Returns GRANT/REVOKE SQL statements
+   * @returns {string}
+   */
+  getPermissionsSql (list, type) {
+    const result = []
+    const fromTo = (type === 'GRANT') ? 'TO' : 'FROM'
+    for (let operation of list) {
+      const roles = this.grant[operation]
+      operation = operation.toUpperCase()
+      for (let role of roles) {
+        if (role.toLowerCase() !== 'public') {
+          role = `"${role}"`
+        }
+        result.push(
+          `${type} ${operation} ON ${this.getObjectClass()} ${this.getObjectIdentifier()} ${fromTo} ${role};`
+        )
+      }
+    }
+    return result.join("\n")
+  }
+
+  /**
+   * Returns GRANT/REVOKE SQL statement
+   * @param type
+   * @param operation
+   * @param role
+   * @returns {string}
+   */
+  getPermissionSql (type, operation, role) {
+    operation = operation.toUpperCase()
+    type = type.toUpperCase()
+    if (role.toLowerCase() !== 'public') {
+      role = `"${role}"`
+    }
+    const fromTo = (type === 'GRANT') ? 'TO' : 'FROM'
+    return `${type} ${operation} ON ${this.getObjectClass()} ${this.getObjectIdentifier()} ${fromTo} ${role};`
+  }
+
+  /**
+   * Returns object class name for use in SQL
+   * @returns {string}
+   */
+  getObjectClass () {
+    return this.constructor.name.toUpperCase()
+  }
+
+  /**
+   * Returns object identifier for use in SQL
+   * @returns {string}
+   */
+  getObjectIdentifier () {
+    return this.getParentedName(true)
   }
 
   /**
    * Returns SQL for object update
    * @protected
    * @param {AbstractDbObject} compared
-   * @param {string} changedPropPath - dot-separated path to the changed property (if not the whole object changed)
+   * @param {object} changes - dot-separated paths to the changed properties with ald and new values (empty if the whole object changed)
    * @returns {string}
    */
-  getAlterSql (compared, changedPropPath) {
+  getAlterSql (compared, changes) {
     return ''
   }
 
@@ -359,7 +511,7 @@ class AbstractDbObject {
           throw new Error(`Unknown calculator name ${calcName}`)
         }
         const calcResult = isFunction(calculator) ? calculator(match[2]) : calculator
-        result = result.replace(match[0], calcResult)
+        result = replaceAll(result, match[0], calcResult)
       }
     }
     return result

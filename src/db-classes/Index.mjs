@@ -51,8 +51,18 @@ class Index extends AbstractSchemaObject {
     return result.getDb().pluginOnObjectConfigured(result, colNames)
   }
 
-  getCreateSql () {
-    return `CREATE INDEX "${this._parent.name}_${this.colNames.join('_')}_idx" ON ${this._parent.getParentedName(true)}("${this.colNames.join('","')}");\n`
+  /**
+   * @inheritDoc
+   */
+  getObjectIdentifier () {
+    return `${this.getSchema().getQuotedName()}."${this._parent.name}_${this.colNames.join('_')}_idx"`
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getCreateSql (withParent) {
+    return `CREATE INDEX ${this.getObjectIdentifier()}" ON ${this._parent.getParentedName(true)}("${this.colNames.join('","')}");\n`
   }
 }
 

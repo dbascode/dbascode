@@ -8,6 +8,7 @@ import AbstractSchemaObject from './AbstractSchemaObject'
 import { prepareArgs } from './utils'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
+import isEmpty from 'lodash-es/isEmpty'
 
 /**
  * Function, Procedure, or Trigger Function object
@@ -22,8 +23,6 @@ class Function extends AbstractSchemaObject {
   code = ''
   args = {}
   isLeakProof = false
-  allowExecute = []
-  denyExecute = []
 
   /**
    *
@@ -38,9 +37,9 @@ class Function extends AbstractSchemaObject {
    * @param {Schema} [parent]
    * @param {string} code
    * @param {object} [args]
-   * @param {boolean} isLeakProof
-   * @param {string[]} [allowExecute]
-   * @param {string[]} [denyExecute]
+   * @param {boolean} [isLeakProof]
+   * @param {object} [grant]
+   * @param {object} [revoke]
    */
   constructor (
     {
@@ -55,11 +54,11 @@ class Function extends AbstractSchemaObject {
       code = '',
       args = {},
       isLeakProof = false,
-      allowExecute = [],
-      denyExecute = [],
+      grant = {},
+      revoke = {},
     }
   ) {
-    super(name, parent)
+    super(name, parent, false, grant, revoke)
     this.language = language
     this.returns = returns
     this.cost = cost
@@ -69,8 +68,6 @@ class Function extends AbstractSchemaObject {
     this.parallelSafety = parallelSafety
     this.code = code
     this.args = args
-    this.allowExecute = allowExecute
-    this.denyExecute = denyExecute
   }
 
   /**
@@ -96,8 +93,8 @@ class Function extends AbstractSchemaObject {
       parallelSafety: !!cfg.parallel_safety,
       args: cfg.arguments,
       isLeakProof: cfg.leakproof,
-      allowExecute: cfg.allow_execute,
-      denyExecute: cfg.deny_execute,
+      grant: cfg.grant,
+      revoke: cfg.revoke,
     }))
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
@@ -111,36 +108,17 @@ class Function extends AbstractSchemaObject {
   }
 
   /**
-   * Returns function type (PROCEDURE or FUNCTION) to use in SQL
-   * @returns {string}
+   * @inheritDoc
    */
-  getFunctionType () {
+  getObjectClass () {
     return this.returns ? 'FUNCTION' : 'PROCEDURE'
   }
 
   /**
-   * Returns SQL with GRANT/REVOKE statements
-   * @returns {string}
+   * @inheritDoc
    */
-  getGrants () {
-    const result = []
-    for (let role of this.allowExecute) {
-      if (role.toLowerCase() !== 'public') {
-        role = `"${role}"`
-      }
-      result.push(
-        `GRANT EXECUTE ON ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getArgTypesList()}) TO ${role};`
-      )
-    }
-    for (let role of this.denyExecute) {
-      if (role.toLowerCase() !== 'public') {
-        role = `"${role}"`
-      }
-      result.push(
-        `REVOKE ALL ON ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getArgTypesList()}) FROM ${role};`
-      )
-    }
-    return result.join("\n");
+  getObjectIdentifier () {
+    return `${super.getObjectIdentifier()}(${this.getArgTypesList()})`
   }
 
   /**
@@ -185,59 +163,35 @@ class Function extends AbstractSchemaObject {
    * Returns full function create SQL
    * @returns {string}
    */
-  getCreate () {
+  getReCreateSql () {
     const returns = this.returns ? `RETURNS ${this.returns}` : ''
     const cost = this.cost ? `COST ${this.cost}` : ''
     const leakProof = this.isLeakProof ? 'LEAKPROOF' : 'NOT LEAKPROOF'
     const securityDefiner = this.isSecurityDefiner ? 'SECURITY DEFINER' : ''
     return (
-`CREATE ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getFunctionArgs()})
+`CREATE OR REPLACE ${this.getObjectClass()} ${this.getParentedName(true)}(${this.getFunctionArgs()})
   ${returns}
   LANGUAGE '${this.language}'
   ${cost} ${this.getStabilitySql()} ${leakProof} ${securityDefiner}
 AS $BODY$
 ${this.code}
 $BODY$;
-${this.getGrants()}
 `
     )
   }
 
   /**
-   * Returns function DROP statement
-   * @returns {string}
+   * @inheritDoc
    */
-  getDrop () {
-    return `DROP ${this.getFunctionType()} ${this.getParentedName(true)}(${this.getArgTypesList()});`;
+  getCreateSql (withParent) {
+    return this.getReCreateSql()
   }
 
   /**
    * @inheritDoc
    */
-  getCreateSql (withParent, changedPropPath) {
-    if (changedPropPath) {
-      return this.getDrop() + this.getCreate()
-    } else {
-      return this.getCreate()
-    }
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getDropSql (withParent, changedPropPath) {
-    if (changedPropPath) {
-      return this.getDrop() + this.getCreate()
-    } else {
-      return this.getDrop();
-    }
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getAlterSql (compared, changedPropPath) {
-    return this.getDrop() + this.getCreate()
+  getAlterSql (compared, changes) {
+    return this.getReCreateSql()
   }
 }
 

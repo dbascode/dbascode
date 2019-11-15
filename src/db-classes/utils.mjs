@@ -102,5 +102,4 @@ export function parseArrayProp (name) {
       index: null,
     }
   }
-
 }
