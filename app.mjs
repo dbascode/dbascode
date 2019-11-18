@@ -280,7 +280,7 @@ switch (command) {
       }
     }
     console.log('Executing SQL migration...')
-    executeSqlDump(plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState, version))
+    executeSqlDump(plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState, plan.migration, version))
     break
   }
 

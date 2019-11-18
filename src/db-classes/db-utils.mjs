@@ -65,13 +65,11 @@ export function escapeString(s) {
  * Returns SQL query to store the state in the system state table
  * @param {number} id - id of the state
  * @param {Object} state - current state object
+ * @param {string} migration - SQL queries executed in this migration
  * @param {number} version - current pgascode version
  * @returns {string}
  */
-export function getStateSaveSql (id, state, version) {
-  const migration = state.migration
-  state = {...state}
-  delete state.migration
+export function getStateSaveSql (id, state, migration, version) {
   return `\nINSERT INTO "pgascode"."state" ("id", "state", "pgascode_version", "migration") 
   VALUES (
   ${id}, 
