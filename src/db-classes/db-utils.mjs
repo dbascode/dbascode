@@ -114,5 +114,5 @@ export function parseArrayProp (name) {
  * @param {string[]} sql
  */
 export function joinSql(sql) {
-  return sql.filter(i => i).join("\n")
+  return sql.filter(Boolean).join("\n")
 }
