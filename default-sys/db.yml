@@ -17,7 +17,7 @@ schemas:
           state:
             type: text
           migration:
-            type: string
+            type: text
             allow_null: true
           pgascode_version:
             type: int
