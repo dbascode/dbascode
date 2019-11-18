@@ -32,7 +32,15 @@ class ForeignKey extends AbstractSchemaObject {
       onDelete = 'restrict',
       parent = undefined,
     }) {
-    super('', parent)
+    super({
+      name: `${colName}_fkey`,
+      parent,
+      isSimpleChild: true,
+      droppedByParent: true,
+      createdByParent: true,
+      alterWithParent: true,
+      fullAlter: true,
+    })
     this.colName = colName
     this.refTableName = refTableName
     this.refColName = refColName
@@ -61,12 +69,50 @@ class ForeignKey extends AbstractSchemaObject {
     return result.getDb().pluginOnObjectConfigured(result, definition)
   }
 
-  getCreateSql () {
+  /**
+   * Returns table
+   * @return {Table}
+   */
+  getTable () {
+    return this.getParent().getParent()
   }
 
-  getInlineSql () {
-    return `CONSTRAINT "${this.colName}_fkey" FOREIGN KEY ("${this.colName}")
-      REFERENCES ${this.getSchema().getQuotedName()}."${this.refTableName}" ("${this.refColName}") MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT`
+  /**
+   * Returns ON UPDATE SQL
+   * @return {string}
+   */
+  getOnUpdate () {
+    return this.onUpdate.toUpperCase()
+  }
+
+  /**
+   * Returns ON DELETE SQL
+   */
+  getOnDelete () {
+    return this.onDelete.toUpperCase()
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getDefinition () {
+    return `FOREIGN KEY ("${this.colName}")
+      REFERENCES ${this.getSchema().getQuotedName()}."${this.refTableName}" ("${this.refColName}") 
+      MATCH SIMPLE ON UPDATE ${this.getOnUpdate()} ON DELETE ${this.getOnDelete()}`;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getObjectClass () {
+    return 'CONSTRAINT'
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getParentRelation () {
+    return 'ON'
   }
 }
 

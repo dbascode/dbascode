@@ -15,10 +15,22 @@ class AbstractSchemaObject extends AbstractDbObject {
     let parent = this
     do {
       parent = parent._parent
-    } while (parent && parent.constructor.name !== 'Schema')
+    } while (parent && parent.getClassName() !== 'Schema')
     return parent
   }
 
+  /**
+   * @inheritDoc
+   */
+  getObjectIdentifier (operation, isParentContext) {
+    if (!isParentContext) {
+      const relType = this.getParentRelation()
+      if (relType === '') {
+        return this.getParentedName(true)
+      }
+    }
+    return super.getObjectIdentifier(operation, isParentContext)
+  }
 }
 
 export default AbstractSchemaObject

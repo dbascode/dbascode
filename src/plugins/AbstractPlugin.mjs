@@ -24,6 +24,15 @@ class AbstractPlugin {
    */
   onObjectCreated(instance, config) {
   }
+
+  /**
+   * Execute plugin on calculating changes
+   * @param {AbstractDbObject} old
+   * @param {AbstractDbObject} cur
+   * @param {ChangesContext} context
+   */
+  onCompareObjects (old, cur, context) {
+  }
 }
 
 export default AbstractPlugin

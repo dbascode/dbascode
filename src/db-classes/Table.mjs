@@ -11,10 +11,9 @@ import Column from './Column'
 import Rows from './Rows'
 import Trigger from './Trigger'
 import Index from './Index'
+import PrimaryKey from './PrimaryKey'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import isString from 'lodash-es/isString'
 import {
-  escapeComment,
   parseArrayProp,
   prepareArgs,
 } from './utils'
@@ -24,17 +23,19 @@ import {
  */
 class Table extends AbstractSchemaObject {
   columns = []
-  comment
   uniqueKeys = []
   indexes = []
   triggers = []
   defaultAcl = []
   rows = undefined
   autoIncSeqRequired = false
-  primaryKey = []
+  /**
+   * @type {PrimaryKey}
+   */
+  primaryKey = undefined
   rowLevelSecurity = {}
   inherits = undefined
-  _childrenProps = ['columns', 'indexes', 'triggers', 'rows']
+  _childrenProps = ['columns', 'indexes', 'triggers', 'rows', 'primaryKey']
   skipTriggers = false
   skipIndexes = false
   skipRLS = false
@@ -51,7 +52,7 @@ class Table extends AbstractSchemaObject {
    * @param {Rows} [rows]
    * @param {Table} [inherits]
    * @param {Schema} [parent]
-   * @param {string[]} [primaryKey]
+   * @param {PrimaryKey} [primaryKey]
    * @param {ForeignKey[]} [foreignKeys]
    * @param {Object.<string, string>} [rowLevelSecurity]
    * @param {boolean} skipIndexes
@@ -72,7 +73,7 @@ class Table extends AbstractSchemaObject {
       rows = undefined,
       inherits = undefined,
       parent = undefined,
-      primaryKey = [],
+      primaryKey = undefined,
       rowLevelSecurity = {},
       skipTriggers = false,
       skipIndexes = false,
@@ -80,9 +81,14 @@ class Table extends AbstractSchemaObject {
       grant = {},
       revoke = {},
     }) {
-    super(name, parent, false, grant, revoke)
+    super({
+      name,
+      parent,
+      grant,
+      revoke,
+      comment,
+    })
     this.columns = columns
-    this.comment = comment
     this.uniqueKeys = uniqueKeys
     this.indexes = indexes
     this.triggers = triggers
@@ -122,7 +128,6 @@ class Table extends AbstractSchemaObject {
       parent,
       inherits: inherits,
       comment: cfg.comment,
-      primaryKey: isString(cfg.primary_key) ? [cfg.primary_key] : (cfg.primary_key || []),
       defaultAcl: cfg.default_acl,
       skipIndexes: !!cfg.skip_indexes,
       skipTriggers: !!cfg.skip_triggers,
@@ -136,7 +141,13 @@ class Table extends AbstractSchemaObject {
       const column = Column.createFromCfg(name, cfg.columns[name], result)
       if (column.isAutoIncrement) {
         result.autoIncSeqRequired = true
-        result.primaryKey = [column.name]
+        result.primaryKey = result.getDb().pluginOnObjectConfigured(
+          new PrimaryKey({
+            colNames: [column.name],
+            parent: result,
+          }),
+          null
+        )
       }
     }
     if (inherits) {
@@ -166,13 +177,23 @@ class Table extends AbstractSchemaObject {
     if (inherits) {
       for (const parentIndex of inherits.indexes) {
         new Index({
-          colNames: {
-            ...parentIndex,
-            parent: result,
-            isInherited: true,
-          }
+          ...parentIndex,
+          parent: result,
+          isInherited: true,
         })
       }
+    }
+
+    if (cfg.primary_key) {
+      PrimaryKey.createFromCfg(cfg.primary_key, result)
+    }
+    if (inherits && inherits.primaryKey && !result.primaryKey) {
+      new PrimaryKey({
+        colNames: inherits.primaryKey.colNames,
+        comment: inherits.primaryKey.comment,
+        parent: result,
+        isInherited: true,
+      })
     }
     Rows.createFromCfg(cfg.rows, result)
 
@@ -199,6 +220,27 @@ class Table extends AbstractSchemaObject {
       dependOnMap[cfg.inherit] = 1
     }
     if (cfg.default_acl) {
+      dependOnMap['default_acl'] = 1
+    }
+    return Object.keys(dependOnMap)
+  }
+
+  /**
+   * Returns list of table names which this table depends on
+   * @returns {string[]}
+   */
+  sgetDependencies() {
+    const dependOnMap = {}
+    for (const colName of Object.keys(this.columns)) {
+      const fk = this.columns[colName].foreignKey
+      if (fk) {
+        dependOnMap[fk.refTableName] = 1
+      }
+    }
+    if (this.inherits) {
+      dependOnMap[this.inherits.name] = 1
+    }
+    if (this.defaultAcl) {
       dependOnMap['default_acl'] = 1
     }
     return Object.keys(dependOnMap)
@@ -237,17 +279,13 @@ class Table extends AbstractSchemaObject {
 
   getChildrenForSql (prop, what, withParent) {
     if (what === 'drop' && withParent) {
-      return super.getChildrenForSql(prop)
+      return super.getChildrenForSql(prop, what, withParent)
     }
     switch (prop) {
       case 'triggers': return this.skipTriggers ? {} : this.triggers
       case 'indexes': return this.skipIndexes ? [] : this.indexes
       default: return super.getChildrenForSql(prop)
     }
-  }
-
-  getComment() {
-    return escapeComment(this.comment)
   }
 
   /**
@@ -263,7 +301,7 @@ class Table extends AbstractSchemaObject {
       if (column.isInherited) {
         continue
       }
-      tableDef.push(column.getColumnDefinition())
+      tableDef.push(column.getDefinition())
       if (column.isAutoIncrement) {
         autoIncSeqColumn = column
       }
@@ -271,8 +309,8 @@ class Table extends AbstractSchemaObject {
         foreignKeys.push(column.foreignKey)
       }
     }
-    if (this.primaryKey.length > 0) {
-      tableDef.push(`CONSTRAINT ${this.name}_pkey PRIMARY KEY ("${this.primaryKey.join('", "')}")`)
+    if (this.primaryKey) {
+      tableDef.push(`${this.primaryKey.getObjectClass()} ${this.primaryKey.getDefinition()}`)
     }
     if (this.uniqueKeys.length > 0) {
       for (const names of this.uniqueKeys) {
@@ -281,7 +319,7 @@ class Table extends AbstractSchemaObject {
     }
     if (foreignKeys.length > 0) {
       for (const key of foreignKeys) {
-        tableDef.push(key.getInlineSql())
+        tableDef.push(key.getDefinition())
       }
     }
 
@@ -291,10 +329,6 @@ class Table extends AbstractSchemaObject {
 
     if (this.autoIncSeqRequired) {
       result = `CREATE SEQUENCE ${autoIncSeqColumn.getAutoIncSeqName()} START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;\n${result}`
-    }
-
-    if (this.getComment()) {
-      result += `COMMENT ON TABLE ${this.getParentedName(true)} IS '${this.getComment()}';\n`
     }
 
     const rls = this.getRowLevelSecurity()
@@ -316,27 +350,24 @@ class Table extends AbstractSchemaObject {
   }
 
   /**
-   * Returns SQL for object update
-   * @protected
+   * @inheritDoc
    * @param {Table} compared
-   * @param {object} changes - dot-separated paths to the changed properties with ald and new values (empty if the whole object changed)
-   * @returns {string}
    */
-  getAlterSql (compared, changes) {
+  getAlterPropSql (compared, propName, oldValue, curValue) {
     const result = []
-    for (let prop of Object.keys(changes)) {
-      prop = parseArrayProp(prop)
-      switch (prop.name) {
-        case 'uniqueKeys':
-          if (changes.old) {
-            result.push(`ALTER TABLE ${this.getQuotedName()} DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)}";`)
-          }
-          if (changes.cur) {
-            result.push(`ALTER TABLE ${this.getQuotedName()} ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`)
-          }
-      }
+    const prop = parseArrayProp(propName)
+    const propPath = prop.name.split('.')
+    switch (propPath[0]) {
+      case 'uniqueKeys':
+        if (oldValue) {
+          result.push(`DROP CONSTRAINT "${compared.getUniqueKeyNameByIdx(prop.index)}";`)
+        }
+        if (curValue) {
+          result.push(`ADD ${this.getUniqueKeyDefinition(this.uniqueKeys[prop.index])};`)
+        }
+        break
     }
-    return result.join("\n")
+    return result
   }
 }
 

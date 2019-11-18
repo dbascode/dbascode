@@ -10,15 +10,23 @@ import isArray from 'lodash-es/isArray'
 import isObject from 'lodash-es/isObject'
 import ChangesContext from './ChangesContext'
 import reverse from 'lodash-es/reverse'
-import { parseArrayProp } from './utils'
+import {
+  escapeComment,
+  joinSql,
+  parseArrayProp,
+} from './utils'
 import isEmpty from 'lodash-es/isEmpty'
 import difference from 'lodash-es/difference'
-import { objectDifferenceKeys, objectIntersectionKeys, replaceAll } from '../utils'
+import {
+  objectDifferenceKeys,
+  objectIntersectionKeys,
+  replaceAll,
+} from '../utils'
 
 /**
  * Base class for all DB objects
  */
-class AbstractDbObject {
+export default class AbstractDbObject {
   /**
    * Object _parent
    * @type {AbstractDbObject}
@@ -36,7 +44,8 @@ class AbstractDbObject {
    */
   _calcCache = undefined
   /**
-   * Names of properties of the Object type that store collections of child objects
+   * Names of properties of the DbObject type that store collections of child objects.
+   * Children are created in the order of this array and dropped in the reverse order.
    * @type {string[]}
    */
   _childrenProps = []
@@ -50,30 +59,84 @@ class AbstractDbObject {
    * @type {object}
    */
   revoke = {}
+  /**
+   * Comment on the object
+   * @type {string}
+   */
+  comment = ''
+  /**
+   * Whether the object is automatically dropped by its parent without additional queries.
+   * Parent object must implement corresponding SQL by itself. This object still can be created
+   * separately altering its prent object.
+   * @type {boolean}
+   */
+  droppedByParent = false
+  /**
+   * Whether the object is automatically created by its parent without additional queries.
+   * Parent object must implement corresponding SQL by itself. This object still can be dropped
+   * separately altering its prent object.
+   * @type {boolean}
+   */
+  createdByParent = false
+  /**
+   * Whether parent object must be altered on altering this object.
+   * @type {boolean}
+   */
+  alterWithParent = false
+  /**
+   * Use the whole object definition on ALTER
+   * @type {boolean}
+   */
+  fullAlter = false
 
 
   /**
    * Constructor
-   * @param {String} name
+   * @param {String} [name]
    * @param {AbstractDbObject} [parent]
    * @param {boolean} [isSimpleChild]
-   * @param {object} grant
-   * @param {object} revoke
+   * @param {object} [grant]
+   * @param {object} [revoke]
+   * @param {string} [comment]
+   * @param {boolean} [droppedByParent]
+   * @param {boolean} [createdByParent]
+   * @param {boolean} [fullAlter]
+   * @param {boolean} [alterWithParent]
    */
   constructor (
-    name,
-    parent,
-    isSimpleChild,
-    grant,
-    revoke,
+    {
+      name = '',
+      parent,
+      isSimpleChild,
+      grant = {},
+      revoke = {},
+      comment = '',
+      droppedByParent = false,
+      createdByParent = false,
+      fullAlter = false,
+      alterWithParent = false,
+    }
   ) {
     this.name = name
     this._parent = parent
     this.grant = grant
     this.revoke = revoke
+    this.comment = comment
+    this.droppedByParent = droppedByParent
+    this.createdByParent = createdByParent
+    this.fullAlter = fullAlter
+    this.alterWithParent = alterWithParent
     if (parent) {
       parent.addChild(this, isSimpleChild)
     }
+  }
+
+  /**
+   * Returns class name of this object
+   * @return {string}
+   */
+  getClassName() {
+    return this.constructor.name
   }
 
   /**
@@ -82,7 +145,7 @@ class AbstractDbObject {
    * @returns {string}
    */
   getParentProp(isSimpleChild) {
-    let prop = this.constructor.name
+    let prop = this.getClassName()
     prop = prop[0].toLowerCase() + prop.substr(1)
     const lastChar = prop[prop.length - 1]
     if (!isSimpleChild) {
@@ -111,8 +174,13 @@ class AbstractDbObject {
     }
   }
 
+  /**
+   * Search for a property name where the specified child is stored
+   * @param child
+   * @returns {string}
+   */
   findChildProp (child) {
-    for (const prop in this._childrenProps) {
+    for (const prop of this._childrenProps) {
       const p = this[prop]
       if (p instanceof AbstractDbObject && p === child) {
         return prop
@@ -149,7 +217,22 @@ class AbstractDbObject {
    * @param {ChangesContext} changes
    */
   getChangesSql (previous, changes) {
-    const changedObjects = {}
+    const changedObjects = {}, permissionChangedObjects = {}, commentChangedObjects = {}
+    const addChange = (list, objPath, oldObj, curObj) => {
+      if (!list[objPath]) {
+        const changeObj = {
+          old: oldObj,
+          cur: curObj,
+          changedProps: {},
+        }
+        changeObj.creating = () => changeObj.create = true
+        changeObj.dropping = () => changeObj.drop = true
+        changeObj.changeProp = (path, old, cur) => changeObj.changedProps[path] = {old, cur}
+        list[objPath] = changeObj
+      }
+      return list[objPath]
+    }
+
     for (const [path, old, cur] of changes.changes) {
       let objCur = this
       let objOld = previous
@@ -178,27 +261,27 @@ class AbstractDbObject {
       const objectPath = objectPathAry.join('.')
       const propertyPath = propertyPathAry.join('.')
 
-      if (!changedObjects[objectPath]) {
-        changedObjects[objectPath] = {
-          old: lastDbObjOld,
-          cur: lastDbObjCur,
-          changedProps: {},
-        }
-      }
-      const changedValue = {
-        old,
-        cur,
-      }
+      const isPermissionChange = (propertyPathAry[0] === 'grant' || propertyPathAry[0] === 'revoke')
+      const isCommentChange = (propertyPathAry[0] === 'comment')
+      const curChange = (list) => addChange(list, objectPath, lastDbObjOld, lastDbObjCur)
 
       const curUndefined = lastDbObjCur === undefined
       const oldUndefined = lastDbObjOld === undefined
 
       if (!curUndefined && !oldUndefined) {
-        changedObjects[objectPath].changedProps[propertyPath] = changedValue
+        if (isPermissionChange) {
+          curChange(permissionChangedObjects).changeProp(propertyPath, old, cur)
+        } else if (isCommentChange) {
+          curChange(commentChangedObjects).changeProp(propertyPath, old, cur)
+        } else {
+          curChange(changedObjects).changeProp(propertyPath, old, cur)
+        }
       } else if (!curUndefined && oldUndefined) {
-        changedObjects[objectPath].create = true
+        curChange(changedObjects).creating()
+        curChange(permissionChangedObjects).creating()
+        curChange(commentChangedObjects).creating()
       } else if (curUndefined && !oldUndefined) {
-        changedObjects[objectPath].drop = true
+        curChange(changedObjects).dropping()
       }
     }
 
@@ -207,15 +290,44 @@ class AbstractDbObject {
       const changedObject = changedObjects[path]
 
       if (!isEmpty(changedObject.changedProps)) {
-        result.push(changedObject.cur.getAlterSql(changedObject.old, changedObject.changedProps))
+        if (changedObject.cur.fullAlter) {
+          result.push(changedObject.cur.getFullAlterSql())
+        } else {
+          result.push(changedObject.cur.getAlterSql(changedObject.old, changedObject.changedProps))
+        }
       } else if (changedObject.create) {
         result.push(changedObject.cur.getCreateOrDropSql('create'))
       } else if (changedObject.drop) {
         result.push(changedObject.old.getCreateOrDropSql('drop'))
       }
-      result.push(this.getPermissionsChangesSql(changedObject))
     }
-    return result.join("\n")
+    for (const path of Object.keys(commentChangedObjects)) {
+      const changedObject = commentChangedObjects[path]
+      result.push(changedObject.cur.getCommentChangesSql(changedObject))
+    }
+    for (const path of Object.keys(permissionChangedObjects)) {
+      const changedObject = permissionChangedObjects[path]
+      result.push(changedObject.cur.getPermissionsChangesSql(changedObject))
+    }
+    return joinSql(result)
+  }
+
+  /**
+   * Returns SQL for comments update
+   * @param {object} changedObject
+   * @returns {string}
+   */
+  getCommentChangesSql (changedObject) {
+    const {old, cur} = changedObject
+    return `COMMENT ON ${this.getObjectClass()} ${this.getObjectIdentifier('comment', false)} IS '${cur.getComment()}';`
+  }
+
+  /**
+   * Returns table comment
+   * @returns {string}
+   */
+  getComment() {
+    return escapeComment(this.comment)
   }
 
   /**
@@ -225,18 +337,6 @@ class AbstractDbObject {
    */
   getPermissionsChangesSql (changedObject) {
     const {old, cur} = changedObject
-    let changePermissions = changedObject.create
-    if (!changePermissions) {
-      for (const prop of Object.keys(changedObject.changedProps)) {
-        if (prop.substr(0, 5) === 'grant' || prop.substr(0, 6) === 'revoke') {
-          changePermissions = true
-          break
-        }
-      }
-    }
-    if (!changePermissions) {
-      return ''
-    }
     const result = []
     const curGrant = cur ? cur.grant : {}, curRevoke = cur ? cur.revoke : {}
     const oldGrant = old ? old.grant : {}, oldRevoke = old ? old.revoke : {}
@@ -279,7 +379,7 @@ class AbstractDbObject {
         result.push(cur.getPermissionSql('REVOKE', op, role))
       }
     }
-    return result.join("\n")
+    return joinSql(result)
   }
 
   /**
@@ -292,11 +392,23 @@ class AbstractDbObject {
     let result = []
     const creating = what === 'create'
     if (creating) {
-      result.push(this.getCreateSql(withParent))
+      if (this.createdByParent) {
+        if (!withParent) {
+          result.push(this.getSeparateCreateSql())
+        }
+      } else {
+        result.push(this.getCreateSql(withParent))
+      }
       result.push(this.getChildrenCreateOrDropSql(what, true))
     } else {
       result.push(this.getChildrenCreateOrDropSql(what, true))
-      result.push(this.getDropSql(withParent))
+      if (this.droppedByParent) {
+        if (!withParent) {
+          result.push(this.getSeparateDropSql())
+        }
+      } else {
+        result.push(this.getDropSql(withParent))
+      }
     }
     return result.join('')
   }
@@ -324,9 +436,16 @@ class AbstractDbObject {
         result.push(child.getCreateOrDropSql(what, withParent))
       }
     }
-    return result.join("\n")
+    return joinSql(result)
   }
 
+  /**
+   * Returns children for CREATE or DROP operations
+   * @param {string} prop
+   * @param {string} what
+   * @param {boolean} withParent
+   * @return {*[]}
+   */
   getChildrenForSql (prop, what, withParent) {
     return this[prop]
   }
@@ -338,6 +457,40 @@ class AbstractDbObject {
    * @returns {string}
    */
   getCreateSql (withParent) {
+    const sql = []
+    const result = `${this.getCreateOperator()} ${this.getObjectClass()} ${this.getObjectIdentifier('create', false)} ${this.getDefinition('create', sql)};`
+    sql.unshift(result)
+    return joinSql(sql)
+  }
+
+  /**
+   * Returns operator for the CREATE operation
+   * @return {string}
+   */
+  getCreateOperator () {
+    return 'CREATE'
+  }
+
+  /**
+   * Returns SQL for object creation
+   * @protected
+   * @returns {string}
+   */
+  getSeparateCreateSql () {
+    const parent = this.getParent()
+    const sql = []
+    const result = `ALTER ${parent.getObjectClass()} ${parent.getObjectIdentifier('parent', false)} ADD ${this.getObjectClass()} ${this.getObjectIdentifier('alter-add', true)} ${this.getDefinition('alter-add', sql)};`
+    sql.unshift(result)
+    return joinSql(sql)
+  }
+
+  /**
+   * Returns SQL definition for creation separately from parent
+   * @param {string} operation
+   * @param {array} addSql - Array to add additional SQL queries after the current definition will be executed.
+   * @returns {string}
+   */
+  getDefinition (operation, addSql) {
     return ''
   }
 
@@ -348,29 +501,17 @@ class AbstractDbObject {
    * @returns {string}
    */
   getDropSql (withParent) {
-    return `DROP ${this.getObjectClass()} ${this.getObjectIdentifier()};`
+    return `DROP ${this.getObjectClass()} ${this.getObjectIdentifier('drop', false)};`
   }
 
   /**
-   * Returns GRANT/REVOKE SQL statements
+   * Returns SQL for object deletion separately from its parent
+   * @protected
    * @returns {string}
    */
-  getPermissionsSql (list, type) {
-    const result = []
-    const fromTo = (type === 'GRANT') ? 'TO' : 'FROM'
-    for (let operation of list) {
-      const roles = this.grant[operation]
-      operation = operation.toUpperCase()
-      for (let role of roles) {
-        if (role.toLowerCase() !== 'public') {
-          role = `"${role}"`
-        }
-        result.push(
-          `${type} ${operation} ON ${this.getObjectClass()} ${this.getObjectIdentifier()} ${fromTo} ${role};`
-        )
-      }
-    }
-    return result.join("\n")
+  getSeparateDropSql () {
+    const parent = this.getParent()
+    return `ALTER ${parent.getObjectClass()} ${parent.getObjectIdentifier('parent', false)} DROP ${this.getObjectClass()} ${this.getObjectIdentifier('alter-drop', true)};`
   }
 
   /**
@@ -387,7 +528,7 @@ class AbstractDbObject {
       role = `"${role}"`
     }
     const fromTo = (type === 'GRANT') ? 'TO' : 'FROM'
-    return `${type} ${operation} ON ${this.getObjectClass()} ${this.getObjectIdentifier()} ${fromTo} ${role};`
+    return `${type} ${operation} ON ${this.getObjectClass()} ${this.getObjectIdentifier('grant', false)} ${fromTo} ${role};`
   }
 
   /**
@@ -400,10 +541,31 @@ class AbstractDbObject {
 
   /**
    * Returns object identifier for use in SQL
+   * @param {string} operation
+   * @param {boolean} isParentContext - Is the requested identifier to be used inside the parent object
    * @returns {string}
    */
-  getObjectIdentifier () {
-    return this.getParentedName(true)
+  getObjectIdentifier (operation, isParentContext) {
+    if (isParentContext) {
+      return this.getQuotedName()
+    } else {
+      const relType = this.getParentRelation()
+      if (relType === 'ON') {
+        return `${this.getQuotedName()} ON ${this.getParent().getParentedName(true)}`
+      } else if (relType === '.') {
+        return `${this.getParent().getParentedName(true)}.${this.getQuotedName()}`
+      } else {
+        return this.getQuotedName()
+      }
+    }
+  }
+
+  /**
+   * Returns parent relation type: '' or '.' or 'ON'
+   * @return {string}
+   */
+  getParentRelation () {
+    return ''
   }
 
   /**
@@ -414,7 +576,74 @@ class AbstractDbObject {
    * @returns {string}
    */
   getAlterSql (compared, changes) {
-    return ''
+    if (this.getParentRelation() !== '') {
+      const parent = this.getParent()
+      const result = []
+      for (const propName of Object.keys(changes)) {
+        const change = changes[propName]
+        const sql = this.getAlterPropSql(compared, propName, change.old, change.cur)
+        if (sql !== undefined) {
+          for (const s of [...sql]) {
+            if (this.alterWithParent) {
+              result.push(`${parent.getAlterOperator()} ${parent.getObjectClass()} ${parent.getObjectIdentifier('parent', false)} ${this.getAlterWithParentOperator()} ${this.getObjectClass()} ${this.getObjectIdentifier('alter-alter', true)} ${s};`)
+            } else {
+              result.push(`${this.getAlterOperator()} ${this.getObjectClass()} ${this.getObjectIdentifier('alter', true)} ${s};`)
+            }
+          }
+        }
+      }
+      return joinSql(result)
+    } else {
+      const sql = []
+      const result = `${this.getAlterOperator()} ${this.getObjectClass()} ${this.getDefinition('alter', sql)};`
+      sql.unshift(result)
+      return joinSql(sql)
+    }
+  }
+
+  /**
+   * Returns SQL for alteration of a particular property
+   * @param {AbstractDbObject} compared
+   * @param {string} propName
+   * @param {*} oldValue
+   * @param {*} curValue
+   * @return {string|string[]}
+   */
+  getAlterPropSql (compared, propName, oldValue, curValue) {
+    return '';
+  }
+
+  /**
+   * Returns SQL operator used on changing this object.
+   * @return {string}
+   */
+  getAlterOperator () {
+    return 'ALTER'
+  }
+
+  /**
+   * Returns SQL operator used on changing this object.
+   * @return {string}
+   */
+  getAlterWithParentOperator () {
+    return 'ALTER'
+  }
+
+  /**
+   * Returns ALTER SQL for  objects which are fully recreated on alteration.
+   * @return {string}
+   */
+  getFullAlterSql () {
+    const sql = []
+    let result
+    if (this.alterWithParent) {
+      const parent = this.getParent()
+      result = `ALTER ${parent.getObjectClass()} ${parent.getObjectIdentifier('parent', false)} CHANGE ${this.getObjectClass()} ${this.getObjectIdentifier('alter-alter', true)} ${this.getDefinition('alter-alter', sql)};`
+    } else {
+      result = `ALTER ${this.getObjectClass()} ${this.getObjectIdentifier('alter', true)} ${this.getDefinition('alter', sql)};`
+    }
+    sql.unshift(result)
+    return joinSql(sql)
   }
 
   /**
@@ -455,13 +684,13 @@ class AbstractDbObject {
     let curObject = this
     let prevObject = null
     do {
-      const parent = curObject._parent
+      const parent = curObject.getParent()
       if (parent) {
         path.unshift(parent.findChildProp(curObject))
       }
       prevObject = curObject
       curObject = parent
-    } while (curObject && curObject.constructor.name !== 'DataBase')
+    } while (curObject && curObject.getClassName() !== 'DataBase')
     return path.join('.')
   }
 
@@ -473,7 +702,7 @@ class AbstractDbObject {
     let parent = this
     do {
       parent = parent._parent
-    } while (parent && parent.constructor.name !== 'DataBase')
+    } while (parent && parent.getClassName() !== 'DataBase')
     return parent
   }
 
@@ -546,6 +775,14 @@ class AbstractDbObject {
   getParent() {
     return this._parent
   }
+
+  /**
+   * Method to override by plugins and DB objects to add custom migration SQL.
+   * @return {string}
+   */
+  getCustomChangesSql () {
+    return ''
+  }
 }
 
 
@@ -565,11 +802,11 @@ function filterProps (obj, props, context) {
     .filter(prop => context.deep ? true : !isChildren(obj, prop))
 }
 
-function arrayHasChanges (v1, v2, context) {
+function arrayHasChanges (v2, v1, context) {
   for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
     context.addToPath(i)
     try {
-      hasChangesInValues(v1[i], v2[i], context)
+      hasChangesInValues(v2[i], v1[i], context)
     } finally {
       context.popPath()
     }
@@ -585,7 +822,7 @@ function getComparingProps (obj, context) {
 
 function getObjectForChangeLog(obj) {
   const props = getComparingProps(obj, {deep: false})
-  const result = {class: obj.constructor.name}
+  const result = {class: obj.getClassName()}
   for (const prop of props) {
     result[prop] = obj[prop]
   }
@@ -614,7 +851,7 @@ function mergeAndUnique (a1, a2) {
   return a1.concat(a2).filter((item, i, a) => a.indexOf(item) === i)
 }
 
-function objectHasChanges (v1, v2, context) {
+function objectHasChanges (v2, v1, context) {
   if (context.isInStack(v1) || context.isInStack(v2)) {
     return false
   }
@@ -630,7 +867,7 @@ function objectHasChanges (v1, v2, context) {
       try {
         const v1Value = v1[prop]
         const v2Value = v2[prop]
-        hasChangesInValues(v1Value, v2Value, context)
+        hasChangesInValues(v2Value, v1Value, context)
       } finally {
         context.popPath()
       }
@@ -642,23 +879,24 @@ function objectHasChanges (v1, v2, context) {
   }
 }
 
-function hasChangesInValues (v1, v2, context) {
+function hasChangesInValues (v2, v1, context) {
   if (v1 instanceof AbstractDbObject && v2 instanceof AbstractDbObject) {
     if (v1.isInherited && v2.isInherited) {
       return false
     }
-    return hasChanges(v1, v2, context)
+    hasChanges(v2, v1, context)
+    v1.getDb().pluginOnCompareObjects(v1, v2, context)
   } else if (isFunction(v1) && isFunction(v2)) {
     return false
   } else if (isArray(v1) && isArray(v2)) {
-    return arrayHasChanges(v1, v2, context)
+    return arrayHasChanges(v2, v1, context)
   } else if (isObject(v1) && isObject(v2)) {
-    return objectHasChanges(v1, v2, context)
+    return objectHasChanges(v2, v1, context)
   } else {
     if (v1 !== v2) {
       context.addChange(
-        v2 instanceof AbstractDbObject ? getObjectForChangeLog(v2) : v2,
         v1 instanceof AbstractDbObject ? getObjectForChangeLog(v1) : v1,
+        v2 instanceof AbstractDbObject ? getObjectForChangeLog(v2) : v2,
       )
       return true
     } else {
@@ -678,6 +916,3 @@ function hasChanges (current, old, context) {
     return objectHasChanges(current, old, context)
   }
 }
-
-
-export default AbstractDbObject

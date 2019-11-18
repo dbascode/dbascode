@@ -49,6 +49,16 @@ class ChangesContext {
     this.changes.push([path[0] === '.' ? path.substr(1) : path, old, cur])
   }
 
+  /**
+   * Add change from a plugin
+   * @param {string} path
+   * @param {*} old
+   * @param {*} cur
+   */
+  addChangeWithPath (path, old, cur) {
+    this.changes.push([path[0] === '.' ? path.substr(1) : path, old, cur])
+  }
+
   hasChanges () {
     return this.changes.length > 0
   }

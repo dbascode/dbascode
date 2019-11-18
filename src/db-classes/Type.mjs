@@ -5,7 +5,7 @@
  * Time: 16:25
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
-import Field from './Field'
+import Attribute from './Attribute'
 
 /**
  * DB Type object
@@ -33,7 +33,10 @@ class Type extends AbstractSchemaObject {
       parent = undefined
     }
   ) {
-    super(name, parent)
+    super({
+      name,
+      parent,
+    })
     this.isEnum = isEnum
     this.fields = fields
     this.values = values
@@ -57,7 +60,7 @@ class Type extends AbstractSchemaObject {
     if (cfg.fields) {
       result.isEnum = false
       for (const name of Object.keys(cfg.fields)) {
-        Field.createFromCfg(name, cfg.fields[name], result)
+        Attribute.createFromCfg(name, cfg.fields[name], result)
       }
     } else if (cfg.enum) {
       result.isEnum = true

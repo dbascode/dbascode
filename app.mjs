@@ -17,13 +17,12 @@ import os from 'os'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
 const projectDir = __dirname
 
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
-
 const defaultConfigFile = path.join(__dirname, 'default-sys', 'db.yml')
+const version = 1
 
 const cliConfig = yargs
   .command({
@@ -122,7 +121,15 @@ function loadCurrentState () {
   return loadConfig([defaultConfigFile, configFile])
 }
 
-function loadChanges(prevState, curState) {
+/**
+ * Compare old and current states and return changes object with differences
+ * @param prevState
+ * @param curState
+ * @param prevVersion
+ * @param curVersion
+ * @return {(ChangesContext|DataBase)[]}
+ */
+function buildChanges(prevState, curState, prevVersion, curVersion) {
   const dbOverrides = {
     defaultLocale: cliConfig.defaultLocale,
     rootUserName: cliConfig.dbUser,
@@ -134,14 +141,16 @@ function loadChanges(prevState, curState) {
     dbOverrides,
     [
       new PostgraphilePlugin,
-    ]
+    ],
+    curVersion,
   )
   const previousDbTree = DataBase.createFromCfg(
     prevState,
     dbOverrides,
     [
       new PostgraphilePlugin,
-    ]
+    ],
+    prevVersion,
   )
   const changes = currentDbTree.hasChanges(previousDbTree, true)
   return [
@@ -172,8 +181,14 @@ function createPlan() {
   console.log('Loading current DB state...')
   const prevStateData = loadLastStateFromDB()
   console.log('Loading new state...')
-  const curState = loadCurrentState()
-  const [changes, prevTree, curTree] = loadChanges(prevStateData.state, curState)
+  const curState = loadCurrentState(version)
+  const [changes, prevTree, curTree] =
+    buildChanges(
+      prevStateData.state,
+      curState,
+      prevStateData.pgascode_version,
+      version,
+    )
   try {
     const sql = getMigrationSql(changes, prevTree, curTree)
     return [
@@ -265,7 +280,7 @@ switch (command) {
       }
     }
     console.log('Executing SQL migration...')
-    executeSqlDump(plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState))
+    executeSqlDump(plan.migration + "\n" + getStateSaveSql(plan.id, plan.newState, version))
     break
   }
 

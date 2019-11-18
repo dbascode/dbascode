@@ -7,7 +7,10 @@
 import AbstractSchemaObject from './AbstractSchemaObject'
 import { prepareArgs } from './utils'
 
-class Field extends AbstractSchemaObject{
+/**
+ * Attribute in a type
+ */
+export default class Attribute extends AbstractSchemaObject{
   type
 
   /**
@@ -23,7 +26,13 @@ class Field extends AbstractSchemaObject{
       parent = undefined
     }
   ) {
-    super(name, parent)
+    super({
+      name,
+      parent,
+      createdByParent: true,
+      droppedByParent: true,
+      alterWithParent: true,
+    })
     this.type = type
   }
   /**
@@ -31,13 +40,13 @@ class Field extends AbstractSchemaObject{
    * @param {string} name
    * @param {string} [cfg]
    * @param {Type} [parent]
-   * @return {Field}
+   * @return {Attribute}
    */
   static createFromCfg(name, cfg, parent) {
     if (!cfg) {
       return null
     }
-    const result = new Field(prepareArgs(parent, {
+    const result = new Attribute(prepareArgs(parent, {
       name,
       type: cfg,
       parent,
@@ -45,17 +54,26 @@ class Field extends AbstractSchemaObject{
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
-  getCreateSql (withParent) {
-    if (withParent) {
-      return ''
-    } else {
-      return this.getFieldDefinition()
-    }
-  }
-
-  getFieldDefinition () {
+  /**
+   * @inheritDoc
+   */
+  getDefinition (operation, addSql) {
     return `${this.getQuotedName()} ${this.type}`
   }
-}
 
-export default Field
+  /**
+   * @inheritDoc
+   */
+  getParentRelation () {
+    return ''
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getAlterPropSql (compared, propName, oldValue, curValue) {
+    switch (propName) {
+      case 'type': return `SET DATA TYPE ${this.type}`
+    }
+  }
+}

@@ -63,17 +63,22 @@ export function escapeString(s) {
 
 /**
  * Returns SQL query to store the state in the system state table
- * @param {number} id
- * @param {Object} state
- * @param {boolean} addSql Whether to add current SQL migration text to the saved state
+ * @param {number} id - id of the state
+ * @param {Object} state - current state object
+ * @param {number} version - current pgascode version
  * @returns {string}
  */
-export function getStateSaveSql (id, state, addSql = false) {
-  if (!addSql) {
-    state = {...state}
-    delete state.migration
-  }
-  return `\nINSERT INTO "pgascode"."state" ("id", "state") VALUES (${id}, ${escapeString(JSON.stringify(state, null, 2))});\n`
+export function getStateSaveSql (id, state, version) {
+  const migration = state.migration
+  state = {...state}
+  delete state.migration
+  return `\nINSERT INTO "pgascode"."state" ("id", "state", "pgascode_version", "migration") 
+  VALUES (
+  ${id}, 
+  ${escapeString(JSON.stringify(state, null, 2))}, 
+  ${Number(version)}, 
+  ${escapeString(migration)}
+  );\n`
 }
 
 /**
@@ -102,4 +107,12 @@ export function parseArrayProp (name) {
       index: null,
     }
   }
+}
+
+/**
+ * Joins array of SQL queries filtering empty ones
+ * @param {string[]} sql
+ */
+export function joinSql(sql) {
+  return sql.filter(i => i).join("\n")
 }

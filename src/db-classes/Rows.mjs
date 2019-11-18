@@ -25,7 +25,10 @@ class Rows extends AbstractSchemaObject {
     rows,
     parent = undefined
   ) {
-    super('', parent, true)
+    super({
+      parent,
+      isSimpleChild: true,
+    })
     this.rows = rows
   }
 

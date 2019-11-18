@@ -28,6 +28,7 @@ class DataBase extends AbstractDbObject {
    */
   _plugins = {}
   _childrenProps = ['roles', 'schemas']
+  _version = 0
 
   /**
    * Constructor
@@ -38,6 +39,7 @@ class DataBase extends AbstractDbObject {
    * @param {string} [rootPassword]
    * @param {string} [defaultLocale]
    * @param {string[]} [extensions]
+   * @param {number} version
    */
   constructor (
     {
@@ -48,14 +50,16 @@ class DataBase extends AbstractDbObject {
       rootPassword = '',
       defaultLocale = '',
       extensions = [],
+      version = 0,
     }) {
-    super(name)
+    super({ name: name })
     this._rootUserName = rootUserName
     this._rootPassword = rootPassword
     this.defaultLocale = defaultLocale
     this.schemas = schemas
     this.roles = roles
     this.extensions = extensions
+    this._version = version
   }
 
   /**
@@ -63,12 +67,14 @@ class DataBase extends AbstractDbObject {
    * @param {Object|null} cfg
    * @param {Object|null} [overrides]
    * @param {AbstractPlugin[]} plugins
+   * @param {number} version
    * @return {DataBase|null}
    */
   static createFromCfg(
     cfg,
     overrides,
     plugins = [],
+    version,
   ) {
     if (!cfg) {
       return undefined
@@ -142,6 +148,27 @@ class DataBase extends AbstractDbObject {
       plugin.onObjectCreated(result, config)
     }
     return result
+  }
+
+  /**
+   * Executes plugins to provide custom object comparison when calculating changes
+   * @param {AbstractDbObject} old
+   * @param {AbstractDbObject} cur
+   * @param {ChangesContext} context
+   */
+  pluginOnCompareObjects (old, cur, context) {
+    for (const plugin of Object.values(this._plugins)) {
+      plugin.onCompareObjects(old, cur, context)
+    }
+  }
+
+  /**
+   * Returns version used to save this DB object. Automatically set up by pgascode on state save.
+   * Useful for adding custom migrations on the tool version change.
+   * @return {number}
+   */
+  getVersion () {
+    return this._version
   }
 }
 

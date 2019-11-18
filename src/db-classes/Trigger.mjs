@@ -29,9 +29,12 @@ class Trigger extends AbstractSchemaObject {
       parent = undefined,
       isInherited = false,
     }) {
-    super(`${when}_${operation}`, parent)
-    this.apply({...arguments[0], _parent: parent})
-    delete this.parent
+    super({
+      name: `${parent.name}_${operation}`,
+      parent,
+      droppedByParent: true,
+      fullAlter: true,
+    })
     this.operation = operation
     this.when = when
     this.what = what
@@ -59,10 +62,31 @@ class Trigger extends AbstractSchemaObject {
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
-  getCreateSql () {
-    return `CREATE TRIGGER "${this._parent.name}_${this.operation}" ${this.getSqlTriggerType()} ON ${this._parent.getParentedName(true)} FOR EACH ROW EXECUTE PROCEDURE ${this.what};\n`
+  /**
+   * @inheritDoc
+   */
+  getDefinition (operation, addSql) {
+    return `FOR EACH ROW EXECUTE PROCEDURE ${this.what}`
   }
 
+  /**
+   * @inheritDoc
+   */
+  getParentRelation () {
+    return 'ON'
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getObjectIdentifier (operation, isParentContext) {
+    return `${this.getParentedName(true)} ${this.getSqlTriggerType()} ON ${this.getParent().getParentedName(true)}`
+  }
+
+  /**
+   * Returns SQL trigger type
+   * @return {string}
+   */
   getSqlTriggerType() {
     return (`${this.when} ${this.operation}`).toUpperCase()
   }

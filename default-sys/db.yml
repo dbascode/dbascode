@@ -16,6 +16,12 @@ schemas:
               raw: true
           state:
             type: text
+          migration:
+            type: string
+            allow_null: true
+          pgascode_version:
+            type: int
+            allow_null: true
         indexes:
           - date
         unique_keys:

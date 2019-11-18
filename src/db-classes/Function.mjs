@@ -13,7 +13,7 @@ import isEmpty from 'lodash-es/isEmpty'
 /**
  * Function, Procedure, or Trigger Function object
  */
-class Function extends AbstractSchemaObject {
+export default class Function extends AbstractSchemaObject {
   language
   returns
   cost = 10
@@ -40,6 +40,7 @@ class Function extends AbstractSchemaObject {
    * @param {boolean} [isLeakProof]
    * @param {object} [grant]
    * @param {object} [revoke]
+   * @param {string} [comment]
    */
   constructor (
     {
@@ -56,9 +57,17 @@ class Function extends AbstractSchemaObject {
       isLeakProof = false,
       grant = {},
       revoke = {},
+      comment = '',
     }
   ) {
-    super(name, parent, false, grant, revoke)
+    super({
+      name,
+      parent,
+      grant,
+      revoke,
+      comment,
+      fullAlter: true,
+    })
     this.language = language
     this.returns = returns
     this.cost = cost
@@ -117,8 +126,12 @@ class Function extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getObjectIdentifier () {
-    return `${super.getObjectIdentifier()}(${this.getArgTypesList()})`
+  getObjectIdentifier (operation, isParentContext) {
+    if (operation === 'create') {
+      return `${super.getObjectIdentifier(operation, false)}(${this.getFunctionArgs()})`
+    } else {
+      return `${super.getObjectIdentifier(operation, false)}(${this.getArgTypesList()})`
+    }
   }
 
   /**
@@ -160,39 +173,34 @@ class Function extends AbstractSchemaObject {
   }
 
   /**
-   * Returns full function create SQL
-   * @returns {string}
+   * @inheritDoc
    */
-  getReCreateSql () {
+  getCreateOperator () {
+    return 'CREATE OR REPLACE'
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getAlterOperator () {
+    return 'CREATE OR REPLACE'
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getDefinition (operation, addSql) {
     const returns = this.returns ? `RETURNS ${this.returns}` : ''
     const cost = this.cost ? `COST ${this.cost}` : ''
     const leakProof = this.isLeakProof ? 'LEAKPROOF' : 'NOT LEAKPROOF'
     const securityDefiner = this.isSecurityDefiner ? 'SECURITY DEFINER' : ''
-    return (
-`CREATE OR REPLACE ${this.getObjectClass()} ${this.getParentedName(true)}(${this.getFunctionArgs()})
+    return `${this.getParentedName(true)}(${this.getFunctionArgs()})
   ${returns}
   LANGUAGE '${this.language}'
-  ${cost} ${this.getStabilitySql()} ${leakProof} ${securityDefiner}
+  ${cost} ${this.getStabilitySql()} ${leakProof} ${securityDefiner} ${this.getParallelSafety()}
 AS $BODY$
 ${this.code}
 $BODY$;
 `
-    )
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getCreateSql (withParent) {
-    return this.getReCreateSql()
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getAlterSql (compared, changes) {
-    return this.getReCreateSql()
   }
 }
-
-export default Function

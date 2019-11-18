@@ -17,7 +17,7 @@ import { objectIntersectionKeys } from './utils'
  * @param {string[]} configFiles
  * @returns {*}
  */
-function loadConfig(configFiles) {
+export function loadConfig(configFiles) {
   const cfg = doLoadConfig(configFiles)
   return filterConfig(cfg)
 }
@@ -114,5 +114,3 @@ function filterConfig(cfg) {
   }
   return cfg
 }
-
-export { loadConfig }

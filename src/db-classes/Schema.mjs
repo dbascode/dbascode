@@ -53,7 +53,7 @@ class Schema extends AbstractDbObject {
       revoke = {},
     }
   ) {
-    super(name, parent, false, grant, revoke)
+    super({ name: name, parent: parent, isSimpleChild: false, grant: grant, revoke: revoke })
     this.types = types
     this.tables = tables
     this.functions = functions
@@ -108,22 +108,36 @@ class Schema extends AbstractDbObject {
   /**
    * @inheritDoc
    */
-  getCreateSql (withParent) {
-    return `CREATE SCHEMA ${this.getQuotedName()};`
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getDropSql (withParent) {
-    return `DROP SCHEMA ${this.getQuotedName()} CASCADE;`
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getObjectIdentifier () {
-    return this.getQuotedName()
+  sgetChildrenForSql (prop, what, withParent) {
+    const result = super.getChildrenForSql(prop, what, withParent)
+    if (prop === 'tables') {
+      // Import tables following their dependencies
+      const tableOrder = []
+      let restMap = {}
+      Object.keys(this.tables).forEach(name => restMap[name] = 1)
+      do {
+        const newRestMap = {}
+        for (const tableName of Object.keys(restMap)) {
+          const table = this.tables[tableName]
+          const dependencies = table.getDependencies()
+          if (arrayContainsEntirely(tableOrder, dependencies)) {
+            tableOrder.push(tableName)
+          } else {
+            newRestMap[tableName] = 1
+          }
+        }
+        if (Object.keys(restMap).length === Object.keys(newRestMap).length) {
+          throw new Error("Infinite loop")
+        }
+        restMap = newRestMap
+      } while (!isEmpty(restMap))
+      const orderedResult = {}
+      for (const tableName of tableOrder) {
+        orderedResult[tableName] = this.tables[tableName]
+      }
+    } else {
+      return result
+    }
   }
 
   /**
@@ -144,6 +158,9 @@ class Schema extends AbstractDbObject {
     return this.tables[name]
   }
 
+  /**
+   * @inheritDoc
+   */
   getCalculators () {
     return {
       schemaName: this.name,

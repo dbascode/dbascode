@@ -8,7 +8,7 @@
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
 import ForeignKey from './ForeignKey'
-import { escapeComment, escapeString, prepareArgs } from './utils'
+import { escapeString, prepareArgs } from './utils'
 import isObject from 'lodash-es/isObject'
 
 /**
@@ -38,7 +38,8 @@ class Column extends AbstractSchemaObject {
    * @param {boolean} [isAutoIncrement]
    * @param {boolean} [isInherited]
    * @param {ForeignKey} [foreignKey]
-   * @param {boolean} isIntl
+   * @param {boolean} [isIntl]
+   * @param {string} [comment]
    */
   constructor (
     {
@@ -51,11 +52,17 @@ class Column extends AbstractSchemaObject {
       isInherited = false,
       foreignKey = undefined,
       isIntl = false,
+      comment = '',
     }
   ) {
-    super(name, parent)
-    this.apply({ ...arguments[0], _parent: parent })
-    delete this.parent
+    super({
+      name,
+      parent,
+      comment,
+      droppedByParent: true,
+      createdByParent: true,
+      alterWithParent: true,
+    })
     this.foreignKey = foreignKey
     this.type = type
     this.allowNull = allowNull
@@ -98,6 +105,7 @@ class Column extends AbstractSchemaObject {
       isIntl: !!config.intl,
       isAutoIncrement: !!config.autoincrement,
       defaultValue,
+      comment: cfg.comment,
     }))
     if (config.foreign_key) {
       ForeignKey.createFromCfg(name, config.foreign_key, result)
@@ -113,30 +121,22 @@ class Column extends AbstractSchemaObject {
     }
   }
 
-  getCreateSql (withParent) {
-    const result = []
-    if (!withParent && !this.isInherited) {
-      if (!this.getAllowNull() && !this.isAutoIncrement && this.defaultValue === undefined) {
-        throw new Error(`Can not add not null value without default value`)
-      }
-      result.push(`ALTER TABLE ${this._parent.getParentedName(true)} ADD COLUMN ${this.getColumnDefinition()};\n`)
-    }
-    if (this.getComment()) {
-      result.push(`COMMENT ON COLUMN ${this._parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
-    }
-    return result.join('')
+  /**
+   * @inheritDoc
+   */
+  getParentRelation () {
+    return '.'
   }
 
   /**
-   * Returns full SQL column definition
-   * @returns {string}
+   * @inheritDoc
    */
-  getColumnDefinition () {
+  getDefinition (operation, addSql) {
     const defaultValue = this.isAutoIncrement ?
       (`DEFAULT nextval('${this.getAutoIncSeqName()}'::regclass)`) :
       (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
     const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
-    return `${this.getQuotedName()} ${this.getType()} ${allowNull} ${defaultValue}`
+    return `${this.getType()} ${allowNull} ${defaultValue}`.trim()
   }
 
   /**
@@ -145,10 +145,6 @@ class Column extends AbstractSchemaObject {
    */
   getAutoIncSeqName () {
     return `${this.getSchema().getQuotedName()}."${this.getParent().name}_${this.name}_seq"`
-  }
-
-  getComment () {
-    return escapeComment(this.comment)
   }
 
   getType () {
@@ -160,46 +156,22 @@ class Column extends AbstractSchemaObject {
   }
 
   /**
-   *
-   * @param {Column} compared
-   * @returns {string}
+   * @inheritDoc
    */
-  getAlterSql (compared) {
-    const result = []
-    if (!this.isInherited && this.type !== compared.type) {
-      result.push(
-        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} TYPE ${this.getType()};\n`
-      )
-    }
-    if (!this.isInherited && this.allowNull !== compared.allowNull) {
-      result.push(
-        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${this.getAllowNull() ? 'DROP NOT NULL' : 'SET NOT NULL'};\n`
-      )
-    }
-    if (!this.isInherited && this.isAutoIncrement !== compared.isAutoIncrement) {
-      const dv = this.getDefaultValueSql()
-      result.push(
-        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
-      )
-    }
-    if (!this.isInherited && this.defaultValue !== compared.defaultValue) {
-      const dv = this.getDefaultValueSql()
-      result.push(
-        `ALTER TABLE ${this._parent.getParentedName(true)} ALTER COLUMN ${this.getQuotedName()} ${dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'};\n`
-      )
-    }
-    if (this.getComment() !== compared.getComment()) {
-      result.push(`COMMENT ON COLUMN ${this._parent.getParentedName(true)}.${this.getQuotedName()} IS '${this.getComment()}';\n`)
-    }
-    return result.join()
-  }
-
-  getDropSql (withParent) {
+  getAlterPropSql (compared, propName, oldValue, curValue) {
     if (!this.isInherited) {
-      return `ALTER TABLE ${this._parent.getParentedName(true)} DROP COLUMN ${this.getQuotedName()};\n`
-    } else {
-      return ''
+      switch (propName) {
+        case 'allowNull':
+          return this.allowNull ? 'DROP NOT NULL' : 'SET NOT NULL'
+        case 'defaultValue':
+        case 'isAutoIncrement':
+          const dv = this.getDefaultValueSql()
+          return dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'
+        case 'type':
+          return `TYPE ${this.getType()}`
+      }
     }
+    return undefined
   }
 
   isTextual () {

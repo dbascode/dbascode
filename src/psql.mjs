@@ -1,7 +1,7 @@
 import cp from 'child_process'
 import { convertPathToWsl, escapeShellArg } from './utils'
 
-function executeSql (query, config) {
+export function executeSql (query, config) {
   const commonCmd = [
     '--dbname=' + (config.dbName || ''),
     '--host=' + (config.dbHost || ''),
@@ -48,7 +48,7 @@ function executeSql (query, config) {
   }
 }
 
-function executeSqlJson (queryString, config) {
+export function executeSqlJson (queryString, config) {
   const result = executeSql(
     `SELECT json_agg(__query) FROM (${queryString}) __query`,
     {
@@ -62,9 +62,4 @@ function executeSqlJson (queryString, config) {
     ...result,
     result: res ? JSON.parse(res) : [],
   }
-}
-
-export {
-  executeSql,
-  executeSqlJson,
 }

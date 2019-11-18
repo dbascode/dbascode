@@ -19,6 +19,7 @@ class Role extends AbstractDbObject {
    * @param {string[]} [memberOf]
    * @param {DataBase} [parent]
    * @param {boolean} isClient
+   * @param {string} [comment]
    */
   constructor (
     {
@@ -26,9 +27,14 @@ class Role extends AbstractDbObject {
       memberOf = [],
       parent= undefined,
       isClient = false,
+      comment = '',
     }
   ) {
-    super(name, parent)
+    super({
+      name,
+      parent,
+      comment,
+    })
     this.memberOf = memberOf
     this.isClient = isClient
   }
@@ -51,35 +57,18 @@ class Role extends AbstractDbObject {
   }
 
   /**
-   * Returns SQL for object creation
-   * @returns {string}
+   * @inheritDoc
    */
-  getCreateSql() {
-    let result =
-      `CREATE ROLE ${this.getQuotedName()} WITH
-  NOLOGIN
-  NOSUPERUSER
-  INHERIT
-  NOCREATEDB
-  NOCREATEROLE
-  NOREPLICATION;\n`
+  getDefinition (operation, addSql) {
     if (this.memberOf.length > 0) {
       for (const memberOf of this.memberOf) {
-        result += `GRANT "${memberOf}" TO ${this.getQuotedName()};\n`
+        addSql.push(`GRANT "${memberOf}" TO ${this.getQuotedName()};`)
       }
     }
     if (this.isClient) {
-      result += `GRANT ${this.getQuotedName()} TO current_user;\n`
+      addSql.push(`GRANT ${this.getQuotedName()} TO current_user;`)
     }
-    return result
-  }
-
-  /**
-   * Returns SQL for object deletion
-   * @returns {string}
-   */
-  getDropSql() {
-    return `DROP ROLE ${this.getQuotedName()};`
+    return `WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION`
   }
 }
 

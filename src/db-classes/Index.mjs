@@ -25,9 +25,12 @@ class Index extends AbstractSchemaObject {
       isInherited = false,
     }
   ) {
-    super('', parent)
-    this.apply({...arguments[0], _parent: parent})
-    delete this.parent
+    super({
+      name: `${colNames.join('_')}_idx`,
+      parent,
+      droppedByParent: true,
+      fullAlter: true,
+    })
     this.isInherited = isInherited
     this.colNames = colNames
   }
@@ -54,15 +57,15 @@ class Index extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getObjectIdentifier () {
-    return `${this.getSchema().getQuotedName()}."${this._parent.name}_${this.colNames.join('_')}_idx"`
+  getParentRelation () {
+    return 'ON'
   }
 
   /**
    * @inheritDoc
    */
-  getCreateSql (withParent) {
-    return `CREATE INDEX ${this.getObjectIdentifier()}" ON ${this._parent.getParentedName(true)}("${this.colNames.join('","')}");\n`
+  getDefinition (operation, addSql) {
+    return `("${this.colNames.join('","')}")`
   }
 }
 
