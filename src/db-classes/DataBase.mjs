@@ -5,17 +5,15 @@
  * Time: 16:24
  */
 
+import { dispose, } from '../utils'
 import AbstractDbObject from './AbstractDbObject'
 import Role from './Role'
 import Schema from './Schema'
-import {
-  dispose,
-} from '../utils'
 
 /**
  * Database object
  */
-class DataBase extends AbstractDbObject {
+export default class DataBase extends AbstractDbObject {
   schemas = {}
   roles = {}
   _rootUserName = ''
@@ -85,6 +83,7 @@ class DataBase extends AbstractDbObject {
       rootPassword: overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password,
       name: overrides.dbName ? overrides.dbName : '',
       extensions: cfg.extensions,
+      version,
     })
     for (const plugin of plugins) {
       result.addPlugin(plugin)
@@ -171,5 +170,3 @@ class DataBase extends AbstractDbObject {
     return this._version
   }
 }
-
-export default DataBase

@@ -9,7 +9,10 @@ import AbstractDbObject from './AbstractDbObject'
 import isArray from 'lodash-es/isArray'
 import isEqual from 'lodash-es/isEqual'
 
-class Role extends AbstractDbObject {
+/**
+ * Role in a database
+ */
+export default class Role extends AbstractDbObject {
   memberOf = []
   isClient = false
 
@@ -71,5 +74,3 @@ class Role extends AbstractDbObject {
     return `WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION`
   }
 }
-
-export default Role

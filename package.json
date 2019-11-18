@@ -10,13 +10,16 @@
   "dependencies": {
     "glob": "^7.1.4",
     "js-yaml": "^3.13.1",
+    "jsdoc-export-default-interop": "^0.3.1",
     "lodash-es": "^4.17.15",
+    "remove": "^0.1.5",
     "supports-color": "^7.1.0",
     "yargs": "^14.2.0"
   },
   "type": "module",
   "devDependencies": {
     "docdash": "^1.1.1",
-    "jsdoc": "^3.6.3"
+    "jsdoc": "^3.6.3",
+    "jsdoc-to-markdown": "^5.0.2"
   }
 }

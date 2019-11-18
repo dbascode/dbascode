@@ -5,16 +5,16 @@
  * Time: 15:53
  */
 
+import { escapeString, prepareArgs } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
 import ForeignKey from './ForeignKey'
-import { escapeString, prepareArgs } from './utils'
 import isObject from 'lodash-es/isObject'
 
 /**
- *
+ * Column in a table
  */
-class Column extends AbstractSchemaObject {
+export default class Column extends AbstractSchemaObject {
   type
   foreignKey = undefined
   allowNull = false
@@ -187,5 +187,3 @@ class Column extends AbstractSchemaObject {
 function isTextual (type) {
   return type.toLowerCase().indexOf('text') >= 0
 }
-
-export default Column

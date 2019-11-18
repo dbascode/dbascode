@@ -4,20 +4,17 @@
  * Date: 11.10.2019
  * Time: 16:25
  */
+import { arrayContainsEntirely } from '../utils'
 import AbstractDbObject from './AbstractDbObject'
 import Type from './Type'
 import Function from './Function'
 import Table from './Table'
 import isEmpty from 'lodash-es/isEmpty'
-import { arrayContainsEntirely } from '../utils'
 
 /**
- * Schema object.
- *
- * @field {DataBase} _parent
- * @property {DataBase} _parent
+ * Database schema object.
  */
-class Schema extends AbstractDbObject {
+export default class Schema extends AbstractDbObject {
   /**
    * @type {Object.<string, Table>}
    */
@@ -167,5 +164,3 @@ class Schema extends AbstractDbObject {
     }
   }
 }
-
-export default Schema

@@ -1,11 +1,5 @@
-/**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 15.10.2019
- * Time: 19:37
- */
+import { prepareArgs } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import { prepareArgs } from './utils'
 
 /**
  * Attribute in a type
@@ -58,7 +52,7 @@ export default class Attribute extends AbstractSchemaObject{
    * @inheritDoc
    */
   getDefinition (operation, addSql) {
-    return `${this.getQuotedName()} ${this.type}`
+    return `${this.type}`
   }
 
   /**

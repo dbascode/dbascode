@@ -4,24 +4,23 @@
  * Date: 07.10.2019
  * Time: 15:23
  */
-
-import isArray from 'lodash-es/isArray'
+import {
+  parseArrayProp,
+  prepareArgs,
+} from './db-utils'
 import { indent } from '../utils'
+import isArray from 'lodash-es/isArray'
 import Column from './Column'
 import Rows from './Rows'
 import Trigger from './Trigger'
 import Index from './Index'
 import PrimaryKey from './PrimaryKey'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import {
-  parseArrayProp,
-  prepareArgs,
-} from './utils'
 
 /**
  * Table object
  */
-class Table extends AbstractSchemaObject {
+export default class Table extends AbstractSchemaObject {
   columns = []
   uniqueKeys = []
   indexes = []
@@ -301,7 +300,7 @@ class Table extends AbstractSchemaObject {
       if (column.isInherited) {
         continue
       }
-      tableDef.push(column.getDefinition())
+      tableDef.push(`${column.getObjectIdentifier('', true)} ${column.getDefinition()}`)
       if (column.isAutoIncrement) {
         autoIncSeqColumn = column
       }
@@ -310,7 +309,7 @@ class Table extends AbstractSchemaObject {
       }
     }
     if (this.primaryKey) {
-      tableDef.push(`${this.primaryKey.getObjectClass()} ${this.primaryKey.getDefinition()}`)
+      tableDef.push(`${this.primaryKey.getObjectClass()} ${this.primaryKey.getObjectIdentifier('', true)} ${this.primaryKey.getDefinition()}`)
     }
     if (this.uniqueKeys.length > 0) {
       for (const names of this.uniqueKeys) {
@@ -319,7 +318,7 @@ class Table extends AbstractSchemaObject {
     }
     if (foreignKeys.length > 0) {
       for (const key of foreignKeys) {
-        tableDef.push(key.getDefinition())
+        tableDef.push(`${key.getObjectClass()} ${key.getObjectIdentifier('', true)} ${key.getDefinition()}`)
       }
     }
 
@@ -370,5 +369,3 @@ class Table extends AbstractSchemaObject {
     return result
   }
 }
-
-export default Table

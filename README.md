@@ -25,3 +25,7 @@ yarn run fix-modules
 ```shell script
 npm run migrate
 ```
+
+## Contribution
+
+**Important:** Before making any commit, run the `contrib/init.sh` script. It will add some required git hooks. 

@@ -4,10 +4,13 @@
  * Date: 11.10.2019
  * Time: 16:26
  */
+import { prepareArgs } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import { prepareArgs } from './utils'
 
-class Trigger extends AbstractSchemaObject {
+/**
+ * Trigger on a table
+ */
+export default class Trigger extends AbstractSchemaObject {
   operation
   when
   what
@@ -30,7 +33,7 @@ class Trigger extends AbstractSchemaObject {
       isInherited = false,
     }) {
     super({
-      name: `${parent.name}_${operation}`,
+      name: `${parent.name}_${operation}_${when}`,
       parent,
       droppedByParent: true,
       fullAlter: true,
@@ -80,7 +83,7 @@ class Trigger extends AbstractSchemaObject {
    * @inheritDoc
    */
   getObjectIdentifier (operation, isParentContext) {
-    return `${this.getParentedName(true)} ${this.getSqlTriggerType()} ON ${this.getParent().getParentedName(true)}`
+    return `${this.getQuotedName()} ${this.getSqlTriggerType()} ON ${this.getParent().getParentedName(true)}`
   }
 
   /**
@@ -91,5 +94,3 @@ class Trigger extends AbstractSchemaObject {
     return (`${this.when} ${this.operation}`).toUpperCase()
   }
 }
-
-export default Trigger

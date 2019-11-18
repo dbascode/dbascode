@@ -10,11 +10,11 @@ import Attribute from './Attribute'
 /**
  * DB Type object
  */
-class Type extends AbstractSchemaObject {
+export default class Type extends AbstractSchemaObject {
   isEnum
-  fields = []
+  attributes = []
   values = []
-  _childrenProps = ['fields']
+  _childrenProps = ['attributes']
 
   /**
    *
@@ -38,7 +38,7 @@ class Type extends AbstractSchemaObject {
       parent,
     })
     this.isEnum = isEnum
-    this.fields = fields
+    this.attributes = fields
     this.values = values
   }
 
@@ -57,31 +57,33 @@ class Type extends AbstractSchemaObject {
       name,
       parent,
     })
-    if (cfg.fields) {
+    const attributesField = parent.getDb().getVersion() < 1 ? 'fields' : 'attributes'
+    if (cfg[attributesField]) {
       result.isEnum = false
-      for (const name of Object.keys(cfg.fields)) {
-        Attribute.createFromCfg(name, cfg.fields[name], result)
+      for (const name of Object.keys(cfg[attributesField])) {
+        Attribute.createFromCfg(name, cfg[attributesField][name], result)
       }
     } else if (cfg.enum) {
       result.isEnum = true
       result.values = result.values.concat(cfg.enum)
     } else {
-      throw new Error('Either fields or enum values must be specified')
+      throw new Error('Either attributes or enum values must be specified')
     }
     return result.getDb().pluginOnObjectConfigured(result, cfg)
   }
 
-  getCreateSql () {
+  /**
+   * @inheritDoc
+   */
+  getDefinition (operation, addSql) {
     if (this.isEnum) {
-      return `CREATE TYPE ${this.getParentedName(true)} AS ENUM ('${this.values.join("', '")}');\n`
+      return `AS ENUM ('${this.values.join("', '")}');`
     } else {
       const fields = []
-      for (const field of Object.values(this.fields)) {
-        fields.push(field.getCreateSql())
+      for (const field of Object.values(this.attributes)) {
+        fields.push(`${field.getObjectIdentifier('', true)} ${field.getDefinition()}`)
       }
-      return `CREATE TYPE ${this.getParentedName(true)} AS (\n${fields.join(",\n")}\n);\n`
+      return `AS (\n${fields.join(",\n")}\n)`
     }
   }
 }
-
-export default Type

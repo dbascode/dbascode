@@ -8,7 +8,10 @@
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isArray from 'lodash-es/isArray'
 
-class Index extends AbstractSchemaObject {
+/**
+ * Index in a table
+ */
+export default class Index extends AbstractSchemaObject {
   colNames = []
   isInherited = false
 
@@ -68,5 +71,3 @@ class Index extends AbstractSchemaObject {
     return `("${this.colNames.join('","')}")`
   }
 }
-
-export default Index

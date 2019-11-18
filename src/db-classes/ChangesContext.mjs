@@ -14,7 +14,7 @@ import isArray from 'lodash-es/isArray'
 /**
  * Context to store changes between two DB trees
  */
-class ChangesContext {
+export default class ChangesContext {
   stack = []
   changes = []
   path = []
@@ -120,5 +120,3 @@ const color = {
   BgCyan: "\x1b[46m",
   BgWhite: "\x1b[47m",
 }
-
-export default ChangesContext

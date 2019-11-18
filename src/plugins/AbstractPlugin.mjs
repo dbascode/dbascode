@@ -7,7 +7,7 @@
 /**
  * Abstract base class for all plugins.
  */
-class AbstractPlugin {
+export default class AbstractPlugin {
   /**
    * Returns plugin name. Must be unique.
    * @returns {string}
@@ -34,5 +34,3 @@ class AbstractPlugin {
   onCompareObjects (old, cur, context) {
   }
 }
-
-export default AbstractPlugin

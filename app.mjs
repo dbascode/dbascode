@@ -11,7 +11,7 @@ import DataBase from './src/db-classes/DataBase'
 import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
 import PostgraphilePlugin from './src/plugins/PostgraphilePlugin'
-import { getLoadLastStateSql, getStateSaveSql } from './src/db-classes/utils'
+import { getLoadLastStateSql, getStateSaveSql } from './src/db-classes/db-utils'
 import { executeSql, executeSqlJson } from './src/psql'
 import os from 'os'
 
@@ -122,12 +122,12 @@ function loadCurrentState () {
 }
 
 /**
- * Compare old and current states and return changes object with differences
- * @param prevState
- * @param curState
- * @param prevVersion
- * @param curVersion
- * @return {(ChangesContext|DataBase)[]}
+ * Compare old and current states and return changes object with differences.
+ * @param {object} prevState - Previous state
+ * @param {object} curState - Current state
+ * @param {number} prevVersion - PgAsCode version used to save previous state
+ * @param {number} curVersion - PgAsCode version used to save previous state
+ * @return {array}
  */
 function buildChanges(prevState, curState, prevVersion, curVersion) {
   const dbOverrides = {

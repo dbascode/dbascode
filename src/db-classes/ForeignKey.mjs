@@ -4,10 +4,13 @@
  * Date: 12.10.2019
  * Time: 21:11
  */
+import { prepareArgs } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import { prepareArgs } from './utils'
 
-class ForeignKey extends AbstractSchemaObject {
+/**
+ * Foreign key in a column
+ */
+export default class ForeignKey extends AbstractSchemaObject {
   colName
   refTableName
   refColName
@@ -115,5 +118,3 @@ class ForeignKey extends AbstractSchemaObject {
     return 'ON'
   }
 }
-
-export default ForeignKey

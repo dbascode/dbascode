@@ -6,7 +6,10 @@
  */
 import AbstractDbObject from './AbstractDbObject'
 
-class AbstractSchemaObject extends AbstractDbObject {
+/**
+ * Abstract class for objects belonging to a schema
+ */
+export default class AbstractSchemaObject extends AbstractDbObject {
   /**
    * Returns Schema  object that the current object belongs to
    * @returns {DataBase}
@@ -32,5 +35,3 @@ class AbstractSchemaObject extends AbstractDbObject {
     return super.getObjectIdentifier(operation, isParentContext)
   }
 }
-
-export default AbstractSchemaObject

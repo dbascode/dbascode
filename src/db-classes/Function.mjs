@@ -5,7 +5,7 @@
  * Time: 16:27
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
-import { prepareArgs } from './utils'
+import { prepareArgs } from './db-utils'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
 import isEmpty from 'lodash-es/isEmpty'
@@ -99,7 +99,7 @@ export default class Function extends AbstractSchemaObject {
       isSecurityDefiner: !!cfg.security_definer,
       cost: cfg.cost,
       stability: cfg.stability,
-      parallelSafety: !!cfg.parallel_safety,
+      parallelSafety: cfg.parallel_safety,
       args: cfg.arguments,
       isLeakProof: cfg.leakproof,
       grant: cfg.grant,
@@ -194,13 +194,10 @@ export default class Function extends AbstractSchemaObject {
     const cost = this.cost ? `COST ${this.cost}` : ''
     const leakProof = this.isLeakProof ? 'LEAKPROOF' : 'NOT LEAKPROOF'
     const securityDefiner = this.isSecurityDefiner ? 'SECURITY DEFINER' : ''
-    return `${this.getParentedName(true)}(${this.getFunctionArgs()})
-  ${returns}
-  LANGUAGE '${this.language}'
+    return `${returns} LANGUAGE '${this.language}'
   ${cost} ${this.getStabilitySql()} ${leakProof} ${securityDefiner} ${this.getParallelSafety()}
 AS $BODY$
 ${this.code}
-$BODY$;
-`
+$BODY$`
   }
 }

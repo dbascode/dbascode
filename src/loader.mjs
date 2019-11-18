@@ -95,7 +95,7 @@ function recursePostProcess(cfg, dir) {
 /**
  * Returns config without directory context
  * @param cfg
- * @returns {*[]|*}
+ * @returns {*}
  */
 function filterConfig(cfg) {
   if (isArray(cfg)) {

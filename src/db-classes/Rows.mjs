@@ -13,7 +13,7 @@ import AbstractSchemaObject from './AbstractSchemaObject'
 /**
  * Initial rows in a table
  */
-class Rows extends AbstractSchemaObject {
+export default class Rows extends AbstractSchemaObject {
   rows
 
   /**
@@ -100,5 +100,3 @@ class Rows extends AbstractSchemaObject {
   }
 
 }
-
-export default Rows

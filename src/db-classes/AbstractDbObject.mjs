@@ -14,7 +14,7 @@ import {
   escapeComment,
   joinSql,
   parseArrayProp,
-} from './utils'
+} from './db-utils'
 import isEmpty from 'lodash-es/isEmpty'
 import difference from 'lodash-es/difference'
 import {
@@ -410,7 +410,7 @@ export default class AbstractDbObject {
         result.push(this.getDropSql(withParent))
       }
     }
-    return result.join('')
+    return joinSql(result)
   }
 
   /**
@@ -444,7 +444,7 @@ export default class AbstractDbObject {
    * @param {string} prop
    * @param {string} what
    * @param {boolean} withParent
-   * @return {*[]}
+   * @return {AbstractDbObject[]}
    */
   getChildrenForSql (prop, what, withParent) {
     return this[prop]
@@ -485,7 +485,7 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Returns SQL definition for creation separately from parent
+   * Returns SQL text of the definition body of the object without object type and name.
    * @param {string} operation
    * @param {array} addSql - Array to add additional SQL queries after the current definition will be executed.
    * @returns {string}
