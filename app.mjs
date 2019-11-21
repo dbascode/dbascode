@@ -14,6 +14,9 @@ import PostgraphilePlugin from './src/plugins/PostgraphilePlugin'
 import { getLoadLastStateSql, getStateSaveSql } from './src/db-classes/db-utils'
 import { executeSql, executeSqlJson } from './src/psql'
 import os from 'os'
+import { collectChanges, getChangesSql } from './src/changes'
+import RowLevelSecurityPlugin from './src/plugins/RowLovelSecurityPlugin'
+import DefaultRowsPlugin from './src/plugins/DefaultRowsPlugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -136,23 +139,24 @@ function buildChanges(prevState, curState, prevVersion, curVersion) {
     rootPassword: cliConfig.dbPassword,
     dbName: cliConfig.dbName,
   }
-  const currentDbTree = DataBase.createFromCfg(
-    curState,
-    dbOverrides,
-    [
-      new PostgraphilePlugin,
-    ],
-    curVersion,
-  )
-  const previousDbTree = DataBase.createFromCfg(
-    prevState,
-    dbOverrides,
-    [
-      new PostgraphilePlugin,
-    ],
-    prevVersion,
-  )
-  const changes = currentDbTree.hasChanges(previousDbTree, true)
+  const createTree = (state, version) => {
+    if (!state) {
+      return
+    }
+    return DataBase.createFromState(
+      state,
+      dbOverrides,
+      [
+        new RowLevelSecurityPlugin,
+        new DefaultRowsPlugin,
+        new PostgraphilePlugin,
+      ],
+      version,
+    )
+  }
+  const currentDbTree = createTree(curState, version)
+  const previousDbTree = createTree(prevState, prevVersion)
+  const changes = collectChanges(previousDbTree, currentDbTree, true)
   return [
     changes,
     previousDbTree,
@@ -161,7 +165,7 @@ function buildChanges(prevState, curState, prevVersion, curVersion) {
 }
 
 function getMigrationSql (changes, prevTree, curTree) {
-  let sqlDump = curTree.getChangesSql(prevTree, changes)
+  let sqlDump = getChangesSql(prevTree, curTree, changes)
   if (changes.hasChanges()) {
     if (sqlDump.trim().length === 0) {
       throw new Error('Changes in state detected, but SQL dump is empty.')
@@ -171,7 +175,9 @@ function getMigrationSql (changes, prevTree, curTree) {
 }
 
 function disposeTrees (prevTree, curTree) {
-  curTree.dispose()
+  if (curTree) {
+    curTree.dispose()
+  }
   if (prevTree) {
     prevTree.dispose()
   }

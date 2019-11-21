@@ -9,18 +9,29 @@ import isBoolean from 'lodash-es/isBoolean'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 
+/**
+ * Some Postgraphile-specific add-ons
+ */
 class PostgraphilePlugin extends AbstractPlugin{
   /**
    * @inheritDoc
    */
-  onObjectCreated(instance, config) {
-    const type = instance.getClassName()
-    switch (type) {
-      case 'Table':
-      case 'Column':
-      case 'PrimaryKey':
-        this.applyOmitMixin(instance, config, type)
-        break;
+  onTreeInitialized(db) {
+    for (const schemaName of Object.keys(db.schemas)) {
+      if (schemaName === 'pgascode') {
+        continue
+      }
+      const schema = db.schemas[schemaName]
+      for (const tableName of Object.keys(schema.tables)) {
+        const table = schema.tables[tableName]
+        this.applyOmitMixin(table)
+        for (const columnName of Object.keys(table.columns)) {
+          this.applyOmitMixin(table.columns[columnName])
+        }
+        if (table.primaryKey) {
+          this.applyOmitMixin(table.primaryKey)
+        }
+      }
     }
   }
 
@@ -41,10 +52,10 @@ class PostgraphilePlugin extends AbstractPlugin{
   /**
    * Applies Table class mixin
    * @param {Table|Column|PrimaryKey} inst
-   * @param {Object} cfg
-   * @param {string} type - DB object class type
    */
-  applyOmitMixin(inst, cfg, type) {
+  applyOmitMixin(inst) {
+    const cfg = inst._rawConfig
+    const type = inst.getClassName()
     const omit = cfg ? cfg.omit : false
     inst.applyMixin({
       omit: isBoolean(omit)

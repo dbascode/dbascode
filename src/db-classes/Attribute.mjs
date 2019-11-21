@@ -1,4 +1,4 @@
-import { prepareArgs } from './db-utils'
+import { processCalculations } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 
 /**
@@ -40,7 +40,7 @@ export default class Attribute extends AbstractSchemaObject{
     if (!cfg) {
       return null
     }
-    const result = new Attribute(prepareArgs(parent, {
+    const result = new Attribute(processCalculations(parent, {
       name,
       type: cfg,
       parent,
@@ -51,7 +51,7 @@ export default class Attribute extends AbstractSchemaObject{
   /**
    * @inheritDoc
    */
-  getDefinition (operation, addSql) {
+  getSqlDefinition (operation, addSql) {
     return `${this.type}`
   }
 

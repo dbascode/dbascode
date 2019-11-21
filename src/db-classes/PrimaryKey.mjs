@@ -13,77 +13,36 @@ import isString from 'lodash-es/isString'
  */
 export default class PrimaryKey extends AbstractSchemaObject {
   colNames = []
-  isInherited = false
 
   /**
-   * Constructor
-   * @param {string[]} colNames
-   * @param {Table} [parent]
-   * @param {string} comment
-   * @param {boolean} isInherited
+   * @inheritDoc
    */
-  constructor (
-    {
-      colNames,
-      parent,
-      comment = '',
-      isInherited = false,
+  applyConfigProperties (config) {
+    if (isString(config)) {
+      config = {columns: config}
     }
-  ) {
-    super({
-      name: `${parent.name}_pkey`,
-      parent,
-      comment,
-      isSimpleChild: true,
-      droppedByParent: true,
-      createdByParent: true,
-      fullAlter: true,
-    })
-    this.isInherited = isInherited
-    this.colNames = colNames
-  }
-
-  /**
-   * Instantiate new object from config data
-   * @param {object} cfg
-   * @param {Table} [parent]
-   * @return {PrimaryKey}
-   */
-  static createFromCfg(cfg, parent) {
-    if (isString(cfg)) {
-      cfg = {columns: cfg}
-    }
-    if (!cfg.columns) {
-      return null
-    }
-    const result = new PrimaryKey(
-      {
-        colNames: isString(cfg.columns) ? [cfg.columns] : (cfg.columns || []),
-        comment: cfg.comment || '',
-        parent,
-      }
-    )
-    return result.getDb().pluginOnObjectConfigured(result, cfg)
+    this.colNames = isString(config.columns) ? [config.columns] : (config.columns || [])
+    this.name = `${this.getParent().name}_pkey`
   }
 
   /**
    * @inheritDoc
    */
-  getParentRelation () {
+  getParentRelation (operation) {
     return 'ON'
   }
 
   /**
    * @inheritDoc
    */
-  getObjectClass () {
+  getObjectClass (operation) {
     return 'CONSTRAINT'
   }
 
   /**
    * @inheritDoc
    */
-  getDefinition () {
+  getSqlDefinition (operation, addSql) {
     return `PRIMARY KEY ("${this.colNames.join('", "')}")`
   }
 }

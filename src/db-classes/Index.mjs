@@ -13,61 +13,26 @@ import isArray from 'lodash-es/isArray'
  */
 export default class Index extends AbstractSchemaObject {
   colNames = []
-  isInherited = false
 
   /**
-   * Constructor
-   * @param {string[]} colNames
-   * @param {Table} [parent]
-   * @param {boolean} isInherited
+   * @inheritDoc
    */
-  constructor (
-    {
-      colNames,
-      parent,
-      isInherited = false,
-    }
-  ) {
-    super({
-      name: `${colNames.join('_')}_idx`,
-      parent,
-      droppedByParent: true,
-      fullAlter: true,
-    })
-    this.isInherited = isInherited
-    this.colNames = colNames
-  }
-
-  /**
-   * Instantiate new object from config data
-   * @param {string|string[]} colNames
-   * @param {Table} [parent]
-   * @return {Index}
-   */
-  static createFromCfg(colNames, parent) {
-    if (!colNames) {
-      return null
-    }
-    const result = new Index(
-      {
-        colNames: isArray(colNames) ? colNames : [colNames],
-        parent,
-      }
-    )
-    return result.getDb().pluginOnObjectConfigured(result, colNames)
+  applyConfigProperties (config) {
+    this.colNames = isArray(config) ? config : [config]
+    this.name = `${this.colNames.join('_')}_idx`
   }
 
   /**
    * @inheritDoc
    */
-  getParentRelation () {
+  getParentRelation (operation) {
     return 'ON'
   }
 
   /**
    * @inheritDoc
    */
-  getDefinition (operation, addSql) {
+  getSqlDefinition (operation, addSql) {
     return `("${this.colNames.join('","')}")`
   }
 }

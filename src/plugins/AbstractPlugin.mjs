@@ -17,12 +17,10 @@ export default class AbstractPlugin {
   }
 
   /**
-   * Execute plugin on DB object creation.
-   * @param {AbstractDbObject} instance
-   * @param {Object} config
-   * @returns {AbstractDbObject}
+   * Execute plugin on DB object tree initialized.
+   * @param {DataBase} db
    */
-  onObjectCreated(instance, config) {
+  onTreeInitialized(db) {
   }
 
   /**

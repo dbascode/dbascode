@@ -4,8 +4,9 @@
  * Date: 12.10.2019
  * Time: 21:11
  */
-import { prepareArgs } from './db-utils'
+import { processCalculations } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
+import isString from 'lodash-es/isString'
 
 /**
  * Foreign key in a column
@@ -17,59 +18,26 @@ export default class ForeignKey extends AbstractSchemaObject {
   onUpdate = 'restrict'
   onDelete = 'restrict'
 
-  /**
-   * Constructor
-   * @param {string} colName
-   * @param {string} refTableName
-   * @param {string} refColName
-   * @param {string} onUpdate
-   * @param {string} onDelete
-   * @param {Column} [parent]
-   */
-  constructor (
-    {
-      colName,
-      refTableName,
-      refColName,
-      onUpdate = 'restrict',
-      onDelete = 'restrict',
-      parent = undefined,
-    }) {
-    super({
-      name: `${colName}_fkey`,
-      parent,
-      isSimpleChild: true,
-      droppedByParent: true,
-      createdByParent: true,
-      alterWithParent: true,
-      fullAlter: true,
-    })
-    this.colName = colName
-    this.refTableName = refTableName
-    this.refColName = refColName
-    this.onUpdate = onUpdate
-    this.onDelete = onDelete
-  }
+  static droppedByParent = true
+  static createdByParent = true
+  static alterWithParent = true
+  static fullAlter = true
 
   /**
-   * Instantiate new object from config data
-   * @param {string} colName
-   * @param {string} definition
-   * @param {Column} [parent]
-   * @return {ForeignKey|null}
+   * @inheritDoc
    */
-  static createFromCfg(colName, definition, parent) {
-    if (!definition) {
-      return null
+  applyConfigProperties (config) {
+    const [refTableName, refColName] = config.ref.split('.')
+    this.colName = config.column
+    this.refTableName = refTableName
+    this.refColName = refColName
+    this.name = `${config.column}_fkey`
+    if (config.on_update) {
+      this.onUpdate = config.on_update
     }
-    const [refTableName, refColName] = definition.split('.')
-    const result = new ForeignKey(prepareArgs(parent, {
-      colName,
-      refTableName,
-      refColName,
-      parent,
-    }))
-    return result.getDb().pluginOnObjectConfigured(result, definition)
+    if (config.on_delete) {
+      this.onDelete = config.on_delete
+    }
   }
 
   /**
@@ -77,7 +45,7 @@ export default class ForeignKey extends AbstractSchemaObject {
    * @return {Table}
    */
   getTable () {
-    return this.getParent().getParent()
+    return this.getParent()
   }
 
   /**
@@ -98,7 +66,7 @@ export default class ForeignKey extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getDefinition () {
+  getSqlDefinition () {
     return `FOREIGN KEY ("${this.colName}")
       REFERENCES ${this.getSchema().getQuotedName()}."${this.refTableName}" ("${this.refColName}") 
       MATCH SIMPLE ON UPDATE ${this.getOnUpdate()} ON DELETE ${this.getOnDelete()}`;
@@ -107,14 +75,14 @@ export default class ForeignKey extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getObjectClass () {
+  getObjectClass (operation) {
     return 'CONSTRAINT'
   }
 
   /**
    * @inheritDoc
    */
-  getParentRelation () {
+  getParentRelation (operation) {
     return 'ON'
   }
 }

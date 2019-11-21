@@ -4,7 +4,7 @@
  * Date: 11.10.2019
  * Time: 16:26
  */
-import { prepareArgs } from './db-utils'
+import { processCalculations } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 
 /**
@@ -14,68 +14,30 @@ export default class Trigger extends AbstractSchemaObject {
   operation
   when
   what
-  isInherited = false
 
   /**
-   * Constructor
-   * @param {string} operation
-   * @param {string} when
-   * @param {string} what
-   * @param {Table} [parent]
-   * @param {boolean} [isInherited]
+   * @inheritDoc
    */
-  constructor (
-    {
-      operation,
-      when,
-      what,
-      parent = undefined,
-      isInherited = false,
-    }) {
-    super({
-      name: `${parent.name}_${operation}_${when}`,
-      parent,
-      droppedByParent: true,
-      fullAlter: true,
-    })
-    this.operation = operation
-    this.when = when
-    this.what = what
-    this.isInherited = isInherited
-  }
-
-  /**
-   * Instantiate new object from config data
-   * @param {string} op
-   * @param {string|null} cfg
-   * @param {Table} [parent]
-   * @return {Trigger|null}
-   */
-  static createFromCfg(op, cfg, parent) {
-    if (!cfg) {
-      return null
-    }
+  applyConfigProperties (config) {
+    const op = this.name
     const [when, operation] = op.split('_')
-    const result = new Trigger(prepareArgs(parent, {
-      when,
-      operation,
-      what: cfg,
-      parent,
-    }))
-    return result.getDb().pluginOnObjectConfigured(result, cfg)
+    this.when = when
+    this.operation = operation
+    this.what = config
+    this.name = `${when}_${operation}`
   }
 
   /**
    * @inheritDoc
    */
-  getDefinition (operation, addSql) {
+  getSqlDefinition (operation, addSql) {
     return `FOR EACH ROW EXECUTE PROCEDURE ${this.what}`
   }
 
   /**
    * @inheritDoc
    */
-  getParentRelation () {
+  getParentRelation (operation) {
     return 'ON'
   }
 
@@ -83,7 +45,8 @@ export default class Trigger extends AbstractSchemaObject {
    * @inheritDoc
    */
   getObjectIdentifier (operation, isParentContext) {
-    return `${this.getQuotedName()} ${this.getSqlTriggerType()} ON ${this.getParent().getParentedName(true)}`
+    const table = this.getParent()
+    return `"${table.name}_${this.name}" ${this.getSqlTriggerType()} ON ${table.getObjectIdentifier('')}`
   }
 
   /**

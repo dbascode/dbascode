@@ -6,10 +6,10 @@
  */
 
 import isString from 'lodash-es/isString'
-import { circularSafeStringify } from '../utils'
 import supportsColor from 'supports-color'
 import isObject from 'lodash-es/isObject'
 import isArray from 'lodash-es/isArray'
+import { circularSafeStringify } from './utils'
 
 /**
  * Context to store changes between two DB trees

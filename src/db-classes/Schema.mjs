@@ -10,51 +10,30 @@ import Type from './Type'
 import Function from './Function'
 import Table from './Table'
 import isEmpty from 'lodash-es/isEmpty'
+import Sequence from './Sequence'
+import ChildDef from './ChildDef'
+import ChildDefCollection from './ChildDefCollection'
 
 /**
  * Database schema object.
  */
 export default class Schema extends AbstractDbObject {
   /**
-   * @type {Object.<string, Table>}
+   * @property {Table[]} tables
+   * @property {Type[]} types
+   * @property {Function[]} functions
+   * @property {Sequence[]} sequences
    */
-  tables = {}
   /**
-   * @type {Object.<string, Type>}
+   * @type {ChildDefCollection}
    */
-  types = {}
-  /**
-   * @type {Object.<string, Function>}
-   */
-  functions = {}
-  _childrenProps = ['types', 'functions', 'tables']
+  static childrenDefs = new ChildDefCollection([
+    new ChildDef(Type),
+    new ChildDef(Function),
+    new ChildDef(Sequence),
+    new ChildDef(Table),
+  ])
 
-  /**
-   * Constructor
-   * @param {string} name
-   * @param {Object.<string, Table>} [tables]
-   * @param {Object.<string, Function>} [functions]
-   * @param {Object.<string, Type>} [types]
-   * @param {DataBase} [parent]
-   * @param {object} [grant]
-   * @param {object} [revoke]
-   */
-  constructor (
-    {
-      name,
-      tables = {},
-      functions = {},
-      types = {},
-      parent = undefined,
-      grant = {},
-      revoke = {},
-    }
-  ) {
-    super({ name: name, parent: parent, isSimpleChild: false, grant: grant, revoke: revoke })
-    this.types = types
-    this.tables = tables
-    this.functions = functions
-  }
 
   /**
    * Instantiate new object from config data
@@ -100,41 +79,6 @@ export default class Schema extends AbstractDbObject {
       restMap = newRestMap
     } while (!isEmpty(restMap))
     return result.getDb().pluginOnObjectConfigured(result, cfg)
-  }
-
-  /**
-   * @inheritDoc
-   */
-  sgetChildrenForSql (prop, what, withParent) {
-    const result = super.getChildrenForSql(prop, what, withParent)
-    if (prop === 'tables') {
-      // Import tables following their dependencies
-      const tableOrder = []
-      let restMap = {}
-      Object.keys(this.tables).forEach(name => restMap[name] = 1)
-      do {
-        const newRestMap = {}
-        for (const tableName of Object.keys(restMap)) {
-          const table = this.tables[tableName]
-          const dependencies = table.getDependencies()
-          if (arrayContainsEntirely(tableOrder, dependencies)) {
-            tableOrder.push(tableName)
-          } else {
-            newRestMap[tableName] = 1
-          }
-        }
-        if (Object.keys(restMap).length === Object.keys(newRestMap).length) {
-          throw new Error("Infinite loop")
-        }
-        restMap = newRestMap
-      } while (!isEmpty(restMap))
-      const orderedResult = {}
-      for (const tableName of tableOrder) {
-        orderedResult[tableName] = this.tables[tableName]
-      }
-    } else {
-      return result
-    }
   }
 
   /**

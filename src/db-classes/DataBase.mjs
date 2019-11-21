@@ -9,56 +9,56 @@ import { dispose, } from '../utils'
 import AbstractDbObject from './AbstractDbObject'
 import Role from './Role'
 import Schema from './Schema'
+import ChildDef from './ChildDef'
+import ChildDefCollection from './ChildDefCollection'
 
 /**
  * Database object
  */
 export default class DataBase extends AbstractDbObject {
-  schemas = {}
-  roles = {}
-  _rootUserName = ''
-  _rootPassword = ''
+  /**
+   * Default locale of this Database.
+   * @type {string}
+   */
   defaultLocale = ''
+  /**
+   * List of installed Postgres database extensions.
+   * @type {*[]}
+   */
   extensions = []
   /**
+   * @type {string}
+   * @private
+   */
+  _rootUserName = ''
+  /**
+   * @type {string}
+   * @private
+   */
+  _rootPassword = ''
+  /**
+   * Database plugins
    * @type {Object.<string, AbstractPlugin>}
    * @private
    */
   _plugins = {}
-  _childrenProps = ['roles', 'schemas']
-  _version = 0
-
   /**
-   * Constructor
-   * @param {string} [name]
-   * @param {Object.<string, Schema>} [schemas]
-   * @param {Object.<string, Role>} [roles]
-   * @param {string} rootUserName
-   * @param {string} [rootPassword]
-   * @param {string} [defaultLocale]
-   * @param {string[]} [extensions]
-   * @param {number} version
+   * PgAsCode version number this object was generated with
+   * @type {number}
+   * @private
    */
-  constructor (
-    {
-      name= '',
-      schemas = {},
-      roles = {},
-      rootUserName,
-      rootPassword = '',
-      defaultLocale = '',
-      extensions = [],
-      version = 0,
-    }) {
-    super({ name: name })
-    this._rootUserName = rootUserName
-    this._rootPassword = rootPassword
-    this.defaultLocale = defaultLocale
-    this.schemas = schemas
-    this.roles = roles
-    this.extensions = extensions
-    this._version = version
-  }
+  _version = 0
+  /**
+   * @property {Role[]} roles
+   * @property {Schema[]} schemas
+   */
+  /**
+   * @type {ChildDefCollection}
+   */
+  static childrenDefs = new ChildDefCollection([
+    new ChildDef(Role),
+    new ChildDef(Schema),
+  ])
 
   /**
    * Instantiate new object from config data
@@ -68,32 +68,28 @@ export default class DataBase extends AbstractDbObject {
    * @param {number} version
    * @return {DataBase|null}
    */
-  static createFromCfg(
+  static createFromState(
     cfg,
     overrides,
     plugins = [],
     version,
   ) {
-    if (!cfg) {
-      return undefined
-    }
     const result = new DataBase({
-      defaultLocale: overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale,
-      rootUserName: overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name,
-      rootPassword: overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password,
       name: overrides.dbName ? overrides.dbName : '',
-      extensions: cfg.extensions,
-      version,
+      rawConfig: cfg,
     })
+    result._version = version
+    result.defaultLocale = overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale
+    result._rootUserName = overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name
+    result._rootPassword = overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password
+    result.extensions = cfg.extensions
     for (const plugin of plugins) {
       result.addPlugin(plugin)
     }
-    for (const name of Object.keys(cfg.roles || {})) {
-      Role.createFromCfg(name, cfg.roles[name], result)
-    }
-    for (const name of Object.keys(cfg.schemas || {})) {
-      Schema.createFromCfg(name, cfg.schemas[name], result)
-    }
+    result.applyConfig(cfg)
+    result.postprocessTree()
+    result.setupDependencies()
+    result.pluginOnTreeInitialized()
     return result
   }
 
@@ -137,16 +133,12 @@ export default class DataBase extends AbstractDbObject {
 
   /**
    * Executes plugins when an object is created and configured
-   * @param {AbstractDbObject} instance
    * @param {Object} config
-   * @returns {AbstractDbObject}
    */
-  pluginOnObjectConfigured(instance, config = {}) {
-    let result = instance
+  pluginOnTreeInitialized(config = {}) {
     for (const plugin of Object.values(this._plugins)) {
-      plugin.onObjectCreated(result, config)
+      plugin.onTreeInitialized(this)
     }
-    return result
   }
 
   /**

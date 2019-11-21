@@ -5,53 +5,34 @@
  * Time: 16:30
  */
 
+import AbstractSchemaObject from '../db-classes/AbstractSchemaObject'
 import isUndefined from 'lodash-es/isUndefined'
 import isObject from 'lodash-es/isObject'
 import { lookupClosestLocale } from '../utils'
-import AbstractSchemaObject from './AbstractSchemaObject'
 
 /**
  * Initial rows in a table
  */
 export default class Rows extends AbstractSchemaObject {
-  rows
+  rows = []
+
+  static configName = 'rows'
+  static droppedByParent = true
 
   /**
-   * Constructor
-   * @param {Object[]} rows
-   * @param {Table} [parent]
+   * @inheritDoc
    */
-  constructor (
-    rows,
-    parent = undefined
-  ) {
-    super({
-      parent,
-      isSimpleChild: true,
-    })
-    this.rows = rows
+  applyConfigProperties (config) {
+    this.rows = config
   }
 
   /**
-   * Instantiate new object from config data
-   * @param {Array|null} rows
-   * @param {Table} [parent]
-   * @return {Rows|null}
+   * @inheritDoc
    */
-  static createFromCfg(rows, parent) {
-    if (!rows) {
-      return null
-    }
-    const result = new Rows(
-      rows,
-      parent,
-    )
-    return result.getDb().pluginOnObjectConfigured(result, rows)
-  }
-
   getCreateSql () {
     const sqlValues = []
-    const columns = this._parent.columns
+    const table = this.getParent()
+    const columns = table.columns
     const colNames = Object.keys(columns)
     for (const row of this.rows) {
       const values = []
@@ -66,7 +47,7 @@ export default class Rows extends AbstractSchemaObject {
             } else if (column.isNumeric()) {
               values.push('0')
             } else {
-              throw new Error(`Can not set default value for field ${this._parent.getParentedName()}.${column.name}`)
+              throw new Error(`Can not set default value for field ${column.getObjectIdentifier('comment')}`)
             }
           }
         } else {
@@ -81,13 +62,13 @@ export default class Rows extends AbstractSchemaObject {
           } else if (this.isFieldNumeric(column.type)) {
             values.push(value)
           } else {
-            throw new Error(`Don't know how to format value for field ${this._parent.getParentedName()}.${column.name}`)
+            throw new Error(`Don't know how to format value for field ${column.getObjectIdentifier('comment')}`)
           }
         }
       }
       sqlValues.push(`(${values.join(', ')})`)
     }
-    return `INSERT INTO ${this._parent.getParentedName(true)} ("${colNames.join('", "')}") VALUES\n${sqlValues.join(",\n")};\n`
+    return `INSERT INTO ${table.getObjectIdentifier('insert')} ("${colNames.join('", "')}") VALUES\n${sqlValues.join(",\n")};`
   }
 
   isFieldText (type) {

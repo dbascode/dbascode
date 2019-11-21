@@ -17,52 +17,19 @@ export default class Role extends AbstractDbObject {
   isClient = false
 
   /**
-   * Constructor
-   * @param {string} name
-   * @param {string[]} [memberOf]
-   * @param {DataBase} [parent]
-   * @param {boolean} isClient
-   * @param {string} [comment]
+   * @inheritDoc
    */
-  constructor (
-    {
-      name,
-      memberOf = [],
-      parent= undefined,
-      isClient = false,
-      comment = '',
-    }
-  ) {
-    super({
-      name,
-      parent,
-      comment,
-    })
-    this.memberOf = memberOf
-    this.isClient = isClient
-  }
-
-  /**
-   * Instantiate new object from config data
-   * @param {string} name
-   * @param {Object|null} cfg
-   * @param {DataBase} [parent]
-   * @return {Role}
-   */
-  static createFromCfg(name, cfg, parent) {
-    const memberOf = cfg ? cfg.member_of : []
-    const result = new Role({
-      name,
-      memberOf: isArray(memberOf) ? memberOf : (memberOf ? [memberOf] : []),
-      parent,
-    })
-    return result.getDb().pluginOnObjectConfigured(result, cfg)
+  applyConfigProperties (config) {
+    config = config || {}
+    const memberOf = config.member_of || []
+    this.memberOf = isArray(memberOf) ? memberOf : (memberOf ? [memberOf] : [])
+    this.isClient = !!config.is_client
   }
 
   /**
    * @inheritDoc
    */
-  getDefinition (operation, addSql) {
+  getSqlDefinition (operation, addSql) {
     if (this.memberOf.length > 0) {
       for (const memberOf of this.memberOf) {
         addSql.push(`GRANT "${memberOf}" TO ${this.getQuotedName()};`)

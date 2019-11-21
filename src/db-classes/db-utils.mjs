@@ -16,12 +16,15 @@ import { replaceAll } from '../utils'
  * @param {Object.<string, *>} args
  * @returns {*}
  */
-export function prepareArgs (obj, args) {
-  if (!obj) {
+export function processCalculations (obj, args) {
+  if (!obj || !args) {
     return args
   }
+  if (isString(args)) {
+    return recurseProcessCalculations(obj, args)
+  }
   for (const prop of Object.keys(args)) {
-    if (prop === 'name') {
+    if (prop === 'name' || prop === 'rawConfig' || prop === 'parent') {
       continue
     }
     args[prop] = recurseProcessCalculations(obj, args[prop])

@@ -5,114 +5,102 @@
  * Time: 15:53
  */
 
-import { escapeString, prepareArgs } from './db-utils'
+import { escapeString } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
-import ForeignKey from './ForeignKey'
 import isObject from 'lodash-es/isObject'
+import Sequence from './Sequence'
+import PrimaryKey from './PrimaryKey'
+import ForeignKey from './ForeignKey'
 
 /**
  * Column in a table
  */
 export default class Column extends AbstractSchemaObject {
   type
-  foreignKey = undefined
+  foreignKey
   allowNull = false
-  /**
-   * Raw default value
-   * @type {*}
-   */
-  defaultValue = undefined
+  defaultValue
   isAutoIncrement = false
-  isInherited = false
-  isIntl = false
-  _childrenProps = ['foreignKey']
 
   /**
-   * Constructor
-   * @param {string} name
-   * @param {Table|Type|null} parent
-   * @param {string} type
-   * @param {boolean} [allowNull]
-   * @param {string} [defaultValue]
-   * @param {boolean} [isAutoIncrement]
-   * @param {boolean} [isInherited]
-   * @param {ForeignKey} [foreignKey]
-   * @param {boolean} [isIntl]
-   * @param {string} [comment]
-   */
-  constructor (
-    {
-      name,
-      parent,
-      type,
-      allowNull = false,
-      defaultValue = undefined,
-      isAutoIncrement = false,
-      isInherited = false,
-      foreignKey = undefined,
-      isIntl = false,
-      comment = '',
-    }
-  ) {
-    super({
-      name,
-      parent,
-      comment,
-      droppedByParent: true,
-      createdByParent: true,
-      alterWithParent: true,
-    })
-    this.foreignKey = foreignKey
-    this.type = type
-    this.allowNull = allowNull
-    this.defaultValue = defaultValue
-    this.isAutoIncrement = isAutoIncrement
-    this.isInherited = isInherited
-    this.isIntl = isIntl
-  }
-
+   * @typedef ColumnConfig
+   * @property {boolean} allow_null
+   * @property {*} default
+   * @property {boolean} autoincrement
+   * /
   /**
-   * Instantiate new object from config data
-   * @param {string} name
-   * @param {string|Object|null} cfg
-   * @param {Table|Type} [parent]
-   * @return {AbstractDbObject}
+   *
+   * @type {ColumnConfig}
    */
-  static createFromCfg (name, cfg, parent) {
-    if (!cfg) {
-      return null
-    }
-    const config = isString(cfg) ? { type: cfg } : cfg
+  applyConfigProperties (config) {
+    const cfg = isString(config) ? { type: config } : config
     let defaultValue
-    if (config.default) {
-      const def = isObject(config.default) ? config.default : {value: config.default, raw: false}
+    if (cfg.default) {
+      const def = isObject(cfg.default) ? cfg.default : {value: cfg.default, raw: false}
       if (def.raw) {
         defaultValue = def.value
       } else {
-        if (isTextual(config.type)) {
+        if (isTextual(cfg.type)) {
           defaultValue = escapeString(def.value)
         } else {
           defaultValue = def.value
         }
       }
     }
-    const result = new Column(prepareArgs(parent, {
-      name,
-      parent,
-      type: config.type,
-      allowNull: !!config.allow_null,
-      isIntl: !!config.intl,
-      isAutoIncrement: !!config.autoincrement,
-      defaultValue,
-      comment: cfg.comment,
-    }))
-    if (config.foreign_key) {
-      ForeignKey.createFromCfg(name, config.foreign_key, result)
-    }
-    return result.getDb().pluginOnObjectConfigured(result, config)
+    this.type = cfg.type
+    this.allowNull = !!cfg.allow_null
+    this.isAutoIncrement = !!cfg.autoincrement
+    this.defaultValue = defaultValue
+    this.foreignKey = cfg.foreign_key
   }
 
+  /**
+   * @inheritDoc
+   */
+  postprocessTree () {
+    if (this.isAutoIncrement) {
+      // Implicitly create autoincrement sequence for the parent table and make this
+      // column primary key.
+      const table = this.getParent()
+      const tableName = table.name
+      const seqName = `${tableName}_${this.name}_seq`
+      const schema = this.getSchema()
+      const seqDef = schema.getChildrenDefCollection().getDefByClass(Sequence)
+      if (!schema.findChildByDefAndName(seqDef, seqName)) {
+        const tableConfig = {}
+        const schemaConfig = {}
+        const pkDef = table.getChildrenDefCollection().getDefByClass(PrimaryKey)
+        table.getChildrenDefCollection().initConfig(tableConfig)
+        schema.getChildrenDefCollection().initConfig(schemaConfig)
+        schemaConfig[seqDef.configPropName][seqName] = {
+          table: tableName,
+          column: this.name,
+        }
+        tableConfig[pkDef.configPropName] = {
+          columns: this.name,
+        }
+        schema.createChildrenFromConfig(schemaConfig, false)
+        table.createChildrenFromConfig(tableConfig, false)
+      }
+    } else if (this.foreignKey) {
+      // Implicitly add foreign keys to the table if this column has the foreign_key config value.
+      const table = this.getParent()
+      const config = {}
+      const fkDef = table.getChildrenDefCollection().getDefByClass(ForeignKey)
+      table.getChildrenDefCollection().initConfig(config)
+      config[fkDef.configPropName].push({
+        column: this.name,
+        ref: this.foreignKey,
+      })
+      table.createChildrenFromConfig(config, false)
+    }
+  }
+
+  /**
+   * Returns SQL for default value definition
+   * @return {string}
+   */
   getDefaultValueSql () {
     if (this.defaultValue === null) {
       return 'NULL'
@@ -124,19 +112,26 @@ export default class Column extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getParentRelation () {
+  getParentRelation (operation) {
     return '.'
   }
 
   /**
    * @inheritDoc
    */
-  getDefinition (operation, addSql) {
+  getSqlDefinition (operation, addSql) {
     const defaultValue = this.isAutoIncrement ?
       (`DEFAULT nextval('${this.getAutoIncSeqName()}'::regclass)`) :
       (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
     const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
     return `${this.getType()} ${allowNull} ${defaultValue}`.trim()
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getObjectClass (operation) {
+    return operation === 'create' ? '' : super.getObjectClass(operation)
   }
 
   /**

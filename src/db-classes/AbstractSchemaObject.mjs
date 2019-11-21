@@ -12,7 +12,7 @@ import AbstractDbObject from './AbstractDbObject'
 export default class AbstractSchemaObject extends AbstractDbObject {
   /**
    * Returns Schema  object that the current object belongs to
-   * @returns {DataBase}
+   * @returns {Schema}
    */
   getSchema () {
     let parent = this
@@ -25,7 +25,7 @@ export default class AbstractSchemaObject extends AbstractDbObject {
   /**
    * @inheritDoc
    */
-  getObjectIdentifier (operation, isParentContext) {
+  getObjectIdentifier (operation, isParentContext = false) {
     if (!isParentContext) {
       const relType = this.getParentRelation()
       if (relType === '') {
