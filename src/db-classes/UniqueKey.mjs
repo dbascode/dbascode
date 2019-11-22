@@ -5,13 +5,19 @@
  * Time: 9:19
  */
 import AbstractDbObject from './AbstractDbObject'
-import isArray from 'lodash-es/isArray'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Unique key of a table
+ * @property {string[]} columns
  */
 export default class UniqueKey extends AbstractDbObject {
-  colNames = []
+
+  static propDefs = new PropDefCollection([
+    new PropDef('columns', { type: PropDef.array, isDefault: true }),
+    ...this.propDefs.defs,
+  ])
 
   static droppedByParent = true
   static fullAlter = true
@@ -20,11 +26,11 @@ export default class UniqueKey extends AbstractDbObject {
    * @inheritDoc
    */
   applyConfigProperties (config) {
-    this.colNames = isArray(config) ? config : [config]
+    super.applyConfigProperties(config)
     const table = this.getParent()
     this.name = this.getDb().getVersion() < 2
-      ? `${table.name}_${this.colNames.join('_')}`
-      : `${table.name}_${this.colNames.join('_')}_idx`
+      ? `${table.name}_${this.columns.join('_')}`
+      : `${table.name}_${this.columns.join('_')}_idx`
   }
 
   /**
@@ -49,6 +55,6 @@ export default class UniqueKey extends AbstractDbObject {
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    return `UNIQUE ("${this.colNames.join('","')}")`
+    return `UNIQUE ("${this.columns.join('","')}")`
   }
 }

@@ -5,6 +5,11 @@
  * Time: 16:54
  */
 
+import PropDef from './PropDef'
+
+/**
+ * Collection of object property definitions
+ */
 export default class PropDefCollection {
   /**
    * @type {PropDef[]}
@@ -28,6 +33,16 @@ export default class PropDefCollection {
       if (def.isDefault) {
         return def
       }
+    }
+  }
+
+  /**
+   * Initialize object props after creation
+   * @param object
+   */
+  initProps (object) {
+    for (const def of this.defs) {
+      object[def.name] = def.defaultValue
     }
   }
 }

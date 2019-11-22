@@ -16,16 +16,14 @@ import ChildDefCollection from './ChildDefCollection'
 
 /**
  * Table object
+ * @property {ForeignKey} foreignKeys
+ * @property {Column[]} columns
+ * @property {Index[]} indexes
+ * @property {Trigger[]} triggers
+ * @property {UniqueKey[]} uniqueKeys
+ * @property {PrimaryKey} primaryKey
  */
 export default class Table extends AbstractSchemaObject {
-  /**
-   * @property {ForeignKey} foreignKeys
-   * @property {Column[]} columns
-   * @property {Index[]} indexes
-   * @property {Trigger[]} triggers
-   * @property {UniqueKey[]} uniqueKeys
-   * @property {PrimaryKey} primaryKey
-   */
   /**
    * @type {ChildDefCollection}
    */
@@ -86,29 +84,16 @@ export default class Table extends AbstractSchemaObject {
   }
 
   /**
-   * @inheritDoc
-   * @param config
-   */
-  applyConfigProperties (config) {
-    if (this.getDb().getVersion() < 2) {
-      this.extends = config.inherit
-    }
-  }
-
-  /**
    * Fills the dependencies list of this object
    */
   setupDependencies() {
     super.setupDependencies()
     const tableDeps = {}
     for (const child of this.getChildrenByType(ForeignKey)) {
-      tableDeps[child.refTableName] = 1
+      tableDeps[child.ref.table] = 1
     }
     if (this.extends) {
       tableDeps[this.extends] = 1
-    }
-    if (this.defaultAcl) {
-      tableDeps['default_acl'] = 1
     }
     const schema = this.getSchema()
     for (const tableName of Object.keys(tableDeps)) {

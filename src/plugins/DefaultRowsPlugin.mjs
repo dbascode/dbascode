@@ -46,7 +46,7 @@ export default class DefaultRowsPlugin extends AbstractPlugin {
           )
         ])
         return newCol
-      }
+      },
     })
   }
 }

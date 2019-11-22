@@ -34,6 +34,7 @@ export default class ChildDefCollection {
         case ChildDef.single: object[def.propName] = null; break
         case ChildDef.array: object[def.propName] = []; break
         case ChildDef.map: object[def.propName] = {}; break
+        default: throw new Error(`Unknown property type ${def.propType}`)
       }
     }
   }

@@ -4,48 +4,53 @@
  * Date: 12.10.2019
  * Time: 21:11
  */
-import { processCalculations } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
+
+/**
+ * @typedef {Object} FKeyRef
+ * @property {string} table
+ * @property {string} column
+ */
 
 /**
  * Foreign key in a column
+ * @property {string} column
+ * @property {string} onUpdate
+ * @property {string} onDelete
+ * @property {FKeyRef} ref
  */
 export default class ForeignKey extends AbstractSchemaObject {
-  colName
-  refTableName
-  refColName
-  onUpdate = 'restrict'
-  onDelete = 'restrict'
-
   static droppedByParent = true
   static createdByParent = true
   static alterWithParent = true
   static fullAlter = true
 
+  static propDefs = new PropDefCollection([
+    new PropDef('column'),
+    new PropDef('onUpdate', { defaultValue: 'restrict' }),
+    new PropDef('onDelete', { defaultValue: 'restrict' }),
+    new PropDef('ref', {
+      type: PropDef.map,
+      normalize: (obj, value) => {
+        if (isString(value)) {
+          const [table, column] = value.split('.')
+          value = { table, column }
+        }
+        return value
+      }
+    }),
+    ...this.propDefs.defs,
+  ])
+
   /**
    * @inheritDoc
    */
   applyConfigProperties (config) {
-    const [refTableName, refColName] = config.ref.split('.')
-    this.colName = config.column
-    this.refTableName = refTableName
-    this.refColName = refColName
-    this.name = `${config.column}_fkey`
-    if (config.on_update) {
-      this.onUpdate = config.on_update
-    }
-    if (config.on_delete) {
-      this.onDelete = config.on_delete
-    }
-  }
-
-  /**
-   * Returns table
-   * @return {Table}
-   */
-  getTable () {
-    return this.getParent()
+    super.applyConfigProperties(config)
+    this.name = `${this.column}_fkey`
   }
 
   /**
@@ -66,9 +71,9 @@ export default class ForeignKey extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition () {
-    return `FOREIGN KEY ("${this.colName}")
-      REFERENCES ${this.getSchema().getQuotedName()}."${this.refTableName}" ("${this.refColName}") 
+  getSqlDefinition (operation, addSql) {
+    return `FOREIGN KEY ("${this.column}")
+      REFERENCES ${this.getSchema().getQuotedName()}."${this.ref.table}" ("${this.ref.column}") 
       MATCH SIMPLE ON UPDATE ${this.getOnUpdate()} ON DELETE ${this.getOnDelete()}`;
   }
 

@@ -12,32 +12,31 @@ import PropDef from './PropDef'
 
 /**
  * Function, Procedure, or Trigger Function object
+ * @property language
+ * @property returns
+ * @property cost
+ * @property isSecurityDefiner
+ * @property stability
+ * @property parallelSafety
+ * @property code
+ * @property args
+ * @property isLeakProof
  */
 export default class Function extends AbstractSchemaObject {
-  /**
-   * @property language
-   * @property returns
-   * @property cost
-   * @property isSecurityDefiner
-   * @property stability
-   * @property parallelSafety
-   * @property code
-   * @property args
-   * @property isLeakProof
-   */
   /**
    * @type {PropDefCollection}
    */
   static propDefs = new PropDefCollection([
-    new PropDef({ name: 'language', defaultValue: 'sql' }),
-    new PropDef({ name: 'returns' }),
-    new PropDef({ name: 'cost', type: PropDef.number, defaultValue: 10 }),
-    new PropDef({ name: 'isSecurityDefiner', type: PropDef.bool, configName: 'security_definer' }),
-    new PropDef({ name: 'stability', defaultValue: 'volatile' }),
-    new PropDef({ name: 'parallelSafety', defaultValue: 'unsafe' }),
-    new PropDef({ name: 'code' }),
-    new PropDef({ name: 'args', configName: 'arguments', type: PropDef.map }),
-    new PropDef({ name: 'isLeakProof', type: PropDef.bool }),
+    new PropDef('language', { defaultValue: 'sql' }),
+    new PropDef('returns'),
+    new PropDef('cost', { type: PropDef.number, defaultValue: 10 }),
+    new PropDef('isSecurityDefiner', { type: PropDef.bool, configName: 'security_definer' }),
+    new PropDef('stability', { defaultValue: 'volatile' }),
+    new PropDef('parallelSafety', { defaultValue: 'unsafe' }),
+    new PropDef('code'),
+    new PropDef('args', { configName: 'arguments', type: PropDef.map }),
+    new PropDef('isLeakProof', { type: PropDef.bool, configName: 'leak_proof' }),
+    ...this.propDefs.defs,
   ])
 
   getStabilitySql () {

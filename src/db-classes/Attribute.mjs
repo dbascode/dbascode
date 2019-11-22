@@ -1,19 +1,23 @@
-import { processCalculations } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Attribute in a type
+ * @property {string} type
  */
 export default class Attribute extends AbstractSchemaObject{
-  type
+  /**
+   * @type {PropDefCollection}
+   */
+  static propDefs = new PropDefCollection([
+    new PropDef('type', { isDefault: true }),
+    ...this.propDefs.defs,
+  ])
 
   static createdByParent = true
   static droppedByParent = true
   static alterWithParent = true
-
-  applyConfigProperties (config) {
-    this.type = config
-  }
 
   /**
    * @inheritDoc

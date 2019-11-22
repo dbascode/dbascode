@@ -6,44 +6,39 @@
  */
 
 import AbstractSchemaObject from './AbstractSchemaObject'
-import isArray from 'lodash-es/isArray'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Index in a table
+ * @property {string[]} columns
  */
 export default class Index extends AbstractSchemaObject {
-  colNames = []
+
+  static propDefs = new PropDefCollection([
+    new PropDef('columns', { type: PropDef.array, isDefault: true }),
+    ...this.propDefs.defs,
+  ])
 
   /**
    * @inheritDoc
    */
   applyConfigProperties (config) {
-    this.colNames = isArray(config) ? config : [config]
-    this.name = `${this.getParent().name}_${this.colNames.join('_')}_idx`
-  }
-
-  /**
-   * @inheritDoc
-   */
-  getObjectIdentifier (operation, isParentContext = false) {
-    if (operation === 'comment') {
-      return `${this.getSchema().getQuotedName()}.${this.getQuotedName()}`
-    } else {
-      return super.getObjectIdentifier(operation, isParentContext)
-    }
+    super.applyConfigProperties(config)
+    this.name = `${this.getParent().name}_${this.columns.join('_')}_idx`
   }
 
   /**
    * @inheritDoc
    */
   getParentRelation (operation) {
-    return 'ON'
+    return operation === 'comment' ? '.' : 'ON'
   }
 
   /**
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    return `("${this.colNames.join('","')}")`
+    return `("${this.columns.join('","')}")`
   }
 }

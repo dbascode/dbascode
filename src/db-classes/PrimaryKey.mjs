@@ -6,13 +6,18 @@
  */
 
 import AbstractSchemaObject from './AbstractSchemaObject'
-import isString from 'lodash-es/isString'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Table primary key object
+ * @property {string[]} columns
  */
 export default class PrimaryKey extends AbstractSchemaObject {
-  colNames = []
+  static propDefs = new PropDefCollection([
+    new PropDef('columns', { type: PropDef.array, isDefault: true }),
+    ...this.propDefs.defs,
+  ])
 
   static createdByParent = true
   static droppedByParent = true
@@ -22,10 +27,7 @@ export default class PrimaryKey extends AbstractSchemaObject {
    * @inheritDoc
    */
   applyConfigProperties (config) {
-    if (isString(config)) {
-      config = {columns: config}
-    }
-    this.colNames = isString(config.columns) ? [config.columns] : (config.columns || [])
+    super.applyConfigProperties(config)
     this.name = `${this.getParent().name}_pkey`
   }
 
@@ -47,6 +49,6 @@ export default class PrimaryKey extends AbstractSchemaObject {
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    return `PRIMARY KEY ("${this.colNames.join('", "')}")`
+    return `PRIMARY KEY ("${this.columns.join('", "')}")`
   }
 }

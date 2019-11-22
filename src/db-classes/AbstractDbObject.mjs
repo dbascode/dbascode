@@ -20,31 +20,22 @@ import {
 } from '../utils'
 import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Base class for all DB objects
+ * @property {string} comment
+ * @property {string} extends - Object that this object extends, inheriting its children and
+ * some properties. Inherited children must have the _isInherited property set to true.
+ * @property {object} grant
+ * @property {object} revoke
  */
 export default class AbstractDbObject {
   /**
    * @type {string}
    */
   name
-  /**
-   * Grant permissions config
-   * @type {object}
-   * @protected
-   */
-  grant = {}
-  /**
-   * Revoke permissions config
-   * @type {object}
-   */
-  revoke = {}
-  /**
-   * Comment on the object
-   * @type {string}
-   */
-  comment = ''
   /**
    * Object _parent
    * @type {AbstractDbObject}
@@ -74,12 +65,7 @@ export default class AbstractDbObject {
    * @type {boolean}
    */
   _isInherited = false
-  /**
-   * Object that this object extends, inheriting its children and some properties.
-   * Inherited children must have the _isInherited property set to true.
-   * @type {string}
-   */
-  extends = ''
+
   /**
    * List of children definitions
    * @type {ChildDefCollection}
@@ -87,9 +73,14 @@ export default class AbstractDbObject {
   static childrenDefs = null
   /**
    * List of properties definitions
-   * @type {ChildDefCollection}
+   * @type {PropDefCollection}
    */
-  static propDefs = null
+  static propDefs = new PropDefCollection([
+    new PropDef('comment'),
+    new PropDef('extends', { configName: ['inherit', {version: 2, name: 'extends'}] }),
+    new PropDef('grant', { type: PropDef.map }),
+    new PropDef('revoke', { type: PropDef.map }),
+  ])
   /**
    * Name of a state key where object configuration is found
    * @type {string}
@@ -123,33 +114,25 @@ export default class AbstractDbObject {
    * Constructor
    * @param {String} [name]
    * @param {AbstractDbObject} [parent]
-   * @param {object} [grant]
-   * @param {object} [revoke]
-   * @param {string} [comment]
    * @param {*} [rawConfig]
    * @param {boolean} [isInherited]
-   * @param {string} [extends]
    */
   constructor (
     {
       name = '',
       parent,
-      grant = {},
-      revoke = {},
-      comment = '',
       rawConfig,
       isInherited = false,
-      extends: extends_,
     }
   ) {
     this.name = name
     this._parent = parent
-    this.grant = grant
-    this.revoke = revoke
-    this.comment = comment
     this._rawConfig = rawConfig
     this._isInherited = isInherited
-    this.extends = extends_
+    const propDefs = this.getPropDefCollection()
+    if (propDefs) {
+      propDefs.initProps(this)
+    }
     const defs = this.getChildrenDefCollection()
     if (defs) {
       defs.initProps(this)
@@ -279,14 +262,19 @@ export default class AbstractDbObject {
 
   /**
    * Returns SQL for comments update
+   * @param {AbstractDbObject} previous
    * @returns {string}
    */
-  getCommentChangesSql () {
-    return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.getComment()}';`
+  getCommentChangesSql (previous) {
+    const comment = this.getComment();
+    const prevComment = previous ? previous.getComment() : ''
+    if (prevComment !== comment) {
+      return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.getComment()}';`
+    }
   }
 
   /**
-   * Returns table comment
+   * Returns this object comment
    * @returns {string}
    */
   getComment() {
@@ -419,7 +407,7 @@ export default class AbstractDbObject {
   getSeparateCreateSql () {
     const parent = this.getParent()
     const sql = []
-    const result = `ALTER ${parent.getObjectClass()} ${parent.getObjectIdentifier('parent', false)} ADD ${this.getObjectClass()} ${this.getObjectIdentifier('alter-add', true)} ${this.getSqlDefinition('alter-add', sql)};`
+    const result = `ALTER ${parent.getObjectClass('alter')} ${parent.getObjectIdentifier('parent', false)} ADD ${this.getObjectClass('alter-add')} ${this.getObjectIdentifier('alter-add', true)} ${this.getSqlDefinition('alter-add', sql)};`
     sql.unshift(result)
     return joinSql(sql)
   }
@@ -496,14 +484,12 @@ export default class AbstractDbObject {
       return this.getQuotedName()
     } else {
       const relType = this.getParentRelation(operation)
-      if (relType === 'ON') {
+      if (relType === 'ON') { // create index Index on table schema.table
         return `${this.getQuotedName()} ON ${this.getParent().getParentedName(true)}`
-      } else if (relType === '.') {
+      } else if (relType === '.') { // comment on column schema.table.column
         return `${this.getParent().getParentedName(true)}.${this.getQuotedName()}`
-      } else if (relType === '-') {
-        return this.getQuotedName()
       } else {
-        return this.getParentedName(true)
+        return this.getQuotedName()
       }
     }
   }
@@ -761,14 +747,6 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Method to override by plugins and DB objects to add custom migration SQL.
-   * @return {string}
-   */
-  getCustomChangesSql () {
-    return ''
-  }
-
-  /**
    * Executed after all the explicit objects are created from the state. It's time to create implicit
    * objects if any.
    */
@@ -809,6 +787,9 @@ export default class AbstractDbObject {
    * @return {object}
    */
   getConfigForApply (config) {
+    if (!config) {
+      return config
+    }
     const rawConfig = cloneDeep(config)
     // Remove children DB objects configs
     const defs = this.getChildrenDefCollection()
@@ -840,23 +821,17 @@ export default class AbstractDbObject {
     }
     for (const def of defs.defs) {
       const createAndAdd = (name, cfg) => {
-        if (cfg === null) {
-          cfg = {}
-        }
         const child =
           new def.class_(
             processCalculations(this, {
               name,
               parent: this,
-              comment: cfg.comment,
-              grant: cfg.grant,
-              revoke: cfg.revoke,
-              extends: cfg.extends,
               isInherited,
               rawConfig: cfg,
             })
           )
         this.addChild(child)
+        child.applyConfig(cfg)
         return child
       }
       const configPropName = this.getConfigPropNameForChild(def)
@@ -864,19 +839,19 @@ export default class AbstractDbObject {
       switch (def.propType) {
         case ChildDef.single:
           if (childConfig) {
-            createAndAdd(def.propName, childConfig).applyConfig(childConfig)
+            createAndAdd(def.propName, childConfig)
           }
           break
 
         case ChildDef.map:
           for (const name of Object.keys(childConfig || {})) {
-            createAndAdd(name, childConfig[name]).applyConfig(childConfig[name])
+            createAndAdd(name, childConfig[name])
           }
           break
 
         case ChildDef.array:
           for (const cfg of childConfig || []) {
-            createAndAdd('', cfg).applyConfig(cfg)
+            createAndAdd('', cfg)
           }
           break
 
@@ -894,9 +869,8 @@ export default class AbstractDbObject {
   applyConfigProperties (config) {
     const defs = this.getPropDefCollection()
     if (defs) {
-      const defaultProp = defs.getDefaultProp()
       for (const def of defs.defs) {
-        def.apply(this, config, defaultProp ? defaultProp.name : undefined)
+        def.apply(this, config)
       }
     }
   }

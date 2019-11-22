@@ -8,13 +8,22 @@ import AbstractSchemaObject from './AbstractSchemaObject'
 import Attribute from './Attribute'
 import ChildDefCollection from './ChildDefCollection'
 import ChildDef from './ChildDef'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * DB Type object
+ * @property {Object.<string, Attribute>} attributes
+ * @property {boolean} isEnum
+ * @property {string[]} values
  */
 export default class Type extends AbstractSchemaObject {
-  isEnum
-  values = []
+
+  static propDefs = new PropDefCollection([
+    new PropDef('isEnum', { type: PropDef.bool }),
+    new PropDef('values', { type: PropDef.array }),
+    ...this.propDefs.defs,
+  ])
 
   static childrenDefs = new ChildDefCollection([
     new ChildDef(Attribute),
@@ -44,7 +53,7 @@ export default class Type extends AbstractSchemaObject {
    * @inheritDoc
    */
   getConfigForApply (config) {
-    // Don't filter config here
+    // Don't filter config here to check for attributes in applyConfigProperties
     return config
   }
 

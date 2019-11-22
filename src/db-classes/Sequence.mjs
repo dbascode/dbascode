@@ -1,11 +1,19 @@
 import AbstractSchemaObject from './AbstractSchemaObject'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Autoincrement sequence class
+ * @property {string} table
+ * @property {string} column
  */
 export default class Sequence extends AbstractSchemaObject{
-  tableName = ''
-  columnName = ''
+
+  static propDefs = new PropDefCollection([
+    new PropDef('table'),
+    new PropDef('column'),
+    ...this.propDefs.defs,
+  ])
 
   static fullAlter = true
 
@@ -13,9 +21,8 @@ export default class Sequence extends AbstractSchemaObject{
    * @inheritDoc
    */
   applyConfigProperties (config) {
-    this.tableName = config.table
-    this.columnName = config.column
-    this.name = `${this.tableName}_${this.columnName}_seq`
+    super.applyConfigProperties(config)
+    this.name = `${this.table}_${this.column}_seq`
   }
 
   /**

@@ -6,14 +6,23 @@
  */
 import { processCalculations } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Trigger on a table
+ * @property {string} operation
+ * @property {string} when
+ * @property {string} what
  */
 export default class Trigger extends AbstractSchemaObject {
-  operation
-  when
-  what
+
+  static propDefs = new PropDefCollection([
+    new PropDef('operation'),
+    new PropDef('when'),
+    new PropDef('what'),
+    ...this.propDefs.defs,
+  ])
 
   /**
    * @inheritDoc

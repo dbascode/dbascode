@@ -100,7 +100,7 @@ export function getChangesSql (previous, current, changes) {
     const changedObject = changedObjects[path]
 
     if (!isEmpty(changedObject.changedProps)) {
-      if (changedObject.cur.fullAlter) {
+      if (changedObject.cur.getFullAlter()) {
         result.push(changedObject.cur.getFullAlterSql())
       } else {
         result.push(changedObject.cur.getAlterSql(changedObject.old, changedObject.changedProps))
@@ -113,7 +113,7 @@ export function getChangesSql (previous, current, changes) {
   }
   for (const path of Object.keys(commentChangedObjects)) {
     const changedObject = commentChangedObjects[path]
-    result.push(changedObject.cur.getCommentChangesSql())
+    result.push(changedObject.cur.getCommentChangesSql(changedObject.old))
   }
   for (const path of Object.keys(permissionChangedObjects)) {
     const changedObject = permissionChangedObjects[path]
@@ -152,16 +152,6 @@ function isChildren (obj, name) {
   return false
 }
 
-function filterProps (obj, props, context) {
-  return props
-    // Remove mixin methods
-    .filter(prop => !isFunction(obj[prop]))
-    // Don't compare private props
-    .filter(prop => prop[0] !== '_')
-    // Don't compare DB children if not deep
-    .filter(prop => context.deep ? true : !isChildren(obj, prop))
-}
-
 function arrayHasChanges (v2, v1, context) {
   for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
     context.addToPath(i)
@@ -175,9 +165,22 @@ function arrayHasChanges (v2, v1, context) {
 }
 
 function getComparingProps (obj, context) {
-  return obj instanceof AbstractDbObject
-    ? filterProps(obj, Object.keys(obj), context)
-    : Object.keys(obj)
+  if (obj instanceof AbstractDbObject) {
+    const props = []
+    if (context.deep) {
+      const childrenCol = obj.getChildrenDefCollection()
+      if (childrenCol) {
+        childrenCol.defs.forEach(def => props.push(def.propName))
+      }
+    }
+    const propCol = obj.getPropDefCollection()
+    if (propCol) {
+      propCol.defs.forEach(def => props.push(def.name))
+    }
+    return props
+  } else {
+    return Object.keys(obj)
+  }
 }
 
 /**

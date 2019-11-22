@@ -7,57 +7,49 @@
 
 import { escapeString } from './db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
 import Sequence from './Sequence'
 import PrimaryKey from './PrimaryKey'
 import ForeignKey from './ForeignKey'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Column in a table
+ * @property {string} type
+ * @property {string} foreignKey
+ * @property {boolean} allowNull
+ * @property {string} defaultValue
+ * @property {boolean} isAutoIncrement
  */
 export default class Column extends AbstractSchemaObject {
-  type
-  foreignKey
-  allowNull = false
-  defaultValue
-  isAutoIncrement = false
 
   static createdByParent = true
   static droppedByParent = true
   static alterWithParent = true
 
-  /**
-   * @typedef ColumnConfig
-   * @property {boolean} allow_null
-   * @property {*} default
-   * @property {boolean} autoincrement
-   * /
-  /**
-   *
-   * @type {ColumnConfig}
-   */
-  applyConfigProperties (config) {
-    const cfg = isString(config) ? { type: config } : config
-    let defaultValue
-    if (cfg.default) {
-      const def = isObject(cfg.default) ? cfg.default : {value: cfg.default, raw: false}
-      if (def.raw) {
-        defaultValue = def.value
-      } else {
-        if (isTextual(cfg.type)) {
-          defaultValue = escapeString(def.value)
+  static propDefs = new PropDefCollection([
+    new PropDef('type', { isDefault: true }),
+    new PropDef('foreignKey'),
+    new PropDef('allowNull', { type: PropDef.bool }),
+    new PropDef('defaultValue', {
+      configName: 'default',
+      normalize: (obj, value) => {
+        const def = isObject(value) ? value : { value, raw: false }
+        if (def.raw) {
+          return def.value
         } else {
-          defaultValue = def.value
+          if (isTextual(obj.type)) {
+            return escapeString(def.value)
+          } else {
+            return def.value
+          }
         }
       }
-    }
-    this.type = cfg.type
-    this.allowNull = !!cfg.allow_null
-    this.isAutoIncrement = !!cfg.autoincrement
-    this.defaultValue = defaultValue
-    this.foreignKey = cfg.foreign_key
-  }
+    }),
+    new PropDef('isAutoIncrement', { type: PropDef.bool, configName: 'autoincrement'}),
+    ...this.propDefs.defs,
+  ])
 
   /**
    * @inheritDoc
@@ -117,7 +109,7 @@ export default class Column extends AbstractSchemaObject {
    * @inheritDoc
    */
   getParentRelation (operation) {
-    return '.'
+    return operation === 'comment' ? '.' : 'ON'
   }
 
   /**
@@ -158,7 +150,7 @@ export default class Column extends AbstractSchemaObject {
    * @inheritDoc
    */
   getAlterPropSql (compared, propName, oldValue, curValue) {
-    if (!this.isInherited) {
+    if (!this._isInherited) {
       switch (propName) {
         case 'allowNull':
           return this.allowNull ? 'DROP NOT NULL' : 'SET NOT NULL'

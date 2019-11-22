@@ -213,6 +213,15 @@ function escapeShellArg (arg) {
   return `"${arg}"`
 }
 
+/**
+ * Converts camelCase notation to the underscore-separated
+ * @param {string} s
+ * @return {string}
+ */
+export function camelCaseToUnderscore (s) {
+  return s.replace(/([A-Z]+)/g, function (x,y){return "_" + y.toLowerCase()}).replace(/^_/, "")
+}
+
 
 export {
   checkFiles,

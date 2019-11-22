@@ -6,7 +6,18 @@
  */
 import isArray from 'lodash-es/isArray'
 import isObject from 'lodash-es/isObject'
+import { camelCaseToUnderscore } from '../utils'
+import isFunction from 'lodash-es/isFunction'
+import isString from 'lodash-es/isString'
 
+/**
+ * @typedef {object} VersionedPropName
+ * @property {number} version
+ * @property {string} name
+ */
+/**
+ * Object property definition (scalar and non-DB classes)
+ */
 export default class PropDef {
   static string = 'string'
   static number = 'number'
@@ -17,7 +28,7 @@ export default class PropDef {
   name
   type
   defaultValue
-  configName
+  _configName
   isDefault
   normalize
   validate
@@ -27,24 +38,27 @@ export default class PropDef {
    * @param {string} name
    * @param {string} [type]
    * @param {*} [defaultValue]
-   * @param {string} [configName]
+   * @param {string|VersionedPropName[]} [configName]
    * @param {boolean} [isDefault]
    * @param {function} [normalize]
    * @param {function} [validate]
    */
   constructor (
+    name,
     {
-      name,
       type = PropDef.string,
       defaultValue = '',
       configName,
       isDefault = false,
       normalize,
       validate,
-    },
+    } = {},
   ) {
+    if (type === PropDef.map && isDefault) {
+      throw new Error(`Map property ${name} can not be default`)
+    }
     if (!configName) {
-      configName = name
+      configName = camelCaseToUnderscore(name)
     }
     if (type === PropDef.string) {
       defaultValue = String(defaultValue || '')
@@ -62,7 +76,7 @@ export default class PropDef {
     this.defaultValue = defaultValue
     this.name = name
     this.type = type
-    this.configName = configName
+    this._configName = configName
     this.isDefault = isDefault
     this.normalize = normalize
     this.validate = validate
@@ -72,29 +86,60 @@ export default class PropDef {
    * Applies config value to the object
    * @param {AbstractDbObject} obj
    * @param {*} config
-   * @param {string} [defaultPropName]
    */
-  apply (obj, config, defaultPropName) {
-    const value = config[this.configName] !== undefined ? config[this.configName] : this.defaultValue
-    const p = this.name
+  apply (obj, config) {
+    let configValue
+    const configName = this.getConfigName(obj)
+    configValue = this.isDefault && !isObject(config)
+      ? config
+      : config
+        ? config[configName]
+        : undefined
+    const objProp = this.name
+    if (configValue === undefined || configValue === null) {
+      configValue = this.defaultValue
+    } else {
+      configValue = isFunction(this.normalize) ? this.normalize(obj, configValue) : configValue
+    }
+    const setValue = v => obj[objProp] = v
+
     switch (this.type) {
       case PropDef.string:
-        obj[p] = String(value)
+        setValue(String(configValue))
         break
       case PropDef.number:
-        obj[p] = Number(value)
+        setValue(Number(configValue))
         break
       case PropDef.bool:
-        obj[p] = !!value
+        setValue(!!configValue)
         break
       case PropDef.array:
-        obj[p] = isArray(value) ? value : [value]
+        setValue(isArray(configValue) ? configValue : [configValue])
         break
       case PropDef.map:
-        obj[p] = isObject(value) ? value : {[defaultPropName]: value}
+        setValue(configValue)
         break
       default:
         throw new Error(`Unknown property type ${this.type}`)
     }
+  }
+
+  /**
+   * Returns config name
+   * @param {AbstractDbObject} obj
+   * @return {*}
+   */
+  getConfigName (obj) {
+    if (isArray(this._configName)) {
+      const dbVersion = obj.getClassName() === 'DataBase' ? obj.getVersion() :  obj.getDb().getVersion()
+      const versions = [...this._configName]
+        .map(v => isString(v) ? { version: 1, name: v } : v)
+        .filter(
+          v => v.version <= dbVersion
+        )
+      versions.sort((a, b) => b.version - a.version)
+      return versions[0].name
+    }
+    return this._configName
   }
 }

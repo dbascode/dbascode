@@ -4,7 +4,11 @@
  * Date: 19.11.2019
  * Time: 9:23
  */
+import { camelCaseToUnderscore } from '../utils'
 
+/**
+ * Children prop with DB class object(s) definition
+ */
 export default class ChildDef {
   static single = 'single'
   static map = 'map'
@@ -61,25 +65,7 @@ export default class ChildDef {
   getConfigName () {
     let prop = this.class_.configName
     if (!prop) {
-      prop = this.class_.name
-      const matches = [...prop.matchAll(/[A-Z]/g)]
-      if (matches.length > 0) {
-        const letters = []
-        const parts = []
-        for (const match of matches) {
-          letters.push(match.index)
-        }
-        for (let i = 0; i < letters.length; i++) {
-          const pos = letters[i]
-          const nextPos = letters[i + 1]
-          if (nextPos) {
-            parts.push(prop.substr(pos, nextPos - pos).toLowerCase())
-          } else {
-            parts.push(prop.substr(pos).toLowerCase())
-          }
-        }
-        prop = parts.join('_')
-      }
+      prop = camelCaseToUnderscore(this.class_.name)
     }
     if (this.propType !== ChildDef.single) {
       const lastChar = prop[prop.length - 1]

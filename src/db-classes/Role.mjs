@@ -6,25 +6,21 @@
  */
 
 import AbstractDbObject from './AbstractDbObject'
-import isArray from 'lodash-es/isArray'
-import isEqual from 'lodash-es/isEqual'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Role in a database
+ * @property {string[]} memberOf
+ * @property {boolean} isClient
  */
 export default class Role extends AbstractDbObject {
-  memberOf = []
-  isClient = false
 
-  /**
-   * @inheritDoc
-   */
-  applyConfigProperties (config) {
-    config = config || {}
-    const memberOf = config.member_of || []
-    this.memberOf = isArray(memberOf) ? memberOf : (memberOf ? [memberOf] : [])
-    this.isClient = !!config.is_client
-  }
+  static propDefs = new PropDefCollection([
+    new PropDef('memberOf', { type: PropDef.array }),
+    new PropDef('isClient', { type: PropDef.bool }),
+    ...this.propDefs.defs,
+  ])
 
   /**
    * @inheritDoc

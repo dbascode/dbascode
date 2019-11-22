@@ -68,7 +68,15 @@ export default class RowLevelSecurityPlugin extends AbstractPlugin {
           }
         }
         return origMethod(operation, addSql)
-      }
+      },
+
+      setupDependencies: (origMethod) => {
+        const result = origMethod()
+        if (inst.defaultAcl) {
+          result.push(inst.getSchema().getTable('default_acl').getPath())
+        }
+        return result
+      },
     })
   }
 
