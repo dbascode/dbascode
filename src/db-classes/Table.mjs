@@ -86,6 +86,16 @@ export default class Table extends AbstractSchemaObject {
   }
 
   /**
+   * @inheritDoc
+   * @param config
+   */
+  applyConfigProperties (config) {
+    if (this.getDb().getVersion() < 2) {
+      this.extends = config.inherit
+    }
+  }
+
+  /**
    * Fills the dependencies list of this object
    */
   setupDependencies() {
@@ -110,7 +120,7 @@ export default class Table extends AbstractSchemaObject {
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    let result = super.getSqlDefinition(operation, addSql)
+    let result = `(\n${super.getSqlDefinition(operation, addSql)}\n)`
     if (this.extends) {
       const ancestor = this.getSchema().getTable(this.extends)
       result = `${result} INHERITS (${ancestor.getObjectIdentifier('')})`

@@ -5,39 +5,40 @@
  * Time: 16:27
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
-import { processCalculations } from './db-utils'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
-import isEmpty from 'lodash-es/isEmpty'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Function, Procedure, or Trigger Function object
  */
 export default class Function extends AbstractSchemaObject {
-  language
-  returns
-  cost = 10
-  isSecurityDefiner = false
-  stability = 'volatile'
-  parallelSafety = 'unsafe'
-  code = ''
-  args = {}
-  isLeakProof = false
-
   /**
-   * @inheritDoc
+   * @property language
+   * @property returns
+   * @property cost
+   * @property isSecurityDefiner
+   * @property stability
+   * @property parallelSafety
+   * @property code
+   * @property args
+   * @property isLeakProof
    */
-  applyConfigProperties (config) {
-    this.language = config.language || ''
-    this.code = config.code || ''
-    this.returns = config.returns || ''
-    this.isSecurityDefiner = !!config.security_definer
-    this.cost = Number(config.cost)
-    this.stability = config.stability || ''
-    this.parallelSafety = config.parallel_safety
-    this.args = config.arguments
-    this.isLeakProof = config.leakproof
-  }
+  /**
+   * @type {PropDefCollection}
+   */
+  static propDefs = new PropDefCollection([
+    new PropDef({ name: 'language', defaultValue: 'sql' }),
+    new PropDef({ name: 'returns' }),
+    new PropDef({ name: 'cost', type: PropDef.number, defaultValue: 10 }),
+    new PropDef({ name: 'isSecurityDefiner', type: PropDef.bool, configName: 'security_definer' }),
+    new PropDef({ name: 'stability', defaultValue: 'volatile' }),
+    new PropDef({ name: 'parallelSafety', defaultValue: 'unsafe' }),
+    new PropDef({ name: 'code' }),
+    new PropDef({ name: 'args', configName: 'arguments', type: PropDef.map }),
+    new PropDef({ name: 'isLeakProof', type: PropDef.bool }),
+  ])
 
   getStabilitySql () {
     return this.stability.toUpperCase()
@@ -50,7 +51,7 @@ export default class Function extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getObjectClass () {
+  getObjectClass (operation) {
     return this.returns ? 'FUNCTION' : 'PROCEDURE'
   }
 

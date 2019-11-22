@@ -23,6 +23,10 @@ export default class Column extends AbstractSchemaObject {
   defaultValue
   isAutoIncrement = false
 
+  static createdByParent = true
+  static droppedByParent = true
+  static alterWithParent = true
+
   /**
    * @typedef ColumnConfig
    * @property {boolean} allow_null

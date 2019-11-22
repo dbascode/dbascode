@@ -21,7 +21,10 @@ export default class UniqueKey extends AbstractDbObject {
    */
   applyConfigProperties (config) {
     this.colNames = isArray(config) ? config : [config]
-    this.name = `${this.colNames.join('_')}_idx`
+    const table = this.getParent()
+    this.name = this.getDb().getVersion() < 2
+      ? `${table.name}_${this.colNames.join('_')}`
+      : `${table.name}_${this.colNames.join('_')}_idx`
   }
 
   /**

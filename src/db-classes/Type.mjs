@@ -48,6 +48,9 @@ export default class Type extends AbstractSchemaObject {
     return config
   }
 
+  /**
+   * @inheritDoc
+   */
   getConfigPropNameForChild (def) {
     return this.getDb().getVersion() < 1 ? 'fields' : 'attributes'
   }

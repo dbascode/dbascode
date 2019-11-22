@@ -158,8 +158,6 @@ function filterProps (obj, props, context) {
     .filter(prop => !isFunction(obj[prop]))
     // Don't compare private props
     .filter(prop => prop[0] !== '_')
-    // remove inherits
-    .filter(prop => prop !== 'inherits')
     // Don't compare DB children if not deep
     .filter(prop => context.deep ? true : !isChildren(obj, prop))
 }
@@ -195,27 +193,29 @@ function getObjectForChangeLog(obj) {
   }
   const defs = obj.getChildrenDefCollection()
   if (defs) {
-    for (const def in defs.defs) {
+    for (const def of defs.defs) {
       const prop = def.propName
       const v = obj[prop]
-      switch (prop.propType) {
-        case ChildDef.single:
-          result[prop] = getObjectForChangeLog(v)
-          break
-        case ChildDef.map:
-          result[prop] = {}
-          for (const sp of Object.keys(v)) {
-            result[prop][sp] = getObjectForChangeLog(v[sp])
-          }
-          break
-        case ChildDef.array:
-          result[prop] = []
-          for (const item of v) {
-            result[prop].push(getObjectForChangeLog(item))
-          }
-          break
-        default:
-          throw new Error('Unknown object type')
+      if (v !== undefined && v !== null) {
+        switch (def.propType) {
+          case ChildDef.single:
+            result[prop] = getObjectForChangeLog(v)
+            break
+          case ChildDef.map:
+            result[prop] = {}
+            for (const sp of Object.keys(v)) {
+              result[prop][sp] = getObjectForChangeLog(v[sp])
+            }
+            break
+          case ChildDef.array:
+            result[prop] = []
+            for (const item of v) {
+              result[prop].push(getObjectForChangeLog(item))
+            }
+            break
+          default:
+            throw new Error(`Unknown object type ${def.propType}`)
+        }
       }
     }
   }
@@ -254,9 +254,16 @@ function objectHasChanges (v2, v1, context) {
   }
 }
 
+/**
+ *
+ * @param {AbstractDbObject|*} v2
+ * @param {AbstractDbObject|*} v1
+ * @param {ChangesContext} context
+ * @return {boolean}
+ */
 function hasChangesInValues (v2, v1, context) {
   if (v1 instanceof AbstractDbObject && v2 instanceof AbstractDbObject) {
-    if (v1.isInherited && v2.isInherited) {
+    if (v1._isInherited && v2._isInherited) {
       return false
     }
     hasChanges(v2, v1, context)

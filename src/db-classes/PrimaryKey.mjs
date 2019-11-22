@@ -14,6 +14,10 @@ import isString from 'lodash-es/isString'
 export default class PrimaryKey extends AbstractSchemaObject {
   colNames = []
 
+  static createdByParent = true
+  static droppedByParent = true
+  static alterWithParent = true
+
   /**
    * @inheritDoc
    */

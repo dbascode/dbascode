@@ -86,6 +86,11 @@ export default class AbstractDbObject {
    */
   static childrenDefs = null
   /**
+   * List of properties definitions
+   * @type {ChildDefCollection}
+   */
+  static propDefs = null
+  /**
    * Name of a state key where object configuration is found
    * @type {string}
    */
@@ -192,6 +197,13 @@ export default class AbstractDbObject {
    */
   getChildrenDefCollection () {
     return this.constructor.childrenDefs
+  }
+
+  /**
+   * @return {PropDefCollection}
+   */
+  getPropDefCollection () {
+    return this.constructor.propDefs
   }
 
   /**
@@ -421,7 +433,7 @@ export default class AbstractDbObject {
   getSqlDefinition (operation, addSql) {
     const result = []
     for (const child of this.getAllChildren()) {
-      if (child.getCreatedByParent()) {
+      if (child.getCreatedByParent() && !child._isInherited) {
         result.push(`${child.getObjectClass(operation)} ${child.getObjectIdentifier('create', true)} ${child.getSqlDefinition('create', addSql)}`)
       }
     }
@@ -724,11 +736,10 @@ export default class AbstractDbObject {
       const v = mixin[prop]
       if (isFunction(v)) {
         const origFn = this[prop]
-        this[prop] = () => {
-          const origArguments = arguments
+        this[prop] = (...args) => {
           return v.apply(
             this,
-            [() => origFn.apply(this, origArguments), ...origArguments]
+            [() => origFn.apply(this, args), ...args]
           )
         }
       } else {
@@ -881,6 +892,13 @@ export default class AbstractDbObject {
    * @param {object|string|*} config
    */
   applyConfigProperties (config) {
+    const defs = this.getPropDefCollection()
+    if (defs) {
+      const defaultProp = defs.getDefaultProp()
+      for (const def of defs.defs) {
+        def.apply(this, config, defaultProp ? defaultProp.name : undefined)
+      }
+    }
   }
 
   /**

@@ -19,7 +19,18 @@ export default class Index extends AbstractSchemaObject {
    */
   applyConfigProperties (config) {
     this.colNames = isArray(config) ? config : [config]
-    this.name = `${this.colNames.join('_')}_idx`
+    this.name = `${this.getParent().name}_${this.colNames.join('_')}_idx`
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getObjectIdentifier (operation, isParentContext = false) {
+    if (operation === 'comment') {
+      return `${this.getSchema().getQuotedName()}.${this.getQuotedName()}`
+    } else {
+      return super.getObjectIdentifier(operation, isParentContext)
+    }
   }
 
   /**

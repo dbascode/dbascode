@@ -7,45 +7,12 @@ import AbstractSchemaObject from './AbstractSchemaObject'
 export default class Attribute extends AbstractSchemaObject{
   type
 
-  /**
-   * Constructor
-   * @param {string} name
-   * @param {string} type
-   * @param {Type} [parent]
-   */
-  constructor (
-    {
-      name,
-      type,
-      parent = undefined
-    }
-  ) {
-    super({
-      name,
-      parent,
-      createdByParent: true,
-      droppedByParent: true,
-      alterWithParent: true,
-    })
-    this.type = type
-  }
-  /**
-   * Instantiate new object from config data
-   * @param {string} name
-   * @param {string} [cfg]
-   * @param {Type} [parent]
-   * @return {Attribute}
-   */
-  static createFromCfg(name, cfg, parent) {
-    if (!cfg) {
-      return null
-    }
-    const result = new Attribute(processCalculations(parent, {
-      name,
-      type: cfg,
-      parent,
-    }))
-    return result.getDb().pluginOnObjectConfigured(result, cfg)
+  static createdByParent = true
+  static droppedByParent = true
+  static alterWithParent = true
+
+  applyConfigProperties (config) {
+    this.type = config
   }
 
   /**
@@ -58,7 +25,7 @@ export default class Attribute extends AbstractSchemaObject{
   /**
    * @inheritDoc
    */
-  getParentRelation () {
+  getParentRelation (operation) {
     return ''
   }
 

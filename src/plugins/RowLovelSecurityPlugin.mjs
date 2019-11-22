@@ -54,7 +54,7 @@ export default class RowLevelSecurityPlugin extends AbstractPlugin {
         }
       },
 
-      getDefinition: (origMethod, operation, addSql) => {
+      getSqlDefinition: (origMethod, operation, addSql) => {
         const rls = inst.getRowLevelSecurity()
         if (Object.keys(rls).length > 0) {
           addSql.push(`ALTER TABLE ${inst.getObjectIdentifier('alter')} ENABLE ROW LEVEL SECURITY;`)

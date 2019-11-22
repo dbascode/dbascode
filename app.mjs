@@ -25,7 +25,7 @@ const projectDir = __dirname
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
 const defaultConfigFile = path.join(__dirname, 'default-sys', 'db.yml')
-const version = 1
+const version = 2
 
 const cliConfig = yargs
   .command({

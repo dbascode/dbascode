@@ -27,7 +27,7 @@ export default class AbstractSchemaObject extends AbstractDbObject {
    */
   getObjectIdentifier (operation, isParentContext = false) {
     if (!isParentContext) {
-      const relType = this.getParentRelation()
+      const relType = this.getParentRelation(operation)
       if (relType === '') {
         return this.getParentedName(true)
       }
