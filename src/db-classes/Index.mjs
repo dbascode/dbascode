@@ -38,6 +38,17 @@ export default class Index extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
+  getObjectIdentifier (operation, isParentContext = false) {
+    if (operation === 'drop') {
+      return `${this.getSchema().getQuotedName()}.${this.getQuotedName()}`
+    } else {
+      return super.getObjectIdentifier(operation, isParentContext)
+    }
+  }
+
+  /**
+   * @inheritDoc
+   */
   getSqlDefinition (operation, addSql) {
     return `("${this.columns.join('","')}")`
   }

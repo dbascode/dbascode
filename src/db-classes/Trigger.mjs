@@ -55,7 +55,7 @@ export default class Trigger extends AbstractSchemaObject {
    */
   getObjectIdentifier (operation, isParentContext) {
     const table = this.getParent()
-    return `"${table.name}_${this.name}" ${this.getSqlTriggerType()} ON ${table.getObjectIdentifier('')}`
+    return `"${table.name}_${this.name}" ${operation === 'create' ? this.getSqlTriggerType() : ''} ON ${table.getObjectIdentifier('')}`
   }
 
   /**
