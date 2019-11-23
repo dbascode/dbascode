@@ -19,6 +19,7 @@ export default class UniqueKey extends AbstractDbObject {
     ...this.propDefs.defs,
   ])
 
+  static createdByParent = true
   static droppedByParent = true
   static fullAlter = true
 

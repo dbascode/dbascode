@@ -5,6 +5,7 @@
  * Time: 9:55
  */
 import AbstractPlugin from './AbstractPlugin'
+import { processCalculations } from '../db-classes/db-utils'
 
 /**
  * Add row-level security functionality
@@ -31,7 +32,7 @@ export default class RowLevelSecurityPlugin extends AbstractPlugin {
    * @param {Table} inst
    */
   applyOmitMixin(inst) {
-    const config = inst._rawConfig
+    const config = processCalculations(inst, inst._rawConfig)
     const rowLevelSecurity = {}
     for (const op of Object.keys(config.row_level_security || {})) {
       rowLevelSecurity[op] = config.row_level_security[op]
