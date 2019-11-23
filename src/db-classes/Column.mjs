@@ -19,7 +19,7 @@ import PropDef from './PropDef'
  * @property {string} type
  * @property {string} foreignKey
  * @property {boolean} allowNull
- * @property {string} defaultValue
+ * @property {string|null} defaultValue
  * @property {boolean} isAutoIncrement
  */
 export default class Column extends AbstractSchemaObject {
@@ -33,7 +33,9 @@ export default class Column extends AbstractSchemaObject {
     new PropDef('foreignKey'),
     new PropDef('allowNull', { type: PropDef.bool }),
     new PropDef('defaultValue', {
+      allowNull: true,
       configName: 'default',
+      defaultValue: null,
       normalize: (obj, value) => {
         const def = isObject(value) ? value : { value, raw: false }
         if (def.raw) {

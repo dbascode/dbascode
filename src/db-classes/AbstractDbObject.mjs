@@ -22,6 +22,7 @@ import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
+import isEmpty from 'lodash-es/isEmpty'
 
 /**
  * Base class for all DB objects
@@ -346,7 +347,7 @@ export default class AbstractDbObject {
       result.push(this.getSeparateCreateSql())
     } else {
       result.push(this.getCreateSql())
-      for (const child of this.getAllChildren()) {
+      for (const child of this.getChildrenCreateOrder(this.getAllChildren())) {
         // Children created by the current object are processed in the getCreateSql-getSqlDefinition
         // calls, so skip them here.
         if (!child.getCreatedByParent()) {
@@ -355,6 +356,48 @@ export default class AbstractDbObject {
       }
     }
     return joinSql(result)
+  }
+
+  getChildrenCreateOrder (children) {
+    if (children.length === 0) {
+      return children
+    }
+    const childMap = {}
+    for (const child of children) {
+      childMap[child.getPath()] = child
+    }
+    const deps = this.getAllDependencies()
+    const result = {}
+    let lastResultLength
+    do {
+      lastResultLength = Object.keys(result).length
+      for (const dependentPath of Object.keys(childMap)) {
+        let dependencies = deps[dependentPath]
+        if (dependencies && dependencies.length > 0) {
+          for (let i = 0; i < dependencies.length; i++) {
+            const dependencyPath = dependencies[i]
+            if (result[dependencyPath]) {
+              delete dependencies[i]
+            }
+          }
+          deps[dependentPath] = dependencies.filter(Boolean)
+        }
+        dependencies = deps[dependentPath]
+        if (!dependencies || dependencies.length === 0) {
+          result[dependentPath] = childMap[dependentPath]
+          delete deps[dependentPath]
+          delete childMap[dependentPath]
+        }
+      }
+      if (Object.keys(result).length === lastResultLength) {
+        throw new Error('Infinite loop in children order')
+      }
+    } while (Object.keys(result).length !== children.length)
+    return Object.values(result)
+  }
+
+  getChildrenDropOrder (children) {
+    return reverse(this.getChildrenCreateOrder(children))
   }
 
   /**
@@ -366,7 +409,7 @@ export default class AbstractDbObject {
     if (this.getDroppedByParent()) {
       result.push(this.getSeparateDropSql())
     } else {
-      for (const child of reverse(this.getAllChildren())) {
+      for (const child of this.getChildrenDropOrder(this.getAllChildren())) {
         // Children dropping by the current object will be dropped automatically with this object,
         // so skip dropping of them here.
         if (!child.getDroppedByParent()) {
@@ -757,12 +800,36 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Fills the dependencies list of this object and its children
+   * Fills the dependencies list of this object and its children. Must throw an exception if
+   * a dependency object is not found in the current tree.
    */
   setupDependencies() {
     for (const child of this.getAllChildren()) {
       child.setupDependencies()
     }
+  }
+
+  getAllDependencies () {
+    const result = {}
+    const addResult = (dependentPath, dependencyPath) => {
+      if (!result[dependentPath]) {
+        result[dependentPath] = []
+      }
+      result[dependentPath].push(dependencyPath)
+    }
+    const thisPath = this.getPath()
+    for (const dependencyPath of this._dependencies) {
+      addResult(thisPath, dependencyPath)
+    }
+    for (const child of this.getAllChildren()) {
+      const childResult = child.getAllDependencies()
+      for (const dependentPath of Object.keys(childResult)) {
+        for (const dependencyPath of childResult[dependentPath]) {
+          addResult(dependentPath, dependencyPath)
+        }
+      }
+    }
+    return result
   }
 
   /**

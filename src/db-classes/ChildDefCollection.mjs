@@ -31,7 +31,7 @@ export default class ChildDefCollection {
   initProps (object) {
     for (const def of this.defs) {
       switch (def.propType) {
-        case ChildDef.single: object[def.propName] = null; break
+        case ChildDef.single: object[def.propName] = undefined; break
         case ChildDef.array: object[def.propName] = []; break
         case ChildDef.map: object[def.propName] = {}; break
         default: throw new Error(`Unknown property type ${def.propType}`)
@@ -46,7 +46,7 @@ export default class ChildDefCollection {
   initConfig (object) {
     for (const def of this.defs) {
       switch (def.propType) {
-        case ChildDef.single: object[def.configPropName] = null; break
+        case ChildDef.single: object[def.configPropName] = undefined; break
         case ChildDef.array: object[def.configPropName] = []; break
         case ChildDef.map: object[def.configPropName] = {}; break
       }

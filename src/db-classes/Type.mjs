@@ -69,7 +69,7 @@ export default class Type extends AbstractSchemaObject {
    */
   getSqlDefinition (operation, addSql) {
     if (this.isEnum) {
-      return `AS ENUM ('${this.values.join("', '")}');`
+      return `AS ENUM ('${this.values.join("', '")}')`
     } else {
       const fields = []
       for (const field of Object.values(this.attributes)) {

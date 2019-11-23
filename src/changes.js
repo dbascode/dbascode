@@ -13,6 +13,9 @@ import isFunction from 'lodash-es/isFunction'
 import isArray from 'lodash-es/isArray'
 import ChildDef from './db-classes/ChildDef'
 import isObject from 'lodash-es/isObject'
+import equalArrays from 'lodash-es/_equalArrays'
+import isEqual from 'lodash-es/isEqual'
+import difference from 'lodash-es/difference'
 
 /**
  * Returns SQL applying specified changes
@@ -96,21 +99,48 @@ export function getChangesSql (previous, current, changes) {
   }
 
   let result = []
-  for (const path of Object.keys(changedObjects)) {
-    const changedObject = changedObjects[path]
 
-    if (!isEmpty(changedObject.changedProps)) {
-      if (changedObject.cur.getFullAlter()) {
-        result.push(changedObject.cur.getFullAlterSql())
-      } else {
-        result.push(changedObject.cur.getAlterSql(changedObject.old, changedObject.changedProps))
-      }
-    } else if (changedObject.create) {
-      result.push(changedObject.cur.getCreateSqlWithChildren())
-    } else if (changedObject.drop) {
-      result.push(changedObject.old.getDropSqlWithChildren())
+  const alterChanges = []
+  const createChanges = []
+  const dropChanges = []
+  for (const path of Object.keys(changedObjects)) {
+    const change = changedObjects[path]
+    change.path = path
+    if (!isEmpty(change.changedProps)) {
+      alterChanges.push(change)
+    } else if (change.create) {
+      createChanges.push(change)
+    } else if (change.drop) {
+      dropChanges.push(change)
     }
   }
+
+  for (const change of alterChanges) {
+    if (change.cur.getFullAlter()) {
+      result.push(change.cur.getFullAlterSql())
+    } else {
+      result.push(change.cur.getAlterSql(change.old, change.changedProps))
+    }
+  }
+
+  if (createChanges.length > 0) {
+    for (const change of createChanges) {
+      change.getPath = () => change.path
+    }
+    for (const change of current.getChildrenCreateOrder(createChanges)) {
+      result.push(change.cur.getCreateSqlWithChildren())
+    }
+  }
+
+  if (dropChanges.length > 0) {
+    for (const change of dropChanges) {
+      change.getPath = () => change.path
+    }
+    for (const change of current.getChildrenDropOrder(dropChanges)) {
+      result.push(change.old.getDropSqlWithChildren())
+    }
+  }
+
   for (const path of Object.keys(commentChangedObjects)) {
     const changedObject = commentChangedObjects[path]
     result.push(changedObject.cur.getCommentChangesSql(changedObject.old))

@@ -14,6 +14,8 @@ import ChildDefCollection from './ChildDefCollection'
 
 /**
  * Database object
+ * @property {Role[]} roles
+ * @property {Schema[]} schemas
  */
 export default class DataBase extends AbstractDbObject {
   /**
@@ -48,10 +50,6 @@ export default class DataBase extends AbstractDbObject {
    * @private
    */
   _version = 0
-  /**
-   * @property {Role[]} roles
-   * @property {Schema[]} schemas
-   */
   /**
    * @type {ChildDefCollection}
    */

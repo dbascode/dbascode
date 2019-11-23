@@ -32,6 +32,7 @@ export default class PropDef {
   isDefault
   normalize
   validate
+  allowNull
 
   /**
    * Constructor
@@ -42,6 +43,7 @@ export default class PropDef {
    * @param {boolean} [isDefault]
    * @param {function} [normalize]
    * @param {function} [validate]
+   * @param {boolean} allowNull
    */
   constructor (
     name,
@@ -52,26 +54,30 @@ export default class PropDef {
       isDefault = false,
       normalize,
       validate,
+      allowNull = false,
     } = {},
   ) {
+    this.allowNull = allowNull
     if (type === PropDef.map && isDefault) {
       throw new Error(`Map property ${name} can not be default`)
     }
     if (!configName) {
       configName = camelCaseToUnderscore(name)
     }
-    if (type === PropDef.string) {
-      defaultValue = String(defaultValue || '')
-    } else if (type === PropDef.number) {
-      defaultValue = Number.isNaN(Number(defaultValue)) ? 0 : Number(defaultValue)
-    } else if (type === PropDef.bool) {
-      defaultValue = !!defaultValue
-    } else if (type === PropDef.map) {
-      defaultValue = defaultValue || {}
-    } else if (type === PropDef.array) {
-      defaultValue = defaultValue || []
-    } else {
-      throw new Error(`Unknown property type ${type}`)
+    if (!allowNull || defaultValue !== null) {
+      if (type === PropDef.string) {
+        defaultValue = String(defaultValue || '')
+      } else if (type === PropDef.number) {
+        defaultValue = Number.isNaN(Number(defaultValue)) ? 0 : Number(defaultValue)
+      } else if (type === PropDef.bool) {
+        defaultValue = !!defaultValue
+      } else if (type === PropDef.map) {
+        defaultValue = defaultValue || {}
+      } else if (type === PropDef.array) {
+        defaultValue = defaultValue || []
+      } else {
+        throw new Error(`Unknown property type ${type}`)
+      }
     }
     this.defaultValue = defaultValue
     this.name = name
@@ -96,31 +102,36 @@ export default class PropDef {
         ? config[configName]
         : undefined
     const objProp = this.name
-    if (configValue === undefined || configValue === null) {
+    const setNull = configValue === null && this.allowNull
+    if (configValue === undefined || (configValue === null && !this.allowNull)) {
       configValue = this.defaultValue
     } else {
       configValue = isFunction(this.normalize) ? this.normalize(obj, configValue) : configValue
     }
     const setValue = v => obj[objProp] = v
 
-    switch (this.type) {
-      case PropDef.string:
-        setValue(String(configValue))
-        break
-      case PropDef.number:
-        setValue(Number(configValue))
-        break
-      case PropDef.bool:
-        setValue(!!configValue)
-        break
-      case PropDef.array:
-        setValue(isArray(configValue) ? configValue : [configValue])
-        break
-      case PropDef.map:
-        setValue(configValue)
-        break
-      default:
-        throw new Error(`Unknown property type ${this.type}`)
+    if (this.allowNull && configValue === null) {
+      setValue(null)
+    } else {
+      switch (this.type) {
+        case PropDef.string:
+          setValue(String(configValue))
+          break
+        case PropDef.number:
+          setValue(Number(configValue))
+          break
+        case PropDef.bool:
+          setValue(!!configValue)
+          break
+        case PropDef.array:
+          setValue(isArray(configValue) ? configValue : [configValue])
+          break
+        case PropDef.map:
+          setValue(configValue)
+          break
+        default:
+          throw new Error(`Unknown property type ${this.type}`)
+      }
     }
   }
 

@@ -13,6 +13,7 @@ import UniqueKey from './UniqueKey'
 import ChildDef from './ChildDef'
 import ForeignKey from './ForeignKey'
 import ChildDefCollection from './ChildDefCollection'
+import AbstractDbObject from './AbstractDbObject'
 
 /**
  * Table object
@@ -48,6 +49,9 @@ export default class Table extends AbstractSchemaObject {
     if (this.extends) {
       // Add inherited objects
       const ancestor = this.getSchema().getTable(this.extends)
+      if (!ancestor) {
+        throw new Error(`Ancestor table ${this.extends} for table ${this.name} not exists`)
+      }
       const inheritedObjects = [
         Column,
         Trigger,
@@ -89,15 +93,20 @@ export default class Table extends AbstractSchemaObject {
   setupDependencies() {
     super.setupDependencies()
     const tableDeps = {}
+    const schema = this.getSchema()
     for (const child of this.getChildrenByType(ForeignKey)) {
-      tableDeps[child.ref.table] = 1
+      const refTable = schema.getTable(child.ref.table)
+      if (!refTable) {
+        throw new Error(`Foreign key ${this.name}.${child.name} reference table ${child.ref.table} not found`)
+      }
+      tableDeps[child.ref.table] = refTable
     }
     if (this.extends) {
       tableDeps[this.extends] = 1
     }
-    const schema = this.getSchema()
     for (const tableName of Object.keys(tableDeps)) {
-      this._dependencies.push(schema.getTable(tableName).getPath())
+      const table = tableDeps[tableName]
+      this._dependencies.push((table instanceof AbstractDbObject ? table : schema.getTable(tableName)).getPath())
     }
   }
 
