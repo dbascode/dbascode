@@ -28,13 +28,13 @@ export default class Function extends AbstractSchemaObject {
    */
   static propDefs = new PropDefCollection([
     new PropDef('language', { defaultValue: 'sql' }),
-    new PropDef('returns'),
+    new PropDef('returns', { recreateOnChange: true }),
     new PropDef('cost', { type: PropDef.number, defaultValue: 10 }),
     new PropDef('isSecurityDefiner', { type: PropDef.bool, configName: 'security_definer' }),
     new PropDef('stability', { defaultValue: 'volatile' }),
     new PropDef('parallelSafety', { defaultValue: 'unsafe' }),
     new PropDef('code'),
-    new PropDef('args', { configName: 'arguments', type: PropDef.map }),
+    new PropDef('args', { configName: 'arguments', type: PropDef.map, recreateOnChange: true }),
     new PropDef('isLeakProof', { type: PropDef.bool, configName: 'leak_proof' }),
     ...this.propDefs.defs,
   ])
@@ -130,5 +130,9 @@ export default class Function extends AbstractSchemaObject {
 AS $BODY$
 ${this.code}
 $BODY$`
+  }
+
+  getParentRelation (operation) {
+    return '-'
   }
 }

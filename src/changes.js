@@ -115,20 +115,20 @@ export function getChangesSql (previous, current, changes) {
     }
   }
 
-  for (const change of alterChanges) {
-    if (change.cur.getFullAlter()) {
-      result.push(change.cur.getFullAlterSql())
-    } else {
-      result.push(change.cur.getAlterSql(change.old, change.changedProps))
-    }
-  }
-
   if (createChanges.length > 0) {
     for (const change of createChanges) {
       change.getPath = () => change.path
     }
     for (const change of current.getChildrenCreateOrder(createChanges)) {
       result.push(change.cur.getCreateSqlWithChildren())
+    }
+  }
+
+  for (const change of alterChanges) {
+    if (change.cur.getFullAlter()) {
+      result.push(change.cur.getFullAlterSql())
+    } else {
+      result.push(change.cur.getAlterSql(change.old, change.changedProps))
     }
   }
 

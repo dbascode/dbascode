@@ -45,4 +45,13 @@ export default class PropDefCollection {
       object[def.name] = def.defaultValue
     }
   }
+
+  /**
+   * Returns property definition by its name
+   * @param name
+   * @return {PropDef}
+   */
+  findPropByName (name) {
+    return this.defs.find(def => def.name === name)
+  }
 }

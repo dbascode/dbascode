@@ -93,13 +93,16 @@ export default class Table extends AbstractSchemaObject {
   setupDependencies() {
     super.setupDependencies()
     const tableDeps = {}
+    const db = this.getDb()
     const schema = this.getSchema()
     for (const child of this.getChildrenByType(ForeignKey)) {
-      const refTable = schema.getTable(child.ref.table)
+      const ref = child.ref
+      const refSchema = ref.schema ? db.getSchema(ref.schema) : schema
+      const refTable = refSchema.getTable(ref.table)
       if (!refTable) {
-        throw new Error(`Foreign key ${this.name}.${child.name} reference table ${child.ref.table} not found`)
+        throw new Error(`Foreign key ${this.name}.${child.name} reference table ${ref.table} not found`)
       }
-      tableDeps[child.ref.table] = refTable
+      tableDeps[ref.table] = refTable
     }
     if (this.extends) {
       tableDeps[this.extends] = 1

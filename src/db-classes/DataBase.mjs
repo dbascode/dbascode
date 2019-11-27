@@ -11,9 +11,13 @@ import Role from './Role'
 import Schema from './Schema'
 import ChildDef from './ChildDef'
 import ChildDefCollection from './ChildDefCollection'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Database object
+ * @property {object} params
+ * @property {string[]} extensions
  * @property {Role[]} roles
  * @property {Schema[]} schemas
  */
@@ -23,11 +27,6 @@ export default class DataBase extends AbstractDbObject {
    * @type {string}
    */
   defaultLocale = ''
-  /**
-   * List of installed Postgres database extensions.
-   * @type {*[]}
-   */
-  extensions = []
   /**
    * @type {string}
    * @private
@@ -50,6 +49,10 @@ export default class DataBase extends AbstractDbObject {
    * @private
    */
   _version = 0
+  static propDefs = new PropDefCollection([
+    new PropDef('extensions', { type: PropDef.array }),
+    new PropDef('params', { type: PropDef.map }),
+  ])
   /**
    * @type {ChildDefCollection}
    */
@@ -80,7 +83,6 @@ export default class DataBase extends AbstractDbObject {
     result.defaultLocale = overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale
     result._rootUserName = overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name
     result._rootPassword = overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password
-    result.extensions = cfg.extensions
     for (const plugin of plugins) {
       result.addPlugin(plugin)
     }
@@ -118,6 +120,7 @@ export default class DataBase extends AbstractDbObject {
   getCalculators () {
     return {
       rootUserName: this._rootUserName,
+      param: this.params,
     }
   }
 
@@ -158,5 +161,13 @@ export default class DataBase extends AbstractDbObject {
    */
   getVersion () {
     return this._version
+  }
+
+  /**
+   * Returns a schema object by name
+   * @param name
+   */
+  getSchema (name) {
+    return this.schemas[name]
   }
 }

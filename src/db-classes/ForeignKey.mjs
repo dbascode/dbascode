@@ -8,9 +8,11 @@ import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
+import reverse from 'lodash-es/reverse'
 
 /**
  * @typedef {Object} FKeyRef
+ * @property {string} schema
  * @property {string} table
  * @property {string} column
  */
@@ -36,8 +38,8 @@ export default class ForeignKey extends AbstractSchemaObject {
       type: PropDef.map,
       normalize: (obj, value) => {
         if (isString(value)) {
-          const [table, column] = value.split('.')
-          value = { table, column }
+          const [column, table, schema] = reverse(value.split('.'))
+          value = { schema, table, column }
         }
         return value
       }
@@ -72,8 +74,10 @@ export default class ForeignKey extends AbstractSchemaObject {
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
+    const ref = this.ref
+    const refSchema = ref.schema ? this.getDb().getSchema(ref.schema) : this.getSchema()
     return `FOREIGN KEY ("${this.column}")
-      REFERENCES ${this.getSchema().getQuotedName()}."${this.ref.table}" ("${this.ref.column}") 
+      REFERENCES ${refSchema.getQuotedName()}."${ref.table}" ("${ref.column}") 
       MATCH SIMPLE ON UPDATE ${this.getOnUpdate()} ON DELETE ${this.getOnDelete()}`;
   }
 

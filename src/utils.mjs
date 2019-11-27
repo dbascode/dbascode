@@ -222,6 +222,21 @@ export function camelCaseToUnderscore (s) {
   return s.replace(/([A-Z]+)/g, function (x,y){return "_" + y.toLowerCase()}).replace(/^_/, "")
 }
 
+/**
+ * Returns object property value by property path
+ * @param {object} obj
+ * @param {string} prop
+ */
+export function getPropValue (obj, prop) {
+  let result
+  let o = obj
+  for (const p of prop.split('.')) {
+    result = o[p]
+    o = result
+  }
+  return result
+}
+
 
 export {
   checkFiles,

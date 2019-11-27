@@ -33,6 +33,7 @@ export default class PropDef {
   normalize
   validate
   allowNull
+  recreateOnChange
 
   /**
    * Constructor
@@ -43,7 +44,8 @@ export default class PropDef {
    * @param {boolean} [isDefault]
    * @param {function} [normalize]
    * @param {function} [validate]
-   * @param {boolean} allowNull
+   * @param {boolean} [allowNull]
+   * @param {boolean} [recreateOnChange]
    */
   constructor (
     name,
@@ -55,9 +57,11 @@ export default class PropDef {
       normalize,
       validate,
       allowNull = false,
+      recreateOnChange = false,
     } = {},
   ) {
     this.allowNull = allowNull
+    this.recreateOnChange = recreateOnChange
     if (type === PropDef.map && isDefault) {
       throw new Error(`Map property ${name} can not be default`)
     }

@@ -14,6 +14,7 @@ import {
 } from './db-utils'
 import difference from 'lodash-es/difference'
 import {
+  getPropValue,
   objectDifferenceKeys,
   objectIntersectionKeys,
   replaceAll,
@@ -367,7 +368,7 @@ export default class AbstractDbObject {
       childMap[child.getPath()] = child
     }
     const deps = this.getAllDependencies()
-    const result = {}
+    let result = {}
     let lastResultLength
     do {
       lastResultLength = Object.keys(result).length
@@ -390,7 +391,10 @@ export default class AbstractDbObject {
         }
       }
       if (Object.keys(result).length === lastResultLength) {
-        throw new Error('Infinite loop in children order')
+        // Probably we found dependencies not from this object's children.
+        // Hope the rest of them will be resolved by parent.
+        result = {...result, ...childMap}
+        break
       }
     } while (Object.keys(result).length !== children.length)
     return Object.values(result)
@@ -517,7 +521,7 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Returns object identifier for use in SQL
+   * Returns object identifier for use in SQL.
    * @param {string} operation
    * @param {boolean} isParentContext - Is the requested identifier to be used inside the parent object
    * @returns {string}
@@ -539,6 +543,10 @@ export default class AbstractDbObject {
 
   /**
    * Returns parent relation type: '' or '.' or 'ON' or '-'
+   * '' - use regular identification, i.e.: `role` or `schema.table`
+   * `.` - use dot separator in addition to the parent identifier, i.e.: `schema.table.column`
+   * `ON` - use the `ON` operator on the parent, i.e.: `index ON schema.table`
+   * `-` - use regular identification, but alter object using per property changes, not a whole object recreation.
    * @param {string} operation - operation which ir requiring the relation
    * @return {string}
    */
@@ -553,29 +561,33 @@ export default class AbstractDbObject {
    * @returns {string}
    */
   getAlterSql (compared, changes) {
-    if (this.getParentRelation('alter')) {
-      const parent = this.getParent()
-      const result = []
-      for (const propName of Object.keys(changes)) {
-        const change = changes[propName]
-        const sql = this.getAlterPropSql(compared, propName, change.old, change.cur)
-        if (sql !== undefined) {
-          for (const s of [...sql]) {
-            if (this.getAlterWithParent()) {
-              result.push(`${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} ${this.getAlterWithParentOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter-alter', true)} ${s};`)
-            } else {
-              result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${s};`)
-            }
+    const parent = this.getParent()
+    let result = []
+    let dropAndRecreate = false
+    for (const propName of Object.keys(changes)) {
+      const change = changes[propName]
+      const propDef = this.getPropDefCollection().findPropByName(propName)
+      if (propDef && propDef.recreateOnChange) {
+        dropAndRecreate = true
+        result = []
+        break
+      }
+      const sql = this.getAlterPropSql(compared, propName, change.old, change.cur)
+      if (sql !== undefined) {
+        for (const s of [...sql]) {
+          if (this.getAlterWithParent()) {
+            result.push(`${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} ${this.getAlterWithParentOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter-alter', true)} ${s};`)
+          } else {
+            result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${s};`)
           }
         }
       }
-      return joinSql(result)
-    } else {
-      const sql = []
-      const result = `${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getSqlDefinition('alter', sql)};`
-      sql.unshift(result)
-      return joinSql(sql)
     }
+    if (dropAndRecreate) {
+      result.push(this.getDropSqlWithChildren())
+      result.push(this.getCreateSqlWithChildren())
+    }
+    return joinSql(result)
   }
 
   /**
@@ -615,9 +627,9 @@ export default class AbstractDbObject {
     let result
     if (this.getAlterWithParent()) {
       const parent = this.getParent()
-      result = `ALTER ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} CHANGE ${this.getObjectClass()} ${this.getObjectIdentifier('alter-alter', true)} ${this.getSqlDefinition('alter-alter', sql)};`
+      result = `${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} CHANGE ${this.getObjectClass()} ${this.getObjectIdentifier('alter-alter', true)} ${this.getSqlDefinition('alter-alter', sql)};`
     } else {
-      result = `ALTER ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${this.getSqlDefinition('alter', sql)};`
+      result = `${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${this.getSqlDefinition('alter', sql)};`
     }
     sql.unshift(result)
     return joinSql(sql)
@@ -731,7 +743,7 @@ export default class AbstractDbObject {
    */
   processCalculations(value) {
     let result = value
-    const matches = [...value.matchAll(/\$\{\s*(\w+)([^}]*)\s*\}/)]
+    const matches = [...value.matchAll(/\$\{\s*(\w+(\.\w+)*)([^}]*)\s*\}/)]
     if (matches.length > 0) {
       let calculators = this._calcCache
       if (calculators === undefined) {
@@ -745,11 +757,11 @@ export default class AbstractDbObject {
 
       for (const match of matches) {
         const calcName = match[1]
-        const calculator = calculators[calcName]
-        if (!calculator) {
+        const calculator = getPropValue(calculators, calcName)
+        if (calculator === undefined) {
           throw new Error(`Unknown calculator name ${calcName}`)
         }
-        const calcResult = isFunction(calculator) ? calculator(match[2]) : calculator
+        const calcResult = isFunction(calculator) ? calculator(calcName) : calculator
         result = replaceAll(result, match[0], calcResult)
       }
     }
