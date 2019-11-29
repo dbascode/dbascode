@@ -4,13 +4,13 @@
  * Date: 11.10.2019
  * Time: 16:25
  */
-import AbstractDbObject from './AbstractDbObject'
+import AbstractDbObject from '../../../dbascode/AbstractDbObject'
 import Type from './Type'
 import Function from './Function'
 import Table from './Table'
 import Sequence from './Sequence'
-import ChildDef from './ChildDef'
-import ChildDefCollection from './ChildDefCollection'
+import ChildDef from '../../../dbascode/ChildDef'
+import ChildDefCollection from '../../../dbascode/ChildDefCollection'
 
 /**
  * Database schema object.

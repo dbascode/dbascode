@@ -4,7 +4,7 @@
  * Date: 19.11.2019
  * Time: 9:23
  */
-import { camelCaseToUnderscore } from '../utils'
+import { camelCaseToUnderscore } from './utils'
 
 /**
  * Children prop with DB class object(s) definition

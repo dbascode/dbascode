@@ -7,16 +7,16 @@
 import fs from 'fs'
 import path from 'path'
 import yargs from 'yargs'
-import DataBase from './src/db-classes/DataBase'
+import DataBase from './src/plugins/db/postgresql/DataBase'
 import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
-import PostgraphilePlugin from './src/plugins/PostgraphilePlugin'
-import { getLoadLastStateSql, getStateSaveSql } from './src/db-classes/db-utils'
-import { executeSql, executeSqlJson } from './src/psql'
+import PostgraphilePlugin from './src/plugins/tools/PostgraphilePlugin'
+import { getLoadLastStateSql, getStateSaveSql } from './src/dbascode/db-utils'
+import { executeSql, executeSqlJson } from './src/dbascode/psql'
 import os from 'os'
-import { collectChanges, getChangesSql } from './src/changes'
-import RowLevelSecurityPlugin from './src/plugins/RowLovelSecurityPlugin'
-import DefaultRowsPlugin from './src/plugins/DefaultRowsPlugin'
+import { collectChanges, getChangesSql } from './src/dbascode/changes'
+import RowLevelSecurityPlugin from './src/plugins/tools/RowLovelSecurityPlugin'
+import DefaultRowsPlugin from './src/plugins/tools/DefaultRowsPlugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -84,6 +84,10 @@ const cliConfig = yargs
     type: 'boolean',
     default: false,
     describe: 'Use WSL to run psql',
+  })
+  .option('dbms', {
+    default: process.env.DBMS,
+    describe: 'Database management system to work with',
   })
   .demandCommand()
   .argv
@@ -186,6 +190,8 @@ function disposeTrees (prevTree, curTree) {
 function createPlan() {
   console.log('Loading current DB state...')
   const prevStateData = loadLastStateFromDB()
+  // const prevStateData = JSON.parse(fs.readFileSync('1.json'))
+  // fs.writeFileSync('1.json', JSON.stringify(prevStateData))
   console.log('Loading new state...')
   const curState = loadCurrentState(version)
   const [changes, prevTree, curTree] =

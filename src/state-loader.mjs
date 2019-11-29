@@ -10,7 +10,7 @@ import yaml from 'js-yaml'
 import isObject from 'lodash-es/isObject'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
-import { objectIntersectionKeys } from './utils'
+import { objectIntersectionKeys } from './dbascode/utils'
 
 /**
  * Load the whole DB config with postprocessing. Config files are merged and loaded as the single config.

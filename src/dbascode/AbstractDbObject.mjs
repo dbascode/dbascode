@@ -18,12 +18,13 @@ import {
   objectDifferenceKeys,
   objectIntersectionKeys,
   replaceAll,
-} from '../utils'
+} from './utils'
 import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
 import isEmpty from 'lodash-es/isEmpty'
+import isArray from 'lodash-es/isArray'
 
 /**
  * Base class for all DB objects
@@ -574,11 +575,11 @@ export default class AbstractDbObject {
       }
       const sql = this.getAlterPropSql(compared, propName, change.old, change.cur)
       if (sql !== undefined) {
-        for (const s of [...sql]) {
+        for (const s of [...isArray(sql) ? sql : [sql]]) {
           if (this.getAlterWithParent()) {
             result.push(`${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} ${this.getAlterWithParentOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter-alter', true)} ${s};`)
           } else {
-            result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${s};`)
+            result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', false)} ${s};`)
           }
         }
       }

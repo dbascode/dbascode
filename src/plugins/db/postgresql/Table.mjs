@@ -10,10 +10,10 @@ import Index from './Index'
 import PrimaryKey from './PrimaryKey'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import UniqueKey from './UniqueKey'
-import ChildDef from './ChildDef'
+import ChildDef from '../../../dbascode/ChildDef'
 import ForeignKey from './ForeignKey'
-import ChildDefCollection from './ChildDefCollection'
-import AbstractDbObject from './AbstractDbObject'
+import ChildDefCollection from '../../../dbascode/ChildDefCollection'
+import AbstractDbObject from '../../../dbascode/AbstractDbObject'
 
 /**
  * Table object

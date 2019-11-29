@@ -1,6 +1,6 @@
 import AbstractSchemaObject from './AbstractSchemaObject'
-import PropDefCollection from './PropDefCollection'
-import PropDef from './PropDef'
+import PropDefCollection from '../../../dbascode/PropDefCollection'
+import PropDef from '../../../dbascode/PropDef'
 
 /**
  * Attribute in a type

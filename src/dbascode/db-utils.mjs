@@ -8,7 +8,7 @@
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
 import isArray from 'lodash-es/isArray'
-import { replaceAll } from '../utils'
+import { replaceAll } from './utils'
 
 /**
  * Process calculations in string config values

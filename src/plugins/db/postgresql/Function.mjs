@@ -7,8 +7,8 @@
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
-import PropDefCollection from './PropDefCollection'
-import PropDef from './PropDef'
+import PropDefCollection from '../../../dbascode/PropDefCollection'
+import PropDef from '../../../dbascode/PropDef'
 
 /**
  * Function, Procedure, or Trigger Function object
@@ -134,5 +134,13 @@ $BODY$`
 
   getParentRelation (operation) {
     return '-'
+  }
+
+  getAlterPropSql (compared, propName, oldValue, curValue) {
+    switch (propName) {
+      case 'code':
+      case 'language':
+        return this.getSqlDefinition('create', [])
+    }
   }
 }

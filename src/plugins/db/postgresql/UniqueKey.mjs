@@ -1,19 +1,19 @@
 /**
  * Created with PhpStorm.
  * User: pravdin
- * Date: 16.11.2019
- * Time: 12:26
+ * Date: 19.11.2019
+ * Time: 9:19
  */
-
-import AbstractSchemaObject from './AbstractSchemaObject'
-import PropDefCollection from './PropDefCollection'
-import PropDef from './PropDef'
+import AbstractDbObject from '../../../dbascode/AbstractDbObject'
+import PropDefCollection from '../../../dbascode/PropDefCollection'
+import PropDef from '../../../dbascode/PropDef'
 
 /**
- * Table primary key object
+ * Unique key of a table
  * @property {string[]} columns
  */
-export default class PrimaryKey extends AbstractSchemaObject {
+export default class UniqueKey extends AbstractDbObject {
+
   static propDefs = new PropDefCollection([
     new PropDef('columns', { type: PropDef.array, isDefault: true }),
     ...this.propDefs.defs,
@@ -21,14 +21,17 @@ export default class PrimaryKey extends AbstractSchemaObject {
 
   static createdByParent = true
   static droppedByParent = true
-  static alterWithParent = true
+  static fullAlter = true
 
   /**
    * @inheritDoc
    */
   applyConfigProperties (config) {
     super.applyConfigProperties(config)
-    this.name = `${this.getParent().name}_pkey`
+    const table = this.getParent()
+    this.name = this.getDb().getVersion() < 2
+      ? `${table.name}_${this.columns.join('_')}`
+      : `${table.name}_${this.columns.join('_')}_idx`
   }
 
   /**
@@ -45,10 +48,14 @@ export default class PrimaryKey extends AbstractSchemaObject {
     return 'CONSTRAINT'
   }
 
+  getAlterWithParentOperator () {
+    return super.getAlterWithParentOperator()
+  }
+
   /**
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    return `PRIMARY KEY ("${this.columns.join('", "')}")`
+    return `UNIQUE ("${this.columns.join('","')}")`
   }
 }

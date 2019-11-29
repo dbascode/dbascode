@@ -5,13 +5,13 @@
  * Time: 10:14
  */
 
-import { joinSql, parseArrayProp } from './db-classes/db-utils'
+import { joinSql, parseArrayProp } from './db-utils'
 import isEmpty from 'lodash-es/isEmpty'
-import AbstractDbObject from './db-classes/AbstractDbObject'
+import AbstractDbObject from './AbstractDbObject'
 import ChangesContext from './ChangesContext'
 import isFunction from 'lodash-es/isFunction'
 import isArray from 'lodash-es/isArray'
-import ChildDef from './db-classes/ChildDef'
+import ChildDef from './ChildDef'
 import isObject from 'lodash-es/isObject'
 import equalArrays from 'lodash-es/_equalArrays'
 import isEqual from 'lodash-es/isEqual'

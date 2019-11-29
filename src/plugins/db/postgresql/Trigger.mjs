@@ -4,10 +4,10 @@
  * Date: 11.10.2019
  * Time: 16:26
  */
-import { processCalculations } from './db-utils'
+import { processCalculations } from '../../../dbascode/db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
-import PropDefCollection from './PropDefCollection'
-import PropDef from './PropDef'
+import PropDefCollection from '../../../dbascode/PropDefCollection'
+import PropDef from '../../../dbascode/PropDef'
 
 /**
  * Trigger on a table

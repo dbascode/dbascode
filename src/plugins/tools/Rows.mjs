@@ -5,10 +5,10 @@
  * Time: 16:30
  */
 
-import AbstractSchemaObject from '../db-classes/AbstractSchemaObject'
+import AbstractSchemaObject from '../db/postgresql/AbstractSchemaObject'
 import isUndefined from 'lodash-es/isUndefined'
 import isObject from 'lodash-es/isObject'
-import { lookupClosestLocale } from '../utils'
+import { lookupClosestLocale } from '../../dbascode/utils'
 
 /**
  * Initial rows in a table

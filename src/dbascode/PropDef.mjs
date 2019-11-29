@@ -6,7 +6,7 @@
  */
 import isArray from 'lodash-es/isArray'
 import isObject from 'lodash-es/isObject'
-import { camelCaseToUnderscore } from '../utils'
+import { camelCaseToUnderscore } from './utils'
 import isFunction from 'lodash-es/isFunction'
 import isString from 'lodash-es/isString'
 

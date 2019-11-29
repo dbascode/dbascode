@@ -5,8 +5,8 @@
  * Time: 10:25
  */
 import AbstractPlugin from './AbstractPlugin'
-import ChildDefCollection from '../db-classes/ChildDefCollection'
-import ChildDef from '../db-classes/ChildDef'
+import ChildDefCollection from '../../dbascode/ChildDefCollection'
+import ChildDef from '../../dbascode/ChildDef'
 import Rows from './Rows'
 
 /**

@@ -5,14 +5,14 @@
  * Time: 16:24
  */
 
-import { dispose, } from '../utils'
-import AbstractDbObject from './AbstractDbObject'
+import { dispose, } from '../../../dbascode/utils'
+import AbstractDbObject from '../../../dbascode/AbstractDbObject'
 import Role from './Role'
 import Schema from './Schema'
-import ChildDef from './ChildDef'
-import ChildDefCollection from './ChildDefCollection'
-import PropDefCollection from './PropDefCollection'
-import PropDef from './PropDef'
+import ChildDef from '../../../dbascode/ChildDef'
+import ChildDefCollection from '../../../dbascode/ChildDefCollection'
+import PropDefCollection from '../../../dbascode/PropDefCollection'
+import PropDef from '../../../dbascode/PropDef'
 
 /**
  * Database object

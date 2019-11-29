@@ -5,7 +5,7 @@
  * Time: 9:55
  */
 import AbstractPlugin from './AbstractPlugin'
-import { processCalculations } from '../db-classes/db-utils'
+import { processCalculations } from '../../dbascode/db-utils'
 
 /**
  * Add row-level security functionality
