@@ -28,7 +28,8 @@ export default class AbstractSqlExec {
   }
 
   /**
-   * Execute SQL on the DB server
+   * Execute SQL script on the DB server. The whole script must be run in a single transaction. None
+   * of the queries should affect DB state if any of the queries has failed.
    * @param {string} sql
    * @param {object} cfg
    * @return {Promise<SqlExecResult>}

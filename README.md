@@ -1,15 +1,15 @@
-# PgAsCode
-### PostgreSQL As Code
+# DbAsCode
+### Database As Code
 
-A tool to manage PostgreSQL databases structure "as code" in `yaml` config files, allowing easy VCS storage, changes 
-tracking, automation.
+A tool to manage databases structure "as code" in `yaml` config files, allowing easy VCS storage, changes 
+tracking, and automation.
 
 ## Installation
 
-Using MPN:
+Using NPM:
 ```shell script
 git clone https://gitlab.com/interico/pgascode
-cd pgascode
+cd dbascode
 npm run fix-modules
 ```
 
