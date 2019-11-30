@@ -4,17 +4,33 @@
  * Date: 21.11.2019
  * Time: 10:25
  */
-import AbstractPlugin from './AbstractPlugin'
 import ChildDefCollection from '../../dbascode/ChildDefCollection'
 import ChildDef from '../../dbascode/ChildDef'
 import Rows from './Rows'
+import PluginDescriptor from '../../dbascode/PluginDescriptor'
+import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
+
+export default new DefaultRowsPlugin({
+  name: 'default-rows',
+  version: 1,
+})
 
 /**
  * Plugin to add rows to a table when it is created
  */
-export default class DefaultRowsPlugin extends AbstractPlugin {
+class DefaultRowsPlugin extends PluginDescriptor {
   /**
    * @inheritDoc
+   */
+  event (eventName, args = []) {
+    if (eventName === TREE_INITIALIZED) {
+      this.onTreeInitialized(args[0])
+    }
+  }
+
+  /**
+   * Executed on a DB tree initialization completion
+   * @param {DataBase} db
    */
   onTreeInitialized(db) {
     for (const schemaName of Object.keys(db.schemas)) {

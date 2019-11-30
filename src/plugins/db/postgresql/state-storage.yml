@@ -1,7 +1,7 @@
 # Internal routines for PgAsCode support in the DB
 
 schemas:
-  pgascode:
+  dbascode:
     tables:
       state:
         comment: Current state storage for PgAsCode
@@ -19,10 +19,12 @@ schemas:
           migration:
             type: text
             allow_null: true
-          pgascode_version:
+          dbascode_version:
             type: int
-            allow_null: true
+          plugin_version:
+            type: int
         indexes:
           - date
           - pgascode_version
+          - plugin_version
         primary_key: id

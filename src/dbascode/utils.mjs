@@ -26,8 +26,8 @@ function replaceAll(string, search, replacement) {
   return string.split(search).join(replacement)
 }
 
-function loadYaml(file) {
-  return yaml.safeLoad(fs.readFileSync(file, 'utf8'))
+export async function loadYaml(file) {
+  return yaml.safeLoad(await fs.readFile(file, 'utf8'))
 }
 
 function loadYamlSubst(file, subst) {
@@ -237,11 +237,38 @@ export function getPropValue (obj, prop) {
   return result
 }
 
+/**
+ * Parses property name into name itself and array index if any
+ * @param name
+ */
+export function parseArrayProp (name) {
+  const matches = name.match(/([\w-]+)(\[(\d+)\]|)/)
+  if (matches && matches[3] !== undefined) {
+    const [,propName,, index] = matches
+    return {
+      name: propName,
+      index: Number(index),
+    }
+  } else {
+    return {
+      name,
+      index: null,
+    }
+  }
+}
+
+/**
+ * Joins array of SQL queries filtering empty ones
+ * @param {string[]} sql
+ */
+export function joinSql(sql) {
+  return sql.filter(Boolean).join("\n")
+}
+
 
 export {
   checkFiles,
   replaceAll,
-  loadYaml,
   loadYamlSubst,
   loadSqlSubst,
   indent,

@@ -10,14 +10,17 @@ import yaml from 'js-yaml'
 import isObject from 'lodash-es/isObject'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
-import { objectIntersectionKeys } from './dbascode/utils'
+import { objectIntersectionKeys } from './utils'
+import { executeSql, executeSqlJson } from '../plugins/db/postgresql/psql'
+import { getLoadLastStateSql } from '../plugins/db/postgresql/db-utils'
 
 /**
- * Load the whole DB config with postprocessing. Config files are merged and loaded as the single config.
+ * Load the whole DB state with postprocessing. State config files are merged and loaded as the
+ * single config.
  * @param {string[]} configFiles
  * @returns {*}
  */
-export function loadConfig(configFiles) {
+export function loadStateYaml(configFiles) {
   const cfg = doLoadConfig(configFiles)
   return filterConfig(cfg)
 }
@@ -84,7 +87,7 @@ function recursePostProcess(cfg, dir) {
     }
   } else if (isString(cfg)) {
     if (cfg.substr(0, 9) === '$include ') {
-      return loadConfig([path.join(dir, cfg.substr(9))])
+      return loadStateYaml([path.join(dir, cfg.substr(9))])
     } else if (cfg.substr(0, 6) === '$file ') {
       return fs.readFileSync(path.join(dir, cfg.substr(6))).toString()
     }

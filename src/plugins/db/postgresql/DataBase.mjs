@@ -13,43 +13,32 @@ import ChildDef from '../../../dbascode/ChildDef'
 import ChildDefCollection from '../../../dbascode/ChildDefCollection'
 import PropDefCollection from '../../../dbascode/PropDefCollection'
 import PropDef from '../../../dbascode/PropDef'
+import AbstractDataBase from '../../../dbascode/AbstractDataBase'
 
 /**
  * Database object
  * @property {object} params
+ * @property {string} defaultLocale
  * @property {string[]} extensions
  * @property {Role[]} roles
  * @property {Schema[]} schemas
  */
-export default class DataBase extends AbstractDbObject {
-  /**
-   * Default locale of this Database.
-   * @type {string}
-   */
-  defaultLocale = ''
+export default class DataBase extends AbstractDataBase {
   /**
    * @type {string}
    * @private
    */
   _rootUserName = ''
+
   /**
    * @type {string}
-   * @private
    */
-  _rootPassword = ''
+  static dbms = 'postgresql'
   /**
-   * Database plugins
-   * @type {Object.<string, AbstractPlugin>}
-   * @private
+   * @type {PropDefCollection}
    */
-  _plugins = {}
-  /**
-   * PgAsCode version number this object was generated with
-   * @type {number}
-   * @private
-   */
-  _version = 0
   static propDefs = new PropDefCollection([
+    new PropDef('defaultLocale'),
     new PropDef('extensions', { type: PropDef.array }),
     new PropDef('params', { type: PropDef.map }),
   ])
@@ -60,38 +49,6 @@ export default class DataBase extends AbstractDbObject {
     new ChildDef(Role),
     new ChildDef(Schema),
   ])
-
-  /**
-   * Instantiate new object from config data
-   * @param {Object|null} cfg
-   * @param {Object|null} [overrides]
-   * @param {AbstractPlugin[]} plugins
-   * @param {number} version
-   * @return {DataBase|null}
-   */
-  static createFromState(
-    cfg,
-    overrides,
-    plugins = [],
-    version,
-  ) {
-    const result = new DataBase({
-      name: overrides.dbName ? overrides.dbName : '',
-      rawConfig: cfg,
-    })
-    result._version = version
-    result.defaultLocale = overrides.defaultLocale ? overrides.defaultLocale : cfg.default_locale
-    result._rootUserName = overrides.rootUserName ? overrides.rootUserName : cfg.root_user_name
-    result._rootPassword = overrides.rootPassword ? overrides.rootPassword : cfg.root_user_password
-    for (const plugin of plugins) {
-      result.addPlugin(plugin)
-    }
-    result.applyConfig(cfg)
-    result.postprocessTree()
-    result.setupDependencies()
-    result.pluginOnTreeInitialized()
-    return result
-  }
 
   /**
    * Returns SQL for object creation
@@ -105,13 +62,6 @@ export default class DataBase extends AbstractDbObject {
       }
     }
     return result
-  }
-
-  /**
-   * Destroys all links in the tree to allow garbage collector
-   */
-  dispose () {
-    dispose(this)
   }
 
   /**
@@ -152,15 +102,6 @@ export default class DataBase extends AbstractDbObject {
     for (const plugin of Object.values(this._plugins)) {
       plugin.onCompareObjects(old, cur, context)
     }
-  }
-
-  /**
-   * Returns version used to save this DB object. Automatically set up by pgascode on state save.
-   * Useful for adding custom migrations on the tool version change.
-   * @return {number}
-   */
-  getVersion () {
-    return this._version
   }
 
   /**

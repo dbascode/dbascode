@@ -7,11 +7,6 @@
 
 import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
-import {
-  escapeComment,
-  joinSql,
-  parseArrayProp, processCalculations,
-} from './db-utils'
 import difference from 'lodash-es/difference'
 import {
   getPropValue,
@@ -25,6 +20,7 @@ import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
 import isEmpty from 'lodash-es/isEmpty'
 import isArray from 'lodash-es/isArray'
+import isString from 'lodash-es/isString'
 
 /**
  * Base class for all DB objects
@@ -80,7 +76,7 @@ export default class AbstractDbObject {
    */
   static propDefs = new PropDefCollection([
     new PropDef('comment'),
-    new PropDef('extends', { configName: ['inherit', {version: 2, name: 'extends'}] }),
+    new PropDef('extends', { configName: ['inherit', { version: 2, name: 'extends' }] }),
     new PropDef('grant', { type: PropDef.map }),
     new PropDef('revoke', { type: PropDef.map }),
   ])
@@ -111,7 +107,6 @@ export default class AbstractDbObject {
    * @type {boolean}
    */
   static fullAlter = false
-
 
   /**
    * Constructor
@@ -146,7 +141,7 @@ export default class AbstractDbObject {
    * Returns class name of this object
    * @return {string}
    */
-  getClassName() {
+  getClassName () {
     return this.constructor.name
   }
 
@@ -280,7 +275,7 @@ export default class AbstractDbObject {
    * Returns this object comment
    * @returns {string}
    */
-  getComment() {
+  getComment () {
     return escapeComment(this.comment)
   }
 
@@ -340,7 +335,7 @@ export default class AbstractDbObject {
    * Returns CREATE SQL statement for the object and all its children
    * @returns {string}
    */
-  getCreateSqlWithChildren() {
+  getCreateSqlWithChildren () {
     const result = []
     // If we are here on the object that should be created by its parent then we are altering parent
     // and need to get special SQL. This method will not be called when creating such children with
@@ -394,7 +389,7 @@ export default class AbstractDbObject {
       if (Object.keys(result).length === lastResultLength) {
         // Probably we found dependencies not from this object's children.
         // Hope the rest of them will be resolved by parent.
-        result = {...result, ...childMap}
+        result = { ...result, ...childMap }
         break
       }
     } while (Object.keys(result).length !== children.length)
@@ -409,7 +404,7 @@ export default class AbstractDbObject {
    * Returns DROP SQL statement for the object
    * @returns {string}
    */
-  getDropSqlWithChildren() {
+  getDropSqlWithChildren () {
     const result = []
     if (this.getDroppedByParent()) {
       result.push(this.getSeparateDropSql())
@@ -742,7 +737,7 @@ export default class AbstractDbObject {
    * @param {string} value
    * @returns {string}
    */
-  processCalculations(value) {
+  processCalculations (value) {
     let result = value
     const matches = [...value.matchAll(/\$\{\s*(\w+(\.\w+)*)([^}]*)\s*\}/)]
     if (matches.length > 0) {
@@ -750,7 +745,7 @@ export default class AbstractDbObject {
       if (calculators === undefined) {
         let parent = this
         do {
-          calculators = {...parent.getCalculators(), ...calculators}
+          calculators = { ...parent.getCalculators(), ...calculators }
           parent = parent._parent
         } while (parent)
         this._calcCache = calculators
@@ -773,7 +768,7 @@ export default class AbstractDbObject {
    * Applies a mixin to the current object
    * @param {Object} mixin
    */
-  applyMixin(mixin) {
+  applyMixin (mixin) {
     for (const prop of Object.keys(mixin)) {
       const v = mixin[prop]
       if (isFunction(v)) {
@@ -798,7 +793,7 @@ export default class AbstractDbObject {
    * Returns parent of this object
    * @returns {AbstractDbObject}
    */
-  getParent() {
+  getParent () {
     return this._parent
   }
 
@@ -816,7 +811,7 @@ export default class AbstractDbObject {
    * Fills the dependencies list of this object and its children. Must throw an exception if
    * a dependency object is not found in the current tree.
    */
-  setupDependencies() {
+  setupDependencies () {
     for (const child of this.getAllChildren()) {
       child.setupDependencies()
     }
@@ -962,10 +957,56 @@ export default class AbstractDbObject {
   addChild (child) {
     const def = this.getChildrenDefCollection().getDefByObject(child)
     switch (def.propType) {
-      case ChildDef.single: this[def.propName] = child; break
-      case ChildDef.array: this[def.propName].push(child); break
-      case ChildDef.map: this[def.propName][child.name] = child; break
-      default: throw new Error(`Unknown propType ${def.propType} for the object of ${child.constructor.name}`)
+      case ChildDef.single:
+        this[def.propName] = child;
+        break
+      case ChildDef.array:
+        this[def.propName].push(child);
+        break
+      case ChildDef.map:
+        this[def.propName][child.name] = child;
+        break
+      default:
+        throw new Error(`Unknown propType ${def.propType} for the object of ${child.constructor.name}`)
     }
   }
+}
+
+/**
+ * Process calculations in string config values
+ * @param {AbstractDbObject} obj
+ * @param {Object.<string, *>} args
+ * @returns {*}
+ */
+export function processCalculations (obj, args) {
+  if (!obj || !args) {
+    return args
+  }
+  if (isString(args)) {
+    return recurseProcessCalculations(obj, args)
+  }
+  for (const prop of Object.keys(args)) {
+    if (prop === 'name' || prop === 'rawConfig' || prop === 'parent') {
+      continue
+    }
+    args[prop] = recurseProcessCalculations(obj, args[prop])
+  }
+  return args
+}
+
+function recurseProcessCalculations (obj, value) {
+  if (isString(value)) {
+    return obj.processCalculations(value)
+  } else if (isObject(value) && value.constructor.name === 'Object') {
+    for (const prop of Object.keys(value)) {
+      value[prop] = recurseProcessCalculations(obj, value[prop])
+    }
+  } else if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      value[i] = recurseProcessCalculations(obj, value[i])
+    }
+  } else {
+    return value
+  }
+  return value
 }

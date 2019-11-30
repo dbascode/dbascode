@@ -4,7 +4,6 @@
  * Date: 11.10.2019
  * Time: 16:26
  */
-import { processCalculations } from '../../../dbascode/db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import PropDefCollection from '../../../dbascode/PropDefCollection'
 import PropDef from '../../../dbascode/PropDef'

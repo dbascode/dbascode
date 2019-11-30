@@ -5,7 +5,6 @@
  * Time: 10:14
  */
 
-import { joinSql, parseArrayProp } from './db-utils'
 import isEmpty from 'lodash-es/isEmpty'
 import AbstractDbObject from './AbstractDbObject'
 import ChangesContext from './ChangesContext'
@@ -13,9 +12,7 @@ import isFunction from 'lodash-es/isFunction'
 import isArray from 'lodash-es/isArray'
 import ChildDef from './ChildDef'
 import isObject from 'lodash-es/isObject'
-import equalArrays from 'lodash-es/_equalArrays'
-import isEqual from 'lodash-es/isEqual'
-import difference from 'lodash-es/difference'
+import { joinSql, parseArrayProp } from './utils'
 
 /**
  * Returns SQL applying specified changes
@@ -163,23 +160,6 @@ export function collectChanges (old, current, deep = false) {
   const context = new ChangesContext(deep)
   hasChanges(current, old, context)
   return context
-}
-
-/**
- * @param {AbstractDbObject} obj
- * @param {string} name
- * @return {boolean}
- */
-function isChildren (obj, name) {
-  const defs = obj.getChildrenDefCollection()
-  if (defs) {
-    for (const def of defs.defs) {
-      if (def.propName === name) {
-        return true
-      }
-    }
-  }
-  return false
 }
 
 function arrayHasChanges (v2, v1, context) {

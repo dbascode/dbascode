@@ -4,21 +4,37 @@
  * Date: 17.10.2019
  * Time: 20:07
  */
-import AbstractPlugin from './AbstractPlugin'
 import isBoolean from 'lodash-es/isBoolean'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
+import PluginDescriptor from '../../dbascode/PluginDescriptor'
+import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
+
+export default new PluginDescriptor({
+  name: 'postgraphile',
+  version: 1,
+})
 
 /**
  * Some Postgraphile-specific add-ons
  */
-class PostgraphilePlugin extends AbstractPlugin{
+class PostgraphilePlugin extends PluginDescriptor {
   /**
    * @inheritDoc
    */
+  event (eventName, args = []) {
+    if (eventName === TREE_INITIALIZED) {
+      this.onTreeInitialized(args[0])
+    }
+  }
+
+  /**
+   * Executed on a DB tree initialization completion
+   * @param {DataBase} db
+   */
   onTreeInitialized(db) {
     for (const schemaName of Object.keys(db.schemas)) {
-      if (schemaName === 'pgascode') {
+      if (schemaName === 'dbascode') {
         continue
       }
       const schema = db.schemas[schemaName]
@@ -32,20 +48,6 @@ class PostgraphilePlugin extends AbstractPlugin{
           this.applyOmitMixin(table.primaryKey)
         }
       }
-    }
-  }
-
-  /**
-   * @inheritDoc
-   */
-  onCompareObjects (old, cur, context) {
-    switch (cur.getClassName()) {
-      case 'PrimaryKey':
-        if (old.getDb().getVersion() < 1) {
-          // Update omits on primary keys
-          context.addChangeWithPath(`${cur.getPath()}.comment`, old.comment, cur.comment)
-        }
-        break;
     }
   }
 
@@ -94,5 +96,3 @@ class PostgraphilePlugin extends AbstractPlugin{
     }
   }
 }
-
-export default PostgraphilePlugin

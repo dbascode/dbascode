@@ -4,15 +4,30 @@
  * Date: 21.11.2019
  * Time: 9:55
  */
-import AbstractPlugin from './AbstractPlugin'
-import { processCalculations } from '../../dbascode/db-utils'
+import PluginDescriptor from '../../dbascode/PluginDescriptor'
+import { processCalculations } from '../../dbascode/AbstractDbObject'
+
+export default new RowLevelSecurityPlugin({
+  name: 'rls',
+  version: 1,
+})
 
 /**
  * Add row-level security functionality
  */
-export default class RowLevelSecurityPlugin extends AbstractPlugin {
+class RowLevelSecurityPlugin extends PluginDescriptor {
   /**
    * @inheritDoc
+   */
+  event (eventName, args = []) {
+    if (eventName === TREE_INITIALIZED) {
+      this.onTreeInitialized(args[0])
+    }
+  }
+
+  /**
+   * Executed on a DB tree initialization completion
+   * @param {DataBase} db
    */
   onTreeInitialized(db) {
     for (const schemaName of Object.keys(db.schemas)) {

@@ -5,7 +5,6 @@
  * Time: 15:53
  */
 
-import { escapeString } from '../../../dbascode/db-utils'
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isObject from 'lodash-es/isObject'
 import Sequence from './Sequence'
@@ -13,6 +12,7 @@ import PrimaryKey from './PrimaryKey'
 import ForeignKey from './ForeignKey'
 import PropDefCollection from '../../../dbascode/PropDefCollection'
 import PropDef from '../../../dbascode/PropDef'
+import { escapeString } from './utils'
 
 /**
  * Column in a table
