@@ -15,8 +15,7 @@ import PropDef from '../../../dbascode/PropDef'
 import AbstractDataBase from '../../../dbascode/AbstractDataBase'
 
 /**
- * Database object
- * @property {object} params
+ * PostgreSQL database object
  * @property {string} defaultLocale
  * @property {string[]} extensions
  * @property {Object.<string, Role>} roles
@@ -102,5 +101,19 @@ export default class DataBase extends AbstractDataBase {
    */
   getSchema (name) {
     return this.schemas[name]
+  }
+
+  /**
+   * @inheritDoc
+   */
+  validate (previous, context) {
+    if (this.dbmsVersion == 0) {
+      context.addError(this, `DBMS version is not set. Did you forget to define the dbmsVersion parameter in the state configuration?`)
+      return
+    } else if (this.dbmsVersion < 9.4) {
+      context.addError(this, `PostgreSQL version below 9.4 is not supported. Version ${this.dbmsVersion} is defined.`)
+      return
+    }
+    super.validate(previous, context)
   }
 }

@@ -11,6 +11,8 @@ import PropDef from './PropDef'
 
 /**
  * Abstract database class to be inherited by a specific DBMS implementation plugin
+ * @property {number} dbmsVersion
+ * @property {object} params
  */
 export default class AbstractDataBase extends AbstractDbObject {
   /**

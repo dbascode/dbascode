@@ -9,7 +9,8 @@ import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
 import difference from 'lodash-es/difference'
 import {
-  getPropValue, joinSql,
+  getPropValue,
+  joinSql,
   objectDifferenceKeys,
   objectIntersectionKeys,
   parseArrayProp,
@@ -23,7 +24,6 @@ import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
 import { escapeRawText } from '../plugins/db/postgresql/utils'
-import AbstractDataBase from './AbstractDataBase'
 
 /**
  * Base class for all DB objects
@@ -726,13 +726,13 @@ export default class AbstractDbObject {
 
   /**
    * Returns DB object that the current object belongs to
-   * @returns {DataBase}
+   * @returns {AbstractDataBase}
    */
   getDb () {
     let parent = this
     do {
       parent = parent._parent
-    } while (parent && !parent instanceof AbstractDataBase)
+    } while (parent && !parent.getClass().dbms)
     return parent
   }
 
