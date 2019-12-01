@@ -1,4 +1,4 @@
-# Internal routines for PgAsCode support in the DB
+# Schema for DbAsCode state storage
 
 schemas:
   dbascode:
@@ -25,6 +25,6 @@ schemas:
             type: int
         indexes:
           - date
-          - pgascode_version
+          - dbascode_version
           - plugin_version
         primary_key: id

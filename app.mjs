@@ -103,10 +103,10 @@ const dbAsCode = new DbAsCode(
 
 (async () => {
   await dbAsCode.initializePlugins()
-  await dbAsCode.determineCurrentDbmsType()
 
   switch (command) {
     case planCmd: {
+      await dbAsCode.determineCurrentDbmsType()
       console.log('Loading changes...')
       const [plan, changes] = await dbAsCode.createPlan()
       console.log(`Current DB version: ${plan.id - 1}`)
@@ -117,6 +117,7 @@ const dbAsCode = new DbAsCode(
         }
         break
       }
+      plan.dbms = dbAsCode.getDbPlugin().dbClass.dbms
       if (cliConfig.output) {
         console.log(`Writing plan to '${cliConfig.output}'...`)
         fs.writeFileSync(cliConfig.output, JSON.stringify(plan, null, 2))
@@ -145,9 +146,11 @@ const dbAsCode = new DbAsCode(
           console.log('No changes. Nothing to do.')
           break;
         }
+        await dbAsCode.determineCurrentDbmsType(plan.dbms)
       } else {
         console.log('Input plan not set. Creating migration plan...')
-        const [p, changes] = dbAsCode.createPlan()
+        await dbAsCode.determineCurrentDbmsType()
+        const [p, changes] = await dbAsCode.createPlan()
         plan = p
         if (!changes.hasChanges()) {
           console.log('No changes detected. Nothing to do.')

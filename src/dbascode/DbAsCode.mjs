@@ -122,10 +122,11 @@ export default class DbAsCode {
 
   /**
    * Find out the current DBMS and initialize db plugin
+   * @param {string} forcedValue - Enforced DBMS value (to use when loading an existing plan)
    * @return {Promise<void>}
    */
-  async determineCurrentDbmsType () {
-    let dbms = this.config.dbms
+  async determineCurrentDbmsType (forcedValue = undefined) {
+    let dbms = forcedValue || this.config.dbms
     if (!dbms) {
       const stateFile = this.config.source
       if (!stateFile || !fs.existsSync(stateFile)) {
