@@ -161,9 +161,9 @@ export default class DbAsCode {
   async createPlan () {
     console.log('Loading current DB state...')
     const dbPlugin = this.getDbPlugin()
-    // const prevState = await dbPlugin.getStateStore().getState()
-    const prevState = JSON.parse(fs.readFileSync('1.json'))
-    fs.writeFileSync('1.json', JSON.stringify(prevState))
+    const prevState = await dbPlugin.getStateStore().getState()
+    // const prevState = JSON.parse(fs.readFileSync('1.json'))
+    // fs.writeFileSync('1.json', JSON.stringify(prevState))
     console.log('Loading new state...')
     const curStateRaw = await loadStateYaml([
       await dbPlugin.getStateStore().getStorageConfigPath(),
