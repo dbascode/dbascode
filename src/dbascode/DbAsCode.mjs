@@ -179,7 +179,9 @@ export default class DbAsCode {
       prevState.dbAsCodeVersion,
       prevState.pluginVersion,
     )
-    this.pluginEvent(TREE_INITIALIZED, [prevTree])
+    if (prevTree) {
+      this.pluginEvent(TREE_INITIALIZED, [prevTree])
+    }
     /**
      * @var {AbstractDataBase} curTree
      */
@@ -189,7 +191,9 @@ export default class DbAsCode {
       this.version,
       dbPlugin.version
     )
-    this.pluginEvent(TREE_INITIALIZED, [curTree])
+    if (curTree) {
+      this.pluginEvent(TREE_INITIALIZED, [curTree])
+    }
 
     const changes = collectChanges(prevTree, curTree, true)
 

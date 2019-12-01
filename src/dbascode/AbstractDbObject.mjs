@@ -278,7 +278,7 @@ export default class AbstractDbObject {
    * @returns {string}
    */
   getComment () {
-    return escapeRawText(this.comment)
+    return this.comment ? escapeRawText(this.comment) : ''
   }
 
   /**

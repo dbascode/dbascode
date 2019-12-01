@@ -56,6 +56,9 @@ export default class AbstractDataBase extends AbstractDbObject {
     dbAsCodeVersion,
     pluginVersion,
   ) {
+    if (!cfg) {
+      return undefined
+    }
     const result = new class_({
       name: '',
       rawConfig: cfg,
