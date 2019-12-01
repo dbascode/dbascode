@@ -19,8 +19,8 @@ import AbstractDataBase from '../../../dbascode/AbstractDataBase'
  * @property {object} params
  * @property {string} defaultLocale
  * @property {string[]} extensions
- * @property {Role[]} roles
- * @property {Schema[]} schemas
+ * @property {Object.<string, Role>} roles
+ * @property {Object.<string, Schema>} schemas
  */
 export default class DataBase extends AbstractDataBase {
   /**
@@ -74,14 +74,6 @@ export default class DataBase extends AbstractDataBase {
   }
 
   /**
-   *
-   * @param {AbstractPlugin} plugin
-   */
-  addPlugin(plugin) {
-    this._plugins[plugin.getName()] = plugin
-  }
-
-  /**
    * Executes plugins when an object is created and configured
    * @param {Object} config
    */
@@ -105,7 +97,8 @@ export default class DataBase extends AbstractDataBase {
 
   /**
    * Returns a schema object by name
-   * @param name
+   * @param {string} name
+   * @returns Schema
    */
   getSchema (name) {
     return this.schemas[name]

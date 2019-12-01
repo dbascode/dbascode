@@ -5,21 +5,21 @@
  * Time: 16:27
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
-import isString from 'lodash-es/isString'
-import isObject from 'lodash-es/isObject'
 import PropDefCollection from '../../../dbascode/PropDefCollection'
 import PropDef from '../../../dbascode/PropDef'
+import { arrayUnique } from '../../../dbascode/utils'
+import { parseTypedef } from './utils'
 
 /**
  * Function, Procedure, or Trigger Function object
  * @property language
- * @property returns
+ * @property {ArgumentTypeDef} returns
  * @property cost
  * @property isSecurityDefiner
  * @property stability
  * @property parallelSafety
  * @property code
- * @property args
+ * @property {Object.<string, ArgumentTypeDef>} args
  * @property isLeakProof
  */
 export default class Function extends AbstractSchemaObject {
@@ -28,7 +28,7 @@ export default class Function extends AbstractSchemaObject {
    */
   static propDefs = new PropDefCollection([
     new PropDef('language', { defaultValue: 'sql' }),
-    new PropDef('returns', { recreateOnChange: true }),
+    new PropDef('returns', { type: PropDef.map, recreateOnChange: true }),
     new PropDef('cost', { type: PropDef.number, defaultValue: 10 }),
     new PropDef('isSecurityDefiner', { type: PropDef.bool, configName: 'security_definer' }),
     new PropDef('stability', { defaultValue: 'volatile' }),
@@ -38,6 +38,22 @@ export default class Function extends AbstractSchemaObject {
     new PropDef('isLeakProof', { type: PropDef.bool, configName: 'leak_proof' }),
     ...this.propDefs.defs,
   ])
+
+  /**
+   * @inheritDoc
+   */
+  getConfigForApply (config) {
+    const result = super.getConfigForApply(config)
+    if (result && result.arguments) {
+      for (const name of Object.keys(result.arguments)) {
+        result.arguments[name] = parseTypedef(result.arguments[name])
+      }
+    }
+    if (result.returns) {
+      result.returns = parseTypedef(result.returns)
+    }
+    return result
+  }
 
   getStabilitySql () {
     return this.stability.toUpperCase()
@@ -91,16 +107,14 @@ export default class Function extends AbstractSchemaObject {
 
   /**
    * Returns raw argument type string for SQL
-   * @param definition
+   * @param {ArgumentTypeDef} definition
    * @returns {string}
    */
   getArgType (definition) {
-    if (isString(definition)) {
-      return definition
-    } else if (isObject(definition)) {
-      return definition.schema ? `"${definition.schema}".${definition.type}` : definition.type
-    }
-    throw new Error(`Unknown argument type definition format: ${JSON.stringify(definition)}`)
+    return (definition.schema
+      ? `"${definition.schema}"."${definition.type}"`
+      : definition.type)
+      + (definition.isArray ? '[]' : '')
   }
 
   /**
@@ -121,7 +135,7 @@ export default class Function extends AbstractSchemaObject {
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    const returns = this.returns ? `RETURNS ${this.returns}` : ''
+    const returns = this.returns ? `RETURNS ${this.getArgType(this.returns)}` : ''
     const cost = this.cost ? `COST ${this.cost}` : ''
     const leakProof = this.isLeakProof ? 'LEAKPROOF' : 'NOT LEAKPROOF'
     const securityDefiner = this.isSecurityDefiner ? 'SECURITY DEFINER' : ''
@@ -132,15 +146,38 @@ ${this.code}
 $BODY$`
   }
 
+  /**
+   * @inheritDoc
+   */
   getParentRelation (operation) {
     return '-'
   }
 
+  /**
+   * @inheritDoc
+   */
   getAlterPropSql (compared, propName, oldValue, curValue) {
     switch (propName) {
       case 'code':
       case 'language':
         return this.getSqlDefinition('create', [])
     }
+  }
+
+  setupDependencies () {
+    super.setupDependencies()
+    const db = this.getDb()
+    const types = {...this.args, ...(this.returns ? {__ret: this.returns} : undefined)}
+    for (const name of Object.keys(types)) {
+      const { schema, type } = types[name]
+      if (schema && type) {
+        const schemaObj = db.getSchema(schema)
+        const object = schemaObj.types[type] || schemaObj.tables[type]
+        if (object) {
+          this._dependencies.push(object.getPath())
+        }
+      }
+    }
+    this._dependencies = arrayUnique(this._dependencies)
   }
 }

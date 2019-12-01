@@ -14,10 +14,10 @@ import ChildDefCollection from '../../../dbascode/ChildDefCollection'
 
 /**
  * Database schema object.
- * @property {Table[]} tables
- * @property {Type[]} types
- * @property {Function[]} functions
- * @property {Sequence[]} sequences
+ * @property {Object.<string, Table>} tables
+ * @property {Object.<string, Type>} types
+ * @property {Object.<string, Function>} functions
+ * @property {Object.<string, Sequence>} sequences
  */
 export default class Schema extends AbstractDbObject {
   /**

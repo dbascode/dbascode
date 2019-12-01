@@ -200,3 +200,12 @@ export function parseArrayProp (name) {
 export function joinSql(sql) {
   return sql.filter(Boolean).join("\n")
 }
+
+/**
+ * Removes duplicates from an array. Returns new copy of the source array.
+ * @param {array} ary
+ * @returns {array}
+ */
+export function arrayUnique(ary) {
+  return ary.filter((item, index) => ary.indexOf(item) === index)
+}

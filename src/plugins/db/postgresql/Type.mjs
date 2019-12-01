@@ -10,6 +10,7 @@ import ChildDefCollection from '../../../dbascode/ChildDefCollection'
 import ChildDef from '../../../dbascode/ChildDef'
 import PropDefCollection from '../../../dbascode/PropDefCollection'
 import PropDef from '../../../dbascode/PropDef'
+import { arrayUnique, replaceAll } from '../../../dbascode/utils'
 
 /**
  * DB Type object
@@ -33,15 +34,14 @@ export default class Type extends AbstractSchemaObject {
    * @inheritDoc
    */
   applyConfigProperties (config) {
-    const attributesField = this.getDb().getVersion() < 1 ? 'fields' : 'attributes'
-    if (config[attributesField] && config.enum) {
+    if (config['attributes'] && config.enum) {
       throw new Error('Either attributes or enum values must be specified')
     }
-    if (!config[attributesField] && !config.enum) {
+    if (!config['attributes'] && !config.enum) {
       throw new Error('Either attributes or enum values must be specified')
     }
 
-    if (config[attributesField]) {
+    if (config['attributes']) {
       this.isEnum = false
     } else if (config.enum) {
       this.isEnum = true
@@ -76,6 +76,30 @@ export default class Type extends AbstractSchemaObject {
         fields.push(`${field.getObjectIdentifier('', true)} ${field.getSqlDefinition()}`)
       }
       return `AS (\n${fields.join(",\n")}\n)`
+    }
+  }
+
+  /**
+   * @inheritDoc
+   */
+  setupDependencies () {
+    super.setupDependencies()
+    if (!this.isEnum) {
+      const db = this.getDb()
+      for (const name of Object.keys(this.attributes)) {
+        /**
+         * @type {Attribute}
+         */
+        const attr = this.attributes[name]
+        if (attr.schema && attr.type) {
+          const schemaObj = db.getSchema(attr.schema)
+          const object = schemaObj.types[attr.type] || schemaObj.tables[attr.type]
+          if (object) {
+            this._dependencies.push(object.getPath())
+          }
+        }
+      }
+      this._dependencies = arrayUnique(this._dependencies)
     }
   }
 }
