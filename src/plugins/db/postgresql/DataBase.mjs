@@ -32,14 +32,14 @@ export default class DataBase extends AbstractDataBase {
   /**
    * @type {string}
    */
-  static dbms = 'postgresql'
+  static dbms = 'PostgreSQL'
   /**
    * @type {PropDefCollection}
    */
   static propDefs = new PropDefCollection([
     new PropDef('defaultLocale'),
     new PropDef('extensions', { type: PropDef.array }),
-    new PropDef('params', { type: PropDef.map }),
+    ...this.propDefs.defs,
   ])
   /**
    * @type {ChildDefCollection}

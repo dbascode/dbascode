@@ -15,6 +15,7 @@ import { collectChanges, getChangesSql } from './changes'
 import State from './State'
 import { TREE_INITIALIZED } from './PluginEvent'
 import isString from 'lodash-es/isString'
+import ValidationContext from './ValidationContext'
 
 /**
  * @typedef {object} DbAsCodeConfig
@@ -142,7 +143,7 @@ export default class DbAsCode {
       throw new Error('DBMS is not defined')
     }
     for (const p of this._plugins) {
-      if (p.dbClass && p.dbClass.dbms === dbms) {
+      if (p.dbClass && p.dbClass.dbms.toLowerCase() === dbms.toLowerCase()) {
         this._dbPluginName = p.name
         break
       }
@@ -194,6 +195,12 @@ export default class DbAsCode {
     )
     if (curTree) {
       this.pluginEvent(TREE_INITIALIZED, [curTree])
+    }
+    const validationContext = new ValidationContext(prevTree, curTree)
+    curTree.validate(prevTree, validationContext)
+    if (validationContext.hasErrors()) {
+      console.log(validationContext.printErrors())
+      throw new Error('Current state validation has failed')
     }
 
     const changes = collectChanges(prevTree, curTree, true)

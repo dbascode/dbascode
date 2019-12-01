@@ -12,17 +12,18 @@ import {
   getPropValue, joinSql,
   objectDifferenceKeys,
   objectIntersectionKeys,
+  parseArrayProp,
   replaceAll,
 } from './utils'
 import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
-import isEmpty from 'lodash-es/isEmpty'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
-import { escapeRawText, escapeString } from '../plugins/db/postgresql/utils'
+import { escapeRawText } from '../plugins/db/postgresql/utils'
+import AbstractDataBase from './AbstractDataBase'
 
 /**
  * Base class for all DB objects
@@ -145,6 +146,14 @@ export default class AbstractDbObject {
    */
   getClassName () {
     return this.constructor.name
+  }
+
+  /**
+   * Returns class name of this object
+   * @return {typeof AbstractDbObject}
+   */
+  getClass () {
+    return this.constructor
   }
 
   /**
@@ -294,7 +303,7 @@ export default class AbstractDbObject {
     const addGrantOps = objectDifferenceKeys(curGrant, oldGrant)
     const removeGrantOps = objectDifferenceKeys(oldGrant, curGrant)
     const addRevokeOps = objectDifferenceKeys(curRevoke, oldRevoke)
-    const removeRevokeOps = objectDifferenceKeys(oldRevoke, curRevoke)
+    // const removeRevokeOps = objectDifferenceKeys(oldRevoke, curRevoke)
     const sameGrantOps = objectIntersectionKeys(curGrant, oldGrant)
     const sameRevokeOps = objectIntersectionKeys(curRevoke, oldRevoke)
 
@@ -325,7 +334,7 @@ export default class AbstractDbObject {
     }
     for (const op of sameRevokeOps) {
       const addRevokeRoles = difference(curRevoke[op], oldRevoke[op])
-      const removeRevokeRoles = difference(oldRevoke[op], curRevoke[op])
+      // const removeRevokeRoles = difference(oldRevoke[op], curRevoke[op])
       for (const role of addRevokeRoles) {
         result.push(cur.getPermissionSql('REVOKE', op, role))
       }
@@ -489,7 +498,7 @@ export default class AbstractDbObject {
    */
   getSeparateDropSql () {
     const parent = this.getParent()
-    return `ALTER ${parent.getObjectClass('alter-drop')} ${parent.getObjectIdentifier('parent', false)} DROP ${this.getObjectClass()} ${this.getObjectIdentifier('alter-drop', true)};`
+    return `ALTER ${parent.getObjectClass('alter-drop')} ${parent.getObjectIdentifier('parent', false)} DROP ${this.getObjectClass('alter-drop')} ${this.getObjectIdentifier('alter-drop', true)};`
   }
 
   /**
@@ -506,7 +515,7 @@ export default class AbstractDbObject {
       role = `"${role}"`
     }
     const fromTo = (type === 'GRANT') ? 'TO' : 'FROM'
-    return `${type} ${operation} ON ${this.getObjectClass()} ${this.getObjectIdentifier('grant', false)} ${fromTo} ${role};`
+    return `${type} ${operation} ON ${this.getObjectClass('grant')} ${this.getObjectIdentifier('grant', false)} ${fromTo} ${role};`
   }
 
   /**
@@ -673,8 +682,9 @@ export default class AbstractDbObject {
     }
     let parent = this
     let child
-    for (const i in path.split('.')) {
-      const pathItem = path[i]
+    const pathAry = path.split('.')
+    for (const i in pathAry) {
+      const pathItem = pathAry[i]
       const prop = parseArrayProp(pathItem)
       child = parent[prop.name]
       if (prop.index !== null) {
@@ -722,7 +732,7 @@ export default class AbstractDbObject {
     let parent = this
     do {
       parent = parent._parent
-    } while (parent && parent.getClassName() !== 'DataBase')
+    } while (parent && !parent instanceof AbstractDataBase)
     return parent
   }
 
@@ -970,6 +980,22 @@ export default class AbstractDbObject {
         break
       default:
         throw new Error(`Unknown propType ${def.propType} for the object of ${child.constructor.name}`)
+    }
+  }
+
+  /**
+   * Validates this object and its children settings.
+   * @param {AbstractDbObject|undefined} previous - Previous object or to compare with of `undefined`
+   * if this object is newly created.
+   * @param {ValidationContext} context
+   * @returns void
+   */
+  validate (previous, context) {
+    for (const child of this.getAllChildren()) {
+      child.validate(
+        context.prevTree ? context.prevTree.getChildByPath(child.getPath()) : undefined,
+        context
+      )
     }
   }
 }

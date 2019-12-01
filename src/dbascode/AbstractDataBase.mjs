@@ -6,11 +6,21 @@
  */
 import AbstractDbObject from './AbstractDbObject'
 import { dispose } from './utils'
+import PropDefCollection from './PropDefCollection'
+import PropDef from './PropDef'
 
 /**
  * Abstract database class to be inherited by a specific DBMS implementation plugin
  */
 export default class AbstractDataBase extends AbstractDbObject {
+  /**
+   * @type {PropDefCollection}
+   */
+  static propDefs = new PropDefCollection([
+    new PropDef('dbmsVersion', { type: PropDef.map }),
+    new PropDef('params', { type: PropDef.map }),
+    ...this.propDefs.defs,
+  ])
   /**
    * @type {string} Name if DBMS this object is intended for
    */

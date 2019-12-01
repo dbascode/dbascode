@@ -175,6 +175,26 @@ export default class Column extends AbstractSchemaObject {
     return (this.type.toLowerCase().indexOf('int') >= 0) ||
       (this.type.toLowerCase().indexOf('numeric') >= 0)
   }
+
+  /**
+   * @inheritDoc
+   * @param {Column} previous
+   */
+  validate (previous, context) {
+    if (previous) {
+      // Check column alteration
+      if (!this.allowNull && this.defaultValue === null && this.allowNull !== previous.allowNull || this.defaultValue !== previous.defaultValue) {
+        context.addError(this, `Default value other than NULL must be defined for non-null column`)
+      }
+    } else {
+      // Check new column
+      const isNewTable = (!context.prevTree || !context.prevTree.getChildByPath(this.getParent().getPath()))
+      if (!isNewTable && (this.allowNull === false && !this.defaultValue)) {
+        context.addError(this, `Can not add non-null column without default default value to an existing table`)
+      }
+    }
+    super.validate(previous, context)
+  }
 }
 
 function isTextual (type) {
