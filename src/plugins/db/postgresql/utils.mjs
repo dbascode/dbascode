@@ -8,7 +8,17 @@
 import { replaceAll } from '../../../dbascode/utils'
 
 /**
- * Escape string to insert to DB
+ * Escape text to insert to DB (not adds single quotes)
+ * @param {string} s
+ */
+export function escapeRawText(s) {
+  s = replaceAll(s, "'", "''")
+  s = replaceAll(s, "\r", '')
+  return s
+}
+
+/**
+ * Escape string to insert to DB (adds single quotes)
  * @param {string} s
  */
 export function escapeString(s) {
@@ -23,9 +33,10 @@ export function escapeString(s) {
  * @param {DbAsCodeConfig} dbAsCodeConfig
  */
 export function parsePgConfig (vars, dbAsCodeConfig) {
+  const names = Object.keys(vars)
   for (const dbVar of dbAsCodeConfig.dbVars) {
     const [name, value] = dbVar.split('=')
-    if (vars[name]) {
+    if (names.indexOf(name) >= 0) {
       vars[name] = value
     }
   }

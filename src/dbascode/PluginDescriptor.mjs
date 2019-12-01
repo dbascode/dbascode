@@ -62,7 +62,7 @@ export default class PluginDescriptor {
    */
   getStateStore () {
     if (!this._stateStore) {
-      this._stateStore = new this.stateStoreClass(this)
+      this._stateStore = new this.stateStoreClass(this.dbAsCodeConfig, this)
     }
     return this._stateStore
   }
@@ -73,7 +73,7 @@ export default class PluginDescriptor {
    */
   getSqlExec () {
     if (!this._sqlExec) {
-      this._sqlExec = new this.sqlExecClass(this)
+      this._sqlExec = new this.sqlExecClass(this.dbAsCodeConfig, this)
     }
     return this._sqlExec
   }

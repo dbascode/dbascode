@@ -4,6 +4,7 @@
  * Date: 29.11.2019
  * Time: 20:23
  */
+import path from 'path'
 import { fileURLToPath } from 'url'
 import AbstractStateStore from '../../../dbascode/AbstractStateStore'
 import { executeSql, executeSqlJson } from './psql'

@@ -7,16 +7,12 @@
 import fs from 'fs'
 import path from 'path'
 import yargs from 'yargs'
-import DataBase from './src/plugins/db/postgresql/DataBase'
-import { loadConfig } from './src/loader'
 import { fileURLToPath } from 'url'
-import PostgraphilePlugin from './src/plugins/tools/PostgraphilePlugin'
-import { getLoadLastStateSql, getStateSaveSql } from './src/plugins/db/postgresql/db-utils'
-import { executeSql, executeSqlJson } from './src/plugins/db/postgresql/psql'
-import { collectChanges, getChangesSql } from './src/dbascode/changes'
-import RowLevelSecurityPlugin from './src/plugins/tools/RowLovelSecurityPlugin'
-import DefaultRowsPlugin from './src/plugins/tools/DefaultRowsPlugin'
 import DbAsCode from './src/dbascode/DbAsCode'
+import PostgreSqlPlugin from './src/plugins/db/PostgreSqlPlugin'
+import PostgraphilePlugin from './src/plugins/tools-postgres/PostgraphilePlugin'
+import RowLovelSecurityPlugin from './src/plugins/tools-postgres/RowLovelSecurityPlugin'
+import DefaultRowsPlugin from './src/plugins/tools-postgres/DefaultRowsPlugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -24,9 +20,17 @@ const projectDir = __dirname
 
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
-const defaultConfigFile = path.join(__dirname, 'default-sys', 'db.yml')
 const version = 2
 
+/**
+ * @property {string[]} dbVar
+ * @property {string} dbms
+ * @property {string} wsl
+ * @property {string} plan
+ * @property {string} source
+ * @property {string} output
+ * @property {string[]} plugins
+ */
 const cliConfig = yargs
   .command({
     command: `${migrateCmd}`,
@@ -56,10 +60,12 @@ const cliConfig = yargs
       })
     }
   })
-  .array('db-var', {
+  .option('db-var', {
+    type: 'array',
     describe: 'Database configuration parameters (see particular DB plugin documentation)',
   })
-  .array('plugins', {
+  .option('plugins', {
+    type: 'array',
     describe: 'List of plugins to be loaded. Module names to import must be provided.',
   })
   .option('wsl', {
@@ -79,26 +85,30 @@ const command = cliConfig._[0]
 
 const dbAsCode = new DbAsCode(
   {
-    plugins: cliConfig.plugins,
+    plugins: cliConfig.plugins || [],
     dbms: cliConfig.dbms,
-    dbVars: cliConfig.dbVars,
+    dbVars: cliConfig.dbVar || [],
     source: cliConfig.source,
     wsl: cliConfig.wsl,
   },
   [
-    __dirname + '/plugins/postgresql.mjs',
+    // 'file://' + __dirname + '/src/plugins/db/postgresql/PostgreSqlPlugin.mjs',
+    PostgreSqlPlugin,
+    PostgraphilePlugin,
+    RowLovelSecurityPlugin,
+    DefaultRowsPlugin,
   ],
   version,
-)
+);
 
 (async () => {
-  await dbAsCode.determineCurrentDbmsType()
   await dbAsCode.initializePlugins()
+  await dbAsCode.determineCurrentDbmsType()
 
   switch (command) {
     case planCmd: {
       console.log('Loading changes...')
-      const [plan, changes] = dbAsCode.createPlan()
+      const [plan, changes] = await dbAsCode.createPlan()
       console.log(`Current DB version: ${plan.id - 1}`)
       if (!changes.hasChanges()) {
         console.log('No changes detected. Nothing to do.')

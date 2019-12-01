@@ -26,9 +26,9 @@ export async function executeSql (query, config) {
     commonCmd.push('-c')
     commonCmd.push(config.wsl ? escapeShellArg(query) : query)
   }
-  let s
+  let process
   if (config.wsl) {
-    s = cp.spawn(
+    process = cp.spawn(
       'bash',
       [
         '-c',
@@ -36,7 +36,7 @@ export async function executeSql (query, config) {
       ],
     )
   } else {
-    s = cp.spawn(
+    process = cp.spawn(
       'psql',
       commonCmd,
       {
@@ -47,14 +47,33 @@ export async function executeSql (query, config) {
     )
   }
 
-  for await (const out of s.stdout) {
-    // Do nothing, just await for process ends
+  const result = {
+    exitCode: 0,
+    stdout: '',
+    stderr: '',
   }
-  return {
-    exitCode: s.status,
-    stdout: s.stdout.toString(),
-    stderr: s.stderr.toString(),
-  }
+
+  let resolved = false
+  await new Promise((resolve, reject) => {
+    process.stdout.on('data', data => result.stdout += data)
+    process.stderr.on('data', data => result.stderr += data)
+    process.on('exit', code => {
+      result.exitCode = code
+      if (!resolved) {
+        resolve()
+      }
+    })
+    process.on('error', err => {
+      if (!resolved) {
+        if (result.exitCode === 0) {
+          result.exitCode = -1
+        }
+        resolve()
+      }
+    })
+  })
+
+  return result
 }
 
 export async function executeSqlJson (queryString, config) {

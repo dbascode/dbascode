@@ -1,18 +1,16 @@
 {
-  "name": "pg-as-code",
+  "name": "dbascode",
   "version": "0.0.1",
-  "author": "Alex Pravdin <alex.pravdin@interi.co> (https://interi.co)",
-  "homepage": "https://interi.co",
+  "author": "Alex Pravdin <mr.alex.pravdin@gmail.com> (mr.alex.pravdin@gmail.com)",
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs"
   },
   "dependencies": {
+    "concat-stream": "^2.0.0",
     "glob": "^7.1.4",
     "js-yaml": "^3.13.1",
-    "jsdoc-export-default-interop": "^0.3.1",
     "lodash-es": "^4.17.15",
-    "remove": "^0.1.5",
     "supports-color": "^7.1.0",
     "yargs": "^14.2.0"
   },
@@ -20,6 +18,7 @@
   "devDependencies": {
     "better-docs": "^1.4.6",
     "jsdoc": "^3.6.3",
+    "jsdoc-export-default-interop": "^0.3.1",
     "jsdoc-to-markdown": "^5.0.2"
   }
 }

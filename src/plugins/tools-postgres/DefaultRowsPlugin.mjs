@@ -10,11 +10,6 @@ import Rows from './Rows'
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
 import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
 
-export default new DefaultRowsPlugin({
-  name: 'default-rows',
-  version: 1,
-})
-
 /**
  * Plugin to add rows to a table when it is created
  */
@@ -66,3 +61,8 @@ class DefaultRowsPlugin extends PluginDescriptor {
     })
   }
 }
+
+export default new DefaultRowsPlugin({
+  name: 'default-rows',
+  version: 1,
+})

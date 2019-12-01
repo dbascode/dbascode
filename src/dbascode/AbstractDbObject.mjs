@@ -9,7 +9,7 @@ import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
 import difference from 'lodash-es/difference'
 import {
-  getPropValue,
+  getPropValue, joinSql,
   objectDifferenceKeys,
   objectIntersectionKeys,
   replaceAll,
@@ -21,6 +21,8 @@ import PropDef from './PropDef'
 import isEmpty from 'lodash-es/isEmpty'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
+import isObject from 'lodash-es/isObject'
+import { escapeRawText, escapeString } from '../plugins/db/postgresql/utils'
 
 /**
  * Base class for all DB objects
@@ -276,7 +278,7 @@ export default class AbstractDbObject {
    * @returns {string}
    */
   getComment () {
-    return escapeComment(this.comment)
+    return escapeRawText(this.comment)
   }
 
   /**

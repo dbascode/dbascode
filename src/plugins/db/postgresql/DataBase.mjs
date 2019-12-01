@@ -5,7 +5,6 @@
  * Time: 16:24
  */
 
-import { dispose, } from '../../../dbascode/utils'
 import AbstractDbObject from '../../../dbascode/AbstractDbObject'
 import Role from './Role'
 import Schema from './Schema'

@@ -11,8 +11,6 @@ import isObject from 'lodash-es/isObject'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import { objectIntersectionKeys } from './utils'
-import { executeSql, executeSqlJson } from '../plugins/db/postgresql/psql'
-import { getLoadLastStateSql } from '../plugins/db/postgresql/db-utils'
 
 /**
  * Load the whole DB state with postprocessing. State config files are merged and loaded as the

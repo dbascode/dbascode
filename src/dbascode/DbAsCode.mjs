@@ -7,17 +7,19 @@
 
 import path from 'path'
 import os from 'os'
+import fs from 'fs'
 import { loadYaml } from './utils'
 import isObject from 'lodash-es/isObject'
 import { loadStateYaml } from './state-loader-yml'
 import { collectChanges, getChangesSql } from './changes'
 import State from './State'
 import { TREE_INITIALIZED } from './PluginEvent'
+import isString from 'lodash-es/isString'
 
 /**
  * @typedef {object} DbAsCodeConfig
  * @property {string[]} dbVars
- * @property {string[]} plugins
+ * @property {string[]|PluginDescriptor[]} plugins
  * @property {string} source
  * @property {string} dbms
  * @property {boolean} wsl
@@ -41,9 +43,9 @@ export default class DbAsCode {
    */
   version
   /**
-   * @type {string[]}
+   * @type {string[]|PluginDescriptor[]}
    */
-  predefinedPlugins = []
+  _predefinedPlugins = []
   /**
    * @type {PluginDescriptor[]}
    * @private
@@ -62,7 +64,7 @@ export default class DbAsCode {
   /**
    * Constructor
    * @param {DbAsCodeConfig} config
-   * @param {string[]} predefinedPlugins
+   * @param {string[]|PluginDescriptor[]} predefinedPlugins
    * @param {number} version
    */
   constructor (
@@ -71,7 +73,7 @@ export default class DbAsCode {
     version,
   ) {
     this.version = version
-    this.predefinedPlugins = predefinedPlugins
+    this._predefinedPlugins = predefinedPlugins
     this.config = config
   }
 
@@ -105,8 +107,12 @@ export default class DbAsCode {
    */
   async initializePlugins () {
     const plugins = []
-    for (const pluginModulePath of [...this.predefinedPlugins, this.config.plugins]) {
-      plugins.push(import(pluginModulePath))
+    for (const pluginOrImportPathSpec of [...this._predefinedPlugins, ...this.config.plugins]) {
+      plugins.push(
+        isString(pluginOrImportPathSpec)
+          ? (async () => { const module = await import(pluginOrImportPathSpec); return module.default })()
+          : pluginOrImportPathSpec
+      )
     }
     this._plugins = await Promise.all(plugins)
     for (const plugin of this._plugins) {
@@ -121,17 +127,21 @@ export default class DbAsCode {
   async determineCurrentDbmsType () {
     let dbms = this.config.dbms
     if (!dbms) {
-      const stateFile = path.join(this.config.source, 'db.yml')
-      if (!stateFile || !isObject(stateFile)) {
+      const stateFile = this.config.source
+      if (!stateFile || !fs.existsSync(stateFile)) {
+        throw new Error(`Current state file ${stateFile} not set or not found`)
+      }
+      const state = await loadYaml(stateFile)
+      if (!isObject(state)) {
         throw new Error("Current state configuration file must be a valid yaml file")
       }
-      dbms = await loadYaml(stateFile).dbms
+      dbms = state.dbms
     }
     if (!dbms) {
       throw new Error('DBMS is not defined')
     }
     for (const p of this._plugins) {
-      if (p.db && p.db.dbms === dbms) {
+      if (p.dbClass && p.dbClass.dbms === dbms) {
         this._dbPluginName = p.name
         break
       }
@@ -151,12 +161,12 @@ export default class DbAsCode {
   async createPlan () {
     console.log('Loading current DB state...')
     const dbPlugin = this.getDbPlugin()
-    const prevState = await dbPlugin.getStateStore().getState()
-    // const prevState = JSON.parse(fs.readFileSync('1.json'))
-    // fs.writeFileSync('1.json', JSON.stringify(prevState))
+    // const prevState = await dbPlugin.getStateStore().getState()
+    const prevState = JSON.parse(fs.readFileSync('1.json'))
+    fs.writeFileSync('1.json', JSON.stringify(prevState))
     console.log('Loading new state...')
     const curStateRaw = await loadStateYaml([
-      dbPlugin.getStateStore().getStorageConfigPath(),
+      await dbPlugin.getStateStore().getStorageConfigPath(),
       this.config.source,
     ])
     const dbClass = dbPlugin.dbClass

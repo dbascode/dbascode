@@ -6,11 +6,7 @@
  */
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
 import { processCalculations } from '../../dbascode/AbstractDbObject'
-
-export default new RowLevelSecurityPlugin({
-  name: 'rls',
-  version: 1,
-})
+import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
 
 /**
  * Add row-level security functionality
@@ -95,5 +91,9 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
       },
     })
   }
-
 }
+
+export default new RowLevelSecurityPlugin({
+  name: 'rls',
+  version: 1,
+})

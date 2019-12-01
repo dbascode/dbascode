@@ -4,25 +4,16 @@
  * Date: 06.10.2019
  * Time: 14:03
  */
-import fs from 'fs'
+import _fs from 'fs'
 import yaml from 'js-yaml'
-import glob from 'glob'
-import isEqual from 'lodash-es/isEqual'
 import isObject from 'lodash-es/isObject'
-import isEmpty from 'lodash-es/isEmpty'
 import difference from 'lodash-es/difference'
 import intersection from 'lodash-es/intersection'
 import isArray from 'lodash-es/isArray'
 
-function checkFiles(cfg) {
-  for (const configName of Object.keys(cfg)) {
-    if (!fs.existsSync(cfg[configName])) {
-      throw new Error(`Config file ${configName} not exists`)
-    }
-  }
-}
+const fs = _fs.promises
 
-function replaceAll(string, search, replacement) {
+export function replaceAll(string, search, replacement) {
   return string.split(search).join(replacement)
 }
 
@@ -30,30 +21,10 @@ export async function loadYaml(file) {
   return yaml.safeLoad(await fs.readFile(file, 'utf8'))
 }
 
-function loadYamlSubst(file, subst) {
-  let content = fs.readFileSync(file, 'utf8')
-  for (const pattern of Object.keys(subst)) {
-    content = replaceAll(content, pattern, subst[pattern])
-  }
-  return yaml.safeLoad(content)
-}
-
-function loadSqlSubst(file, subst) {
-  let content = fs.readFileSync(file, 'utf8')
-  for (const pattern of Object.keys(subst)) {
-    content = replaceAll(content, pattern, subst[pattern])
-  }
-  return content
-}
-
-function indent(lines, size) {
-  return lines.map(line => String('  ').repeat(size) + line)
-}
-
 // "lookup" algorithm http://tools.ietf.org/html/rfc4647#section-3.4
 // assumes normalized language tags, and matches in a case sensitive manner
 // source: https://github.com/format-message/format-message/blob/master/packages/lookup-closest-locale/index.js
-function lookupClosestLocale (locale/*: string | string[] | void */, available/*: { [string]: any } */)/*: ?string */ {
+export function lookupClosestLocale (locale/*: string | string[] | void */, available/*: { [string]: any } */)/*: ?string */ {
   if (typeof locale === 'string' && available[locale]) return locale
   const locales = [].concat(locale || [])
   let l = 0, ll = locales.length
@@ -67,42 +38,7 @@ function lookupClosestLocale (locale/*: string | string[] | void */, available/*
   }
 }
 
-function getFileList(pattern) {
-  return glob.sync(pattern)
-}
-
-function getConfigDiff(oldItem, newItem) {
-  const add = {}, del = {}, edit = {}
-  const oldKeys = Object.keys(oldItem)
-  const newKeys = Object.keys(newItem)
-  const addKeys = newKeys.filter(key => oldKeys.indexOf(key) < 0)
-  const delKeys = oldKeys.filter(key => newKeys.indexOf(key) < 0)
-  const editKeys = oldKeys.filter(key => newKeys.indexOf(key) !== 0)
-  addKeys.forEach(key => add[key] = newItem[key])
-  delKeys.forEach(key => del[key] = 1)
-  for (const key of editKeys) {
-    const oldVal = oldItem[key]
-    const newVal = newItem[key]
-    if (isObject(oldVal) && isObject(newVal)) {
-      edit[key] = getConfigDiff(oldVal, newVal)
-    } else if (!isEqual(oldVal, newVal)) {
-      edit[key] = newVal
-    }
-  }
-  const result = {}
-  if (!isEmpty(add)) {
-    result.add = add
-  }
-  if (!isEmpty(del)) {
-    result.del = del
-  }
-  if (!isEmpty(edit)) {
-    result.edit = edit
-  }
-  return result
-}
-
-function dispose(obj) {
+export function dispose(obj) {
   if (isObject(obj)) {
     for (const key of Object.keys(obj)) {
       obj[key] = null
@@ -122,7 +58,7 @@ function dispose(obj) {
  * @param {Array} ary2
  * @returns {boolean}
  */
-function arrayContainsEntirely(ary1, ary2) {
+export function arrayContainsEntirely(ary1, ary2) {
   return ary1.filter(dt => ary2.indexOf(dt) >= 0).length === ary2.length
 }
 
@@ -132,7 +68,7 @@ function arrayContainsEntirely(ary1, ary2) {
  * @param {Object} o2
  * @return {Object}
  */
-function objectDifference(o1, o2) {
+export function objectDifference(o1, o2) {
   const result = {}
   for (const key of difference(Object.keys(o1), Object.keys(o2 || {}))) {
     result[key] = o1[key]
@@ -146,7 +82,7 @@ function objectDifference(o1, o2) {
  * @param {Object} o2
  * @return {Array}
  */
-function objectDifferenceKeys(o1, o2) {
+export function objectDifferenceKeys(o1, o2) {
   const result = []
   for (const key of difference(Object.keys(o1 || {}), Object.keys(o2 || {}))) {
     result.push(key)
@@ -160,7 +96,7 @@ function objectDifferenceKeys(o1, o2) {
  * @param {Object} o2
  * @return {Object}
  */
-function objectIntersection (o1, o2) {
+export function objectIntersection (o1, o2) {
   const result = {}
   for (const key of intersection(Object.keys(o1 || {}), Object.keys(o2 || {}))) {
     result[key] = o1[key]
@@ -174,7 +110,7 @@ function objectIntersection (o1, o2) {
  * @param {Object} o2
  * @return {Array}
  */
-function objectIntersectionKeys (o1, o2) {
+export function objectIntersectionKeys (o1, o2) {
   const result = []
   for (const key of intersection(Object.keys(o1 || {}), Object.keys(o2 || {}))) {
     result.push(key)
@@ -182,7 +118,7 @@ function objectIntersectionKeys (o1, o2) {
   return result
 }
 
-function circularSafeStringify (o, forPrint) {
+export function circularSafeStringify (o, forPrint) {
   const cache = []
   return JSON.stringify(o, function (key, value) {
     if (typeof value === 'object' && value !== null) {
@@ -197,7 +133,7 @@ function circularSafeStringify (o, forPrint) {
   }, forPrint ? 2 : undefined)
 }
 
-function convertPathToWsl (path) {
+export function convertPathToWsl (path) {
   const p = path.split('\\')
   if (p[0][1] === ':') {
     p[0] = p[0].substr(0, 1).toLowerCase()
@@ -207,7 +143,7 @@ function convertPathToWsl (path) {
   return p.join('/')
 }
 
-function escapeShellArg (arg) {
+export function escapeShellArg (arg) {
   // arg = `'${arg.replace(/'/g, `'\\''`)}'`;
   arg = replaceAll(arg, '"', '\"')
   return `"${arg}"`
@@ -263,25 +199,4 @@ export function parseArrayProp (name) {
  */
 export function joinSql(sql) {
   return sql.filter(Boolean).join("\n")
-}
-
-
-export {
-  checkFiles,
-  replaceAll,
-  loadYamlSubst,
-  loadSqlSubst,
-  indent,
-  lookupClosestLocale,
-  getFileList,
-  getConfigDiff,
-  dispose,
-  arrayContainsEntirely,
-  objectDifference,
-  objectDifferenceKeys,
-  objectIntersection,
-  objectIntersectionKeys,
-  circularSafeStringify,
-  convertPathToWsl,
-  escapeShellArg,
 }

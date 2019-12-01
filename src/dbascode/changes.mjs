@@ -280,7 +280,7 @@ function hasChangesInValues (v2, v1, context) {
       return false
     }
     hasChanges(v2, v1, context)
-    v1.getDb().pluginOnCompareObjects(v1, v2, context)
+    // v1.getDb().pluginOnCompareObjects(v1, v2, context)
   } else if (isFunction(v1) && isFunction(v2)) {
     return false
   } else if (isArray(v1) && isArray(v2)) {
