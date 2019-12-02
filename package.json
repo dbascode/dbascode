@@ -20,9 +20,9 @@
   "devDependencies": {
     "@babel/core": "^7.7.4",
     "@babel/plugin-proposal-class-properties": "^7.7.4",
+    "@babel/plugin-syntax-import-meta": "^7.7.4",
     "@babel/plugin-transform-modules-commonjs": "^7.7.4",
     "@babel/preset-env": "^7.7.4",
-    "@babel/register": "^7.7.4",
     "babel-jest": "^24.9.0",
     "better-docs": "^1.4.6",
     "jest": "^24.9.0",

@@ -1,6 +1,3 @@
-// require("@babel/register")({
-//     ignore: [/node_modules\/(?!lodash-es)/],
-// });
 module.exports = {
   presets: [
     [
@@ -12,14 +9,9 @@ module.exports = {
       },
     ],
   ],
-  sourceType: "module",
+  sourceType: 'module',
   plugins: [
-    "@babel/plugin-proposal-class-properties",
-    // ["@babel/plugin-transform-modules-commonjs", {
-    //   "allowTopLevelThis": true
-    // }],
+    '@babel/plugin-syntax-import-meta',
+    '@babel/plugin-proposal-class-properties',
   ],
-  // ignore: [
-  //   "node_modules/@babel/plugin-proposal-class-properties/lib/index.js",
-  // ]
 };

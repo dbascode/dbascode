@@ -9,9 +9,9 @@ import path from 'path'
 import yargs from 'yargs'
 import { fileURLToPath } from 'url'
 import DbAsCode from './src/dbascode/DbAsCode'
-import PostgreSqlPlugin from './src/plugins/db/PostgreSqlPlugin'
+import PostgreSqlPlugin from './src/plugins/db-postgres/PostgreSqlPlugin'
 import PostgraphilePlugin from './src/plugins/tools-postgres/PostgraphilePlugin'
-import RowLovelSecurityPlugin from './src/plugins/tools-postgres/RowLovelSecurityPlugin'
+import RowLevelSecurityPlugin from './src/plugins/tools-postgres/RowLevelSecurityPlugin'
 import DefaultRowsPlugin from './src/plugins/tools-postgres/DefaultRowsPlugin'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -94,7 +94,7 @@ const dbAsCode = new DbAsCode(
     // 'file://' + __dirname + '/src/plugins/db-postgres/postgresql/PostgreSqlPlugin.mjs',
     PostgreSqlPlugin,
     PostgraphilePlugin,
-    RowLovelSecurityPlugin,
+    RowLevelSecurityPlugin,
     DefaultRowsPlugin,
   ],
 );

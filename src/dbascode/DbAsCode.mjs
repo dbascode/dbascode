@@ -75,7 +75,7 @@ export default class DbAsCode {
     predefinedPlugins = [],
   ) {
     this._predefinedPlugins = predefinedPlugins
-    this.config = config
+    this.config = {...this.config, ...config}
   }
 
   /**
@@ -110,7 +110,7 @@ export default class DbAsCode {
     const plugins = []
     for (const pluginOrImportPathSpec of [...this._predefinedPlugins, ...this.config.plugins]) {
       plugins.push(
-        isString(pluginOrImportPathSpec)
+        isString(pluginOrImportPathSpec) || pluginOrImportPathSpec instanceof URL
           ? (async () => { const module = await import(pluginOrImportPathSpec); return module.default })()
           : pluginOrImportPathSpec
       )

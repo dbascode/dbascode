@@ -23,7 +23,7 @@ import PropDef from './PropDef'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
-import { escapeRawText } from '../plugins/db/postgresql/utils'
+import { escapeRawText } from '../plugins/db-postgres/utils'
 
 /**
  * Base class for all DB objects
