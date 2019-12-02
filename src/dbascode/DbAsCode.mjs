@@ -8,14 +8,14 @@
 import path from 'path'
 import os from 'os'
 import fs from 'fs'
-import { loadYaml } from './utils'
+import { loadYaml, saveTempSqlFile } from './utils'
 import isObject from 'lodash-es/isObject'
 import { loadStateYaml } from './state-loader-yml'
-import { collectChanges, getChangesSql } from './changes'
 import State from './State'
 import { TREE_INITIALIZED } from './PluginEvent'
 import isString from 'lodash-es/isString'
 import ValidationContext from './ValidationContext'
+import Changes from './Changes'
 
 /**
  * @typedef {object} DbAsCodeConfig
@@ -59,6 +59,7 @@ export default class DbAsCode {
    * @private
    */
   _pluginsMap = {}
+  changes
   /**
    * @type {string}
    * @private
@@ -69,13 +70,19 @@ export default class DbAsCode {
    * Constructor
    * @param {DbAsCodeConfig} config
    * @param {string[]|PluginDescriptor[]} predefinedPlugins
+   * @param {Changes} changes
    */
   constructor (
     config = {},
     predefinedPlugins = [],
+    changes,
   ) {
+    if (changes === undefined) {
+      changes = new Changes()
+    }
+    this.changes = changes
     this._predefinedPlugins = predefinedPlugins
-    this.config = {...this.config, ...config}
+    this.config = { ...this.config, ...config }
   }
 
   /**
@@ -111,7 +118,10 @@ export default class DbAsCode {
     for (const pluginOrImportPathSpec of [...this._predefinedPlugins, ...this.config.plugins]) {
       plugins.push(
         isString(pluginOrImportPathSpec) || pluginOrImportPathSpec instanceof URL
-          ? (async () => { const module = await import(pluginOrImportPathSpec); return module.default })()
+          ? (async () => {
+            const module = await import(pluginOrImportPathSpec);
+            return module.default
+          })()
           : pluginOrImportPathSpec
       )
     }
@@ -203,10 +213,10 @@ export default class DbAsCode {
       }
     }
 
-    const changes = collectChanges(prevTree, curTree, true)
+    const changes = this.changes.collectChanges(prevTree, curTree, true)
 
     try {
-      const sql = getMigrationSql(changes, prevTree, curTree)
+      const sql = this.getMigrationSql(changes, prevTree, curTree)
       return [
         new State({
           id: (prevState.id || 0) + 1,
@@ -218,7 +228,7 @@ export default class DbAsCode {
         changes,
       ]
     } finally {
-      disposeTrees(prevTree, curTree)
+      this.disposeTrees(prevTree, curTree)
     }
   }
 
@@ -253,6 +263,37 @@ export default class DbAsCode {
   }
 
   /**
+   * @private
+   * @param changes
+   * @param prevTree
+   * @param curTree
+   * @returns {string}
+   */
+  getMigrationSql (changes, prevTree, curTree) {
+    let sqlDump = this.changes.getChangesSql(prevTree, curTree, changes)
+    if (changes.hasChanges()) {
+      if (sqlDump.trim().length === 0) {
+        throw new Error('Changes in state detected, but SQL dump is empty.')
+      }
+    }
+    return sqlDump
+  }
+
+  /**
+   * @private
+   * @param prevTree
+   * @param curTree
+   */
+  disposeTrees (prevTree, curTree) {
+    if (curTree) {
+      curTree.dispose()
+    }
+    if (prevTree) {
+      prevTree.dispose()
+    }
+  }
+
+  /**
    * Execute plugin event
    * @param {string} eventName
    * @param {*[]} args
@@ -262,32 +303,4 @@ export default class DbAsCode {
       this.getPlugin(name).event(eventName, args)
     }
   }
-}
-
-function getMigrationSql (changes, prevTree, curTree) {
-  let sqlDump = getChangesSql(prevTree, curTree, changes)
-  if (changes.hasChanges()) {
-    if (sqlDump.trim().length === 0) {
-      throw new Error('Changes in state detected, but SQL dump is empty.')
-    }
-  }
-  return sqlDump
-}
-
-function disposeTrees (prevTree, curTree) {
-  if (curTree) {
-    curTree.dispose()
-  }
-  if (prevTree) {
-    prevTree.dispose()
-  }
-}
-
-export function saveTempSqlFile(sql) {
-  const tmpDumpFile = path.join(os.tmpdir(), `dbascode${process.pid}.sql`)
-  fs.writeFileSync(
-    tmpDumpFile,
-    sql,
-  )
-  return tmpDumpFile
 }

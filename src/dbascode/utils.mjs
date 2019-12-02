@@ -5,6 +5,7 @@
  * Time: 14:03
  */
 import _fs from 'fs'
+import os from 'os'
 import yaml from 'js-yaml'
 import isObject from 'lodash-es/isObject'
 import difference from 'lodash-es/difference'
@@ -208,4 +209,18 @@ export function joinSql(sql) {
  */
 export function arrayUnique(ary) {
   return ary.filter((item, index) => ary.indexOf(item) === index)
+}
+
+/**
+ *
+ * @param sql
+ * @returns {*}
+ */
+export function saveTempSqlFile(sql) {
+  const tmpDumpFile = path.join(os.tmpdir(), `dbascode${process.pid}.sql`)
+  fs.writeFileSync(
+    tmpDumpFile,
+    sql,
+  )
+  return tmpDumpFile
 }

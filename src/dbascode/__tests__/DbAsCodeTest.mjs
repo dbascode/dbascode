@@ -150,9 +150,15 @@ test('returns db plugin by its name', () => {
 })
 
 test('create plan', async () => {
-  const inst = new DbAsCode({
+  const inst = new DbAsCode(
+    {
       source: __dirname + '/DbAsCodeTest1.data.yml',
-  })
+    },
+    [],
+    {
+      collectChanges: () => {return new ChangesContext(true)},
+    }
+  )
   let cfs, prevTree, curTree
   inst._pluginsMap = {
     'test-plug': {
@@ -177,6 +183,7 @@ test('create plan', async () => {
     },
   }
   inst._dbPluginName = 'test-plug'
+  inst.getMigrationSql = () => 'migration sql'
   inst.pluginEvent = jest.fn()
   const [state, changes] = await inst.createPlan()
   expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
@@ -188,7 +195,7 @@ test('create plan', async () => {
     raw: {
       dbms: 'state-dbms',
     },
-    migrationSql: '',
+    migrationSql: 'migration sql',
     dbAsCodeVersion: DbAsCode.version,
   }))
   expect(changes).toEqual(new ChangesContext(true))
