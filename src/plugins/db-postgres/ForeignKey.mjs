@@ -6,8 +6,8 @@
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
 import isString from 'lodash-es/isString'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
 import reverse from 'lodash-es/reverse'
 
 /**

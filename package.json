@@ -5,7 +5,8 @@
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs",
-    "test": "jest"
+    "test": "jest",
+    "coverage": "jest --coverage"
   },
   "dependencies": {
     "concat-stream": "^2.0.0",

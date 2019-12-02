@@ -4,7 +4,7 @@
  * Date: 30.11.2019
  * Time: 11:11
  */
-import AbstractSqlExec from '../../../dbascode/AbstractSqlExec'
+import AbstractSqlExec from '../../dbascode/AbstractSqlExec'
 import { executeSql } from './psql'
 
 /**

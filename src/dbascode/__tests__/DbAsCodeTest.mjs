@@ -20,3 +20,4 @@ test('initializes non-initialized plugin', async () => {
   expect(inst.getPlugin('plugin')).toBe(inst._pluginsMap.plugin)
   expect(initProc.mock.calls.length).toBe(1)
 })
+

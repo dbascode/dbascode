@@ -5,9 +5,9 @@
  * Time: 16:27
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
-import { arrayUnique } from '../../../dbascode/utils'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
+import { arrayUnique } from '../../dbascode/utils'
 import { parseTypedef } from './utils'
 
 /**

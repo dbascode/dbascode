@@ -6,9 +6,9 @@
  */
 import path from 'path'
 import { fileURLToPath } from 'url'
-import AbstractStateStore from '../../../dbascode/AbstractStateStore'
+import AbstractStateStore from '../../dbascode/AbstractStateStore'
 import { executeSql, executeSqlJson } from './psql'
-import State from '../../../dbascode/State'
+import State from '../../dbascode/State'
 import { escapeString, parsePgConfig } from './utils'
 
 const __filename = fileURLToPath(import.meta.url)

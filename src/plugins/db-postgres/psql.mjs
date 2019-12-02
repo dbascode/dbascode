@@ -1,5 +1,5 @@
 import cp from 'child_process'
-import { convertPathToWsl, escapeShellArg } from '../../../dbascode/utils'
+import { convertPathToWsl, escapeShellArg } from '../../dbascode/utils'
 
 /**
  * Executes SQL using the psql command

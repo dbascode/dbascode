@@ -59,7 +59,7 @@ const cliConfig = yargs
       })
     }
   })
-  .option('db-var', {
+  .option('db-postgres-var', {
     type: 'array',
     describe: 'Database configuration parameters (see particular DB plugin documentation)',
   })
@@ -91,7 +91,7 @@ const dbAsCode = new DbAsCode(
     wsl: cliConfig.wsl,
   },
   [
-    // 'file://' + __dirname + '/src/plugins/db/postgresql/PostgreSqlPlugin.mjs',
+    // 'file://' + __dirname + '/src/plugins/db-postgres/postgresql/PostgreSqlPlugin.mjs',
     PostgreSqlPlugin,
     PostgraphilePlugin,
     RowLovelSecurityPlugin,

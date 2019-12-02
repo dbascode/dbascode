@@ -5,10 +5,10 @@
  * Time: 11:41
  */
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
-import { parsePgConfig } from './postgresql/utils'
-import DataBase from './postgresql/DataBase'
-import StateStore from './postgresql/StateStore'
-import SqlExec from './postgresql/SqlExec'
+import { parsePgConfig } from './utils'
+import DataBase from './DataBase'
+import StateStore from './StateStore'
+import SqlExec from './SqlExec'
 
 
 /**

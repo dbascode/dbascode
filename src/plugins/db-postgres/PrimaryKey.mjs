@@ -6,8 +6,8 @@
  */
 
 import AbstractSchemaObject from './AbstractSchemaObject'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
 
 /**
  * Table primary key object

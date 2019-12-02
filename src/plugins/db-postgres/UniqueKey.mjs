@@ -4,9 +4,9 @@
  * Date: 19.11.2019
  * Time: 9:19
  */
-import AbstractDbObject from '../../../dbascode/AbstractDbObject'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
+import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
 
 /**
  * Unique key of a table

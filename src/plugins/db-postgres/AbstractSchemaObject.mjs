@@ -4,7 +4,7 @@
  * Date: 15.10.2019
  * Time: 19:48
  */
-import AbstractDbObject from '../../../dbascode/AbstractDbObject'
+import AbstractDbObject from '../../dbascode/AbstractDbObject'
 
 /**
  * Abstract class for objects belonging to a schema

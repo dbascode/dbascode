@@ -6,11 +6,11 @@
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
 import Attribute from './Attribute'
-import ChildDefCollection from '../../../dbascode/ChildDefCollection'
-import ChildDef from '../../../dbascode/ChildDef'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
-import { arrayUnique, replaceAll } from '../../../dbascode/utils'
+import ChildDefCollection from '../../dbascode/ChildDefCollection'
+import ChildDef from '../../dbascode/ChildDef'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
+import { arrayUnique, replaceAll } from '../../dbascode/utils'
 
 /**
  * DB Type object

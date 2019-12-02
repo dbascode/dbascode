@@ -5,9 +5,9 @@
  * Time: 16:29
  */
 
-import AbstractDbObject from '../../../dbascode/AbstractDbObject'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
+import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
 
 /**
  * Role in a database

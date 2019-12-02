@@ -5,7 +5,7 @@
  * Time: 12:54
  */
 
-import { replaceAll } from '../../../dbascode/utils'
+import { replaceAll } from '../../dbascode/utils'
 import isObject from 'lodash-es/isObject'
 
 /**

@@ -5,14 +5,14 @@
  * Time: 16:24
  */
 
-import AbstractDbObject from '../../../dbascode/AbstractDbObject'
+import AbstractDbObject from '../../dbascode/AbstractDbObject'
 import Role from './Role'
 import Schema from './Schema'
-import ChildDef from '../../../dbascode/ChildDef'
-import ChildDefCollection from '../../../dbascode/ChildDefCollection'
-import PropDefCollection from '../../../dbascode/PropDefCollection'
-import PropDef from '../../../dbascode/PropDef'
-import AbstractDataBase from '../../../dbascode/AbstractDataBase'
+import ChildDef from '../../dbascode/ChildDef'
+import ChildDefCollection from '../../dbascode/ChildDefCollection'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import PropDef from '../../dbascode/PropDef'
+import AbstractDataBase from '../../dbascode/AbstractDataBase'
 
 /**
  * PostgreSQL database object
