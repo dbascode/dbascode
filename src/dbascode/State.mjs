@@ -36,7 +36,7 @@ export default class State {
   ) {
     this.id = id
     this.pluginVersion = pluginVersion
-    this.date = date instanceof Date ? date : new Date(date)
+    this.date = date instanceof Date ? date : (date ? new Date(date): null)
     this.raw = raw
     this.migrationSql = migrationSql
     this.dbAsCodeVersion = dbAsCodeVersion

@@ -30,7 +30,7 @@ export function loadStateYaml(configFiles) {
  */
 function doLoadConfig(configFiles) {
   let cfg = {}
-  for (const configFile of configFiles) {
+  for (const configFile of configFiles.filter(Boolean)) {
     const fileCfg =
       recurseApplyFsContext(
         yaml.safeLoad(fs.readFileSync(configFile, 'utf8')),

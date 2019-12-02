@@ -5,8 +5,7 @@
  * Time: 16:30
  */
 
-import AbstractSchemaObject from '../db/postgresql/AbstractSchemaObject'
-import isUndefined from 'lodash-es/isUndefined'
+import AbstractSchemaObject from '../db-postgres/AbstractSchemaObject'
 import isObject from 'lodash-es/isObject'
 import { lookupClosestLocale } from '../../dbascode/utils'
 
@@ -38,7 +37,7 @@ export default class Rows extends AbstractSchemaObject {
       const values = []
       for (const column of Object.values(columns)) {
         const value = row[column.name]
-        if (isUndefined(value)) {
+        if (value === undefined) {
           if (column.allowNull) {
             values.push('NULL')
           } else {

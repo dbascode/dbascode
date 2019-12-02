@@ -7,6 +7,9 @@
 
 import DbAsCode from '../DbAsCode'
 import Data from './DbAsCodeTest.data'
+import { TREE_INITIALIZED } from '../PluginEvent'
+import State from '../State'
+import ChangesContext from '../ChangesContext'
 
 
 test('throw error if plugin not found', async () => {
@@ -118,7 +121,7 @@ test('init DBMS using config value', async () => {
 test('init DBMS using state value', async () => {
   const inst = new DbAsCode(
     {
-      source: __dirname + '/DbAsCodeTest.data.yml',
+      source: __dirname + '/DbAsCodeTest1.data.yml',
     },
     [{
       name: 'test-plugin',
@@ -132,5 +135,62 @@ test('init DBMS using state value', async () => {
   inst.getDbPlugin = () => inst._plugins[0]
   await inst.determineCurrentDbmsType('state-dbms')
   expect(inst._dbPluginName).toBe('test-plugin')
+})
+
+test('returns db plugin by its name', () => {
+  const inst = new DbAsCode()
+  inst._dbPluginName = 'test-plug'
+  let p
+  inst._pluginsMap = {
+    'test-plug': p = {
+      initialized: true,
+    }
+  }
+  expect(inst.getDbPlugin()).toBe(p)
+})
+
+test('create plan', async () => {
+  const inst = new DbAsCode({
+      source: __dirname + '/DbAsCodeTest1.data.yml',
+  })
+  let cfs, prevTree, curTree
+  inst._pluginsMap = {
+    'test-plug': {
+      name: 'test-plug',
+      initialized: true,
+      getStateStore: () => ({
+        getStorageConfigPath: () => '',
+        getState: () => ({}),
+      }),
+      dbClass: {
+        createFromState: cfs = jest.fn()
+          .mockReturnValueOnce(prevTree = {
+            _old: 1,
+            validate: () => {},
+            dispose: () => {},
+          })
+          .mockReturnValueOnce(curTree = {
+            validate: () => {},
+            dispose: () => {},
+          }),
+      },
+    },
+  }
+  inst._dbPluginName = 'test-plug'
+  inst.pluginEvent = jest.fn()
+  const [state, changes] = await inst.createPlan()
+  expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
+  expect(inst.pluginEvent.mock.calls[0][1]).toEqual([prevTree])
+  expect(inst.pluginEvent.mock.calls[1][0]).toBe(TREE_INITIALIZED)
+  expect(inst.pluginEvent.mock.calls[1][1]).toEqual([curTree])
+  expect(state).toEqual(new State({
+    id: 1,
+    raw: {
+      dbms: 'state-dbms',
+    },
+    migrationSql: '',
+    dbAsCodeVersion: DbAsCode.version,
+  }))
+  expect(changes).toEqual(new ChangesContext(true))
 })
 

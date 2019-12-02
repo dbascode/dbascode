@@ -189,7 +189,7 @@ function getComparingProps (obj, context) {
     }
     return props
   } else {
-    return Object.keys(obj)
+    return Object.keys(obj).filter(prop => prop[0] !== '_')
   }
 }
 

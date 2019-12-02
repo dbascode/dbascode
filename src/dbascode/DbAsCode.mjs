@@ -195,12 +195,12 @@ export default class DbAsCode {
     )
     if (curTree) {
       this.pluginEvent(TREE_INITIALIZED, [curTree])
-    }
-    const validationContext = new ValidationContext(prevTree, curTree)
-    curTree.validate(prevTree, validationContext)
-    if (validationContext.hasErrors()) {
-      console.log(validationContext.printErrors())
-      throw new Error('Current state validation has failed')
+      const validationContext = new ValidationContext(prevTree, curTree)
+      curTree.validate(prevTree, validationContext)
+      if (validationContext.hasErrors()) {
+        console.log(validationContext.printErrors())
+        throw new Error('Current state validation has failed')
+      }
     }
 
     const changes = collectChanges(prevTree, curTree, true)
@@ -209,7 +209,7 @@ export default class DbAsCode {
       const sql = getMigrationSql(changes, prevTree, curTree)
       return [
         new State({
-          id: prevState.id + 1,
+          id: (prevState.id || 0) + 1,
           raw: curStateRaw,
           migrationSql: sql,
           dbAsCodeVersion: DbAsCode.version,
