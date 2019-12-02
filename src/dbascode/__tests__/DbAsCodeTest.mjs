@@ -253,7 +253,7 @@ test('create plan succeed on prev state not exists', async () => {
   expect(changes).toEqual(new ChangesContext(true))
 })
 
-test('create plan succeed on prev new state not exists', async () => {
+test('create plan succeed on new state not exists', async () => {
   const inst = new DbAsCode(
     {
       source: __dirname + '/DbAsCodeTest1.data.yml',
