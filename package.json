@@ -4,7 +4,8 @@
   "author": "Alex Pravdin <mr.alex.pravdin@gmail.com> (mr.alex.pravdin@gmail.com)",
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
-    "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs"
+    "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs",
+    "test": "jest"
   },
   "dependencies": {
     "concat-stream": "^2.0.0",
@@ -16,7 +17,14 @@
   },
   "type": "module",
   "devDependencies": {
+    "@babel/core": "^7.7.4",
+    "@babel/plugin-proposal-class-properties": "^7.7.4",
+    "@babel/plugin-transform-modules-commonjs": "^7.7.4",
+    "@babel/preset-env": "^7.7.4",
+    "@babel/register": "^7.7.4",
+    "babel-jest": "^24.9.0",
     "better-docs": "^1.4.6",
+    "jest": "^24.9.0",
     "jsdoc": "^3.6.3",
     "jsdoc-export-default-interop": "^0.3.1",
     "jsdoc-to-markdown": "^5.0.2"

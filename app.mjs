@@ -20,7 +20,6 @@ const projectDir = __dirname
 
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
-const version = 2
 
 /**
  * @property {string[]} dbVar
@@ -98,7 +97,6 @@ const dbAsCode = new DbAsCode(
     RowLovelSecurityPlugin,
     DefaultRowsPlugin,
   ],
-  version,
 );
 
 (async () => {

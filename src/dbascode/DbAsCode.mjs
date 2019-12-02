@@ -29,6 +29,7 @@ import ValidationContext from './ValidationContext'
  * Main class of the DbAsCode tool
  */
 export default class DbAsCode {
+  static version = 2
   /**
    * @type {DbAsCodeConfig}
    */
@@ -45,6 +46,7 @@ export default class DbAsCode {
   version
   /**
    * @type {string[]|PluginDescriptor[]}
+   * @private
    */
   _predefinedPlugins = []
   /**
@@ -59,6 +61,7 @@ export default class DbAsCode {
   _pluginsMap = {}
   /**
    * @type {string}
+   * @private
    */
   _dbPluginName
 
@@ -66,14 +69,11 @@ export default class DbAsCode {
    * Constructor
    * @param {DbAsCodeConfig} config
    * @param {string[]|PluginDescriptor[]} predefinedPlugins
-   * @param {number} version
    */
   constructor (
     config = {},
     predefinedPlugins = [],
-    version,
   ) {
-    this.version = version
     this._predefinedPlugins = predefinedPlugins
     this.config = config
   }
@@ -190,7 +190,7 @@ export default class DbAsCode {
     const curTree = dbClass.createFromState(
       dbClass,
       curStateRaw,
-      this.version,
+      DbAsCode.version,
       dbPlugin.version
     )
     if (curTree) {
@@ -212,7 +212,7 @@ export default class DbAsCode {
           id: prevState.id + 1,
           raw: curStateRaw,
           migrationSql: sql,
-          dbAsCodeVersion: this.version,
+          dbAsCodeVersion: DbAsCode.version,
           pluginVersion: dbPlugin.version,
         }),
         changes,
