@@ -11,6 +11,9 @@ import { TREE_INITIALIZED } from '../PluginEvent'
 import State from '../State'
 import ChangesContext from '../ChangesContext'
 
+/**
+ * @var {Jest} jest
+ */
 
 test('throw error if plugin not found', async () => {
   const inst = new DbAsCode({}, [])
