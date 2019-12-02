@@ -4,7 +4,7 @@
  * Date: 01.12.2019
  * Time: 18:39
  */
-
+import fs from 'fs'
 import DbAsCode from '../DbAsCode'
 import Data from './DbAsCodeTest.data'
 import { TREE_INITIALIZED } from '../PluginEvent'
@@ -300,3 +300,97 @@ test('create plan succeed on new state not exists', async () => {
   expect(changes).toEqual(new ChangesContext(true))
 })
 
+test('migrate successfully', async () => {
+  const inst = new DbAsCode()
+  const executeSql = jest.fn(file => {
+    const s = fs.readFileSync(file).toString()
+    if (s !== "Migration SQL\nState SQL") {
+      throw new Error("Invalid SQL")
+    }
+    return {
+      exitCode: 0,
+      stderr: '',
+      stdout: '',
+    }
+  })
+  const getStateSaveSql = jest.fn().mockReturnValue('State SQL')
+  inst._pluginsMap = {
+    'test-plug': {
+      name: 'test-plug',
+      initialized: true,
+      getStateStore: () => ({
+        getStateSaveSql,
+      }),
+      getSqlExec: () => ({
+        executeSql
+      }),
+    },
+  }
+  const state = new State({id: 5, raw: {a: 1}, migrationSql: 'Migration SQL'})
+  inst._dbPluginName = 'test-plug'
+  expect(await inst.migrate(state)).toBe(0)
+  expect(getStateSaveSql.mock.calls[0][0]).toBe(state)
+  expect(executeSql.mock.calls.length).toBe(1)
+})
+
+test('migration failed by exit code', async () => {
+  const inst = new DbAsCode()
+  const executeSql = jest.fn(file => {
+    const s = fs.readFileSync(file).toString()
+    if (s !== "Migration SQL\nState SQL") {
+      throw new Error("Invalid SQL")
+    }
+    return {
+      exitCode: 1,
+      stderr: '',
+      stdout: '',
+    }
+  })
+  const getStateSaveSql = jest.fn().mockReturnValue('State SQL')
+  inst._pluginsMap = {
+    'test-plug': {
+      name: 'test-plug',
+      initialized: true,
+      getStateStore: () => ({
+        getStateSaveSql,
+      }),
+      getSqlExec: () => ({
+        executeSql
+      }),
+    },
+  }
+  const state = new State({id: 5, raw: {a: 1}, migrationSql: 'Migration SQL'})
+  inst._dbPluginName = 'test-plug'
+  expect(await inst.migrate(state)).toBe(1)
+  expect(getStateSaveSql.mock.calls[0][0]).toBe(state)
+  expect(executeSql.mock.calls.length).toBe(1)
+})
+
+test('migration failed by exception', async () => {
+  const inst = new DbAsCode()
+  const executeSql = jest.fn(file => {
+    const s = fs.readFileSync(file).toString()
+    if (s !== "Migration SQL\nState SQL") {
+      throw new Error("Invalid SQL")
+    }
+    throw new Error('Test error')
+  })
+  const getStateSaveSql = jest.fn().mockReturnValue('State SQL')
+  inst._pluginsMap = {
+    'test-plug': {
+      name: 'test-plug',
+      initialized: true,
+      getStateStore: () => ({
+        getStateSaveSql,
+      }),
+      getSqlExec: () => ({
+        executeSql
+      }),
+    },
+  }
+  const state = new State({id: 5, raw: {a: 1}, migrationSql: 'Migration SQL'})
+  inst._dbPluginName = 'test-plug'
+  expect(await inst.migrate(state)).toBe(-1)
+  expect(getStateSaveSql.mock.calls[0][0]).toBe(state)
+  expect(executeSql.mock.calls.length).toBe(1)
+})

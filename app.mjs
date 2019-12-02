@@ -156,7 +156,10 @@ const dbAsCode = new DbAsCode(
         }
       }
       console.log('Executing SQL migration...')
-      await dbAsCode.migrate(plan)
+      const exitCode = await dbAsCode.migrate(plan)
+      if (exitCode !== 0) {
+        process.exit(exitCode)
+      }
       break
     }
 

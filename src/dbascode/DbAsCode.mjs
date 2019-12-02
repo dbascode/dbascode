@@ -5,8 +5,6 @@
  * Time: 19:22
  */
 
-import path from 'path'
-import os from 'os'
 import fs from 'fs'
 import { loadYaml, saveTempSqlFile } from './utils'
 import isObject from 'lodash-es/isObject'
@@ -235,7 +233,7 @@ export default class DbAsCode {
   /**
    * Runs SQL migration of the plan
    * @param {State} newState
-   * @return {Promise<void>}
+   * @return {Promise<number>}
    */
   async migrate (newState) {
     const dbPlugin = this.getDbPlugin()
@@ -243,7 +241,7 @@ export default class DbAsCode {
       newState.migrationSql + "\n" +
       await dbPlugin.getStateStore().getStateSaveSql(newState)
 
-    const tmpDumpFile = saveTempSqlFile(sql)
+    const tmpDumpFile = await saveTempSqlFile(sql)
     let result = {}
     try {
       result = await dbPlugin.getSqlExec().executeSql(tmpDumpFile, { isFile: true })
@@ -253,13 +251,15 @@ export default class DbAsCode {
       } else {
         console.log('Migration failed')
       }
+    } catch (e) {
+      result = {
+        exitCode: -1,
+      }
+      console.log(e)
     } finally {
       fs.unlinkSync(tmpDumpFile)
-      if (result.exitCode !== 0) {
-        process.exit(result.exitCode)
-      }
     }
-
+    return result.exitCode
   }
 
   /**

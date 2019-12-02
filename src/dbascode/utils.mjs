@@ -6,6 +6,7 @@
  */
 import _fs from 'fs'
 import os from 'os'
+import path from 'path'
 import yaml from 'js-yaml'
 import isObject from 'lodash-es/isObject'
 import difference from 'lodash-es/difference'
@@ -216,9 +217,9 @@ export function arrayUnique(ary) {
  * @param sql
  * @returns {*}
  */
-export function saveTempSqlFile(sql) {
+export async function saveTempSqlFile(sql) {
   const tmpDumpFile = path.join(os.tmpdir(), `dbascode${process.pid}.sql`)
-  fs.writeFileSync(
+  await fs.writeFile(
     tmpDumpFile,
     sql,
   )
