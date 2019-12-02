@@ -149,7 +149,7 @@ test('returns db plugin by its name', () => {
   expect(inst.getDbPlugin()).toBe(p)
 })
 
-test('create plan', async () => {
+test('create plan succeed on both states exists', async () => {
   const inst = new DbAsCode(
     {
       source: __dirname + '/DbAsCodeTest1.data.yml',
@@ -166,7 +166,7 @@ test('create plan', async () => {
       initialized: true,
       getStateStore: () => ({
         getStorageConfigPath: () => '',
-        getState: () => ({}),
+        getState: () => new State({id: 1}),
       }),
       dbClass: {
         createFromState: cfs = jest.fn()
@@ -176,7 +176,7 @@ test('create plan', async () => {
             dispose: () => {},
           })
           .mockReturnValueOnce(curTree = {
-            validate: () => {},
+            validate: jest.fn(),
             dispose: () => {},
           }),
       },
@@ -190,8 +190,104 @@ test('create plan', async () => {
   expect(inst.pluginEvent.mock.calls[0][1]).toEqual([prevTree])
   expect(inst.pluginEvent.mock.calls[1][0]).toBe(TREE_INITIALIZED)
   expect(inst.pluginEvent.mock.calls[1][1]).toEqual([curTree])
+  expect(curTree.validate.mock.calls.length).toBe(1)
+  expect(state).toEqual(new State({
+    id: 2,
+    raw: {
+      dbms: 'state-dbms',
+    },
+    migrationSql: 'migration sql',
+    dbAsCodeVersion: DbAsCode.version,
+  }))
+  expect(changes).toEqual(new ChangesContext(true))
+})
+
+
+test('create plan succeed on prev state not exists', async () => {
+  const inst = new DbAsCode(
+    {
+      source: __dirname + '/DbAsCodeTest1.data.yml',
+    },
+    [],
+    {
+      collectChanges: () => {return new ChangesContext(true)},
+    }
+  )
+  let cfs, prevTree, curTree
+  inst._pluginsMap = {
+    'test-plug': {
+      name: 'test-plug',
+      initialized: true,
+      getStateStore: () => ({
+        getStorageConfigPath: () => '',
+        getState: () => new State({id: 0}),
+      }),
+      dbClass: {
+        createFromState: cfs = jest.fn()
+          .mockReturnValueOnce(undefined)
+          .mockReturnValueOnce(curTree = {
+            validate: jest.fn(),
+            dispose: () => {},
+          }),
+      },
+    },
+  }
+  inst._dbPluginName = 'test-plug'
+  inst.getMigrationSql = () => 'migration sql'
+  inst.pluginEvent = jest.fn()
+  const [state, changes] = await inst.createPlan()
+  expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
+  expect(inst.pluginEvent.mock.calls[0][1]).toEqual([curTree])
+  expect(curTree.validate.mock.calls.length).toBe(1)
   expect(state).toEqual(new State({
     id: 1,
+    raw: {
+      dbms: 'state-dbms',
+    },
+    migrationSql: 'migration sql',
+    dbAsCodeVersion: DbAsCode.version,
+  }))
+  expect(changes).toEqual(new ChangesContext(true))
+})
+
+test('create plan succeed on prev new state not exists', async () => {
+  const inst = new DbAsCode(
+    {
+      source: __dirname + '/DbAsCodeTest1.data.yml',
+    },
+    [],
+    {
+      collectChanges: () => {return new ChangesContext(true)},
+    }
+  )
+  let cfs, prevTree, curTree
+  inst._pluginsMap = {
+    'test-plug': {
+      name: 'test-plug',
+      initialized: true,
+      getStateStore: () => ({
+        getStorageConfigPath: () => '',
+        getState: () => new State({id: 3}),
+      }),
+      dbClass: {
+        createFromState: cfs = jest.fn()
+          .mockReturnValueOnce(prevTree = {
+            _old: 1,
+            validate: () => {},
+            dispose: () => {},
+          })
+          .mockReturnValueOnce(undefined),
+      },
+    },
+  }
+  inst._dbPluginName = 'test-plug'
+  inst.getMigrationSql = () => 'migration sql'
+  inst.pluginEvent = jest.fn()
+  const [state, changes] = await inst.createPlan()
+  expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
+  expect(inst.pluginEvent.mock.calls[0][1]).toEqual([prevTree])
+  expect(state).toEqual(new State({
+    id: 4,
     raw: {
       dbms: 'state-dbms',
     },
