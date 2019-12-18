@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 21.11.2019
- * Time: 16:54
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 
 import PropDef from './PropDef'

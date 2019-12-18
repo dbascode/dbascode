@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 11.10.2019
- * Time: 16:27
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import AbstractSchemaObject from './AbstractSchemaObject'
 import PropDefCollection from '../../dbascode/PropDefCollection'

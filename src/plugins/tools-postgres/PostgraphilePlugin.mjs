@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 17.10.2019
- * Time: 20:07
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import isBoolean from 'lodash-es/isBoolean'
 import isArray from 'lodash-es/isArray'

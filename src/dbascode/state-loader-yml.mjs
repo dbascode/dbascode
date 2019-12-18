@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 13.10.2019
- * Time: 11:00
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import fs from 'fs'
 import path from 'path'

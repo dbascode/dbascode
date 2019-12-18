@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 29.11.2019
- * Time: 20:56
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 /**
  * State data

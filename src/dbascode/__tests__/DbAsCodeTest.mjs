@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 01.12.2019
- * Time: 18:39
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import fs from 'fs'
 import DbAsCode from '../DbAsCode'

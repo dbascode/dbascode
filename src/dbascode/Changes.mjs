@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 02.12.2019
- * Time: 19:23
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import isEmpty from 'lodash-es/isEmpty'
 import AbstractDbObject from './AbstractDbObject'

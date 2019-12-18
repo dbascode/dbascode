@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 21.11.2019
- * Time: 10:25
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import ChildDefCollection from '../../dbascode/ChildDefCollection'
 import ChildDef from '../../dbascode/ChildDef'

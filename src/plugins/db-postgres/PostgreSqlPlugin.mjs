@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 30.11.2019
- * Time: 11:41
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
 import { parsePgConfig } from './utils'

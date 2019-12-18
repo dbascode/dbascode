@@ -1,8 +1,6 @@
 /**
- * Created with PhpStorm.
- * User: pravdin
- * Date: 15.10.2019
- * Time: 19:48
+ * @licence This file is covered by the LICENSE.md file in the root of this project.
+ * @copyright 2019 Alex Pravdin
  */
 import AbstractDbObject from '../../dbascode/AbstractDbObject'
 
