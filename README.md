@@ -1,8 +1,16 @@
 # DbAsCode
 ### Database As Code
 
-A tool to manage databases structure "as code" in `yaml` config files, allowing easy VCS storage, changes 
+A tool to manage database structure "as code" in `yaml` config files, allowing easy VCS storage, changes 
 tracking, and automation.
+
+## Supported Databases
+
+Currently, only PostgreSQL is supported. Other DBMS support should arrive in the future.
+
+## Project State
+
+This project is currently on the very early development stage. It is not recommended to use it in production.
 
 ## Installation
 
@@ -25,7 +33,3 @@ yarn run fix-modules
 ```shell script
 npm run migrate
 ```
-
-## Contribution
-
-**Important:** Before making any commit, run the `contrib/init.sh` script. It will add some required git hooks. 
