@@ -11,6 +11,7 @@ import isArray from 'lodash-es/isArray'
 import ChildDef from './ChildDef'
 import isObject from 'lodash-es/isObject'
 import { joinSql, parseArrayProp } from './utils'
+import isFunction from 'lodash-es/isFunction'
 
 /**
  * Changes calculation routines class
@@ -283,7 +284,7 @@ export default class Changes {
       }
       this.hasChanges(v2, v1, context)
       // v1.getDb().pluginOnCompareObjects(v1, v2, context)
-    } else if (is(v1) && is(v2)) {
+    } else if (isFunction(v1) && isFunction(v2)) {
       return false
     } else if (isArray(v1) && isArray(v2)) {
       return this.arrayHasChanges(v2, v1, context)

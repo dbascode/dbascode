@@ -13,6 +13,7 @@ import ForeignKey from './ForeignKey'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
 import { escapeString } from './utils'
+import { replaceAll } from '../../dbascode/utils'
 
 /**
  * Column in a table
@@ -41,7 +42,7 @@ export default class Column extends AbstractSchemaObject {
         if (def.raw) {
           return def.value
         } else {
-          if (isTextual(obj.type)) {
+          if (obj.isTextual()) {
             return escapeString(def.value)
           } else {
             return def.value
@@ -140,10 +141,18 @@ export default class Column extends AbstractSchemaObject {
     return `${this.getSchema().getQuotedName()}."${this.getParent().name}_${this.name}_seq"`
   }
 
+  /**
+   * Returns field type
+   * @returns {string}
+   */
   getType () {
     return this.type
   }
 
+  /**
+   * Calculates whether NULL is allowed as the field value
+   * @returns {boolean}
+   */
   getAllowNull () {
     return this.isAutoIncrement ? false : this.allowNull || this.defaultValue === null
   }
@@ -167,13 +176,28 @@ export default class Column extends AbstractSchemaObject {
     return undefined
   }
 
+  /**
+   * Is this field a text one
+   * @returns {boolean}
+   */
   isTextual () {
-    return isTextual(this.type)
+    return isType(textTypes, this.type)
   }
 
+  /**
+   * Is this field a numeric one
+   * @returns {boolean}
+   */
   isNumeric () {
-    return (this.type.toLowerCase().indexOf('int') >= 0) ||
-      (this.type.toLowerCase().indexOf('numeric') >= 0)
+    return isType(numericTypes, this.type)
+  }
+
+  /**
+   * Is this field of a custom type
+   * @returns {boolean}
+   */
+  isCustomType () {
+    return this.type.indexOf('.') >= 0
   }
 
   /**
@@ -181,22 +205,123 @@ export default class Column extends AbstractSchemaObject {
    * @param {Column} previous
    */
   validate (previous, context) {
-    if (previous) {
-      // Check column alteration
-      if (!this.allowNull && this.defaultValue === null && this.allowNull !== previous.allowNull || this.defaultValue !== previous.defaultValue) {
-        context.addError(this, `Default value other than NULL must be defined for non-null column`)
+    if (this.isAutoIncrement && !isType(integerTypes, this.type)) {
+      context.addError(this, `Autoincrement values are only allowed on integer fields, ${this.type} specified`)
+    }
+    if (this.isCustomType()) {
+      let [schemaName, typeName] = this.type.split('.')
+      schemaName = replaceAll(schemaName, '"', '')
+      typeName = replaceAll(typeName, '"', '')
+      const schema = this.getDb().getSchema(schemaName)
+      if (schema) {
+        const type = schema.types[baseType(typeName)]
+        if (!type) {
+          context.addError(this, `Unknown column type: ${this.type} - type ${typeName} not found in schema ${schemaName}`)
+        }
+      } else {
+        context.addError(this, `Unknown column type: ${this.type} - schema ${schemaName} not found`)
       }
     } else {
-      // Check new column
-      const isNewTable = (!context.prevTree || !context.prevTree.getChildByPath(this.getParent().getPath()))
-      if (!isNewTable && (this.allowNull === false && !this.defaultValue)) {
-        context.addError(this, `Can not add non-null column without default default value to an existing table`)
+      if (!this.isNumeric() && !this.isTextual() && !isType(otherTypes, this.type)) {
+        context.addError(this, `Unknown column type: ${this.type}`)
+      }
+      if (previous) {
+        // Check column alteration
+        if (!this.allowNull && this.defaultValue === null && this.allowNull !== previous.allowNull || this.defaultValue !== previous.defaultValue) {
+          context.addError(this, `Default value other than NULL must be defined for non-null column`)
+        }
+      } else {
+        // Check new column
+        const isNewTable = (!context.prevTree || !context.prevTree.getChildByPath(this.getParent().getPath()))
+        if (!isNewTable && (this.allowNull === false && !this.defaultValue)) {
+          context.addError(this, `Can not add non-null column without default default value to an existing table`)
+        }
       }
     }
     super.validate(previous, context)
   }
 }
 
-function isTextual (type) {
-  return type.toLowerCase().indexOf('text') >= 0
+const numericTypes = [
+  'int',
+  'smallint',
+  'integer',
+  'bigint',
+  'decimal',
+  'numeric',
+  'real',
+  'double',
+  'smallserial',
+  'serial',
+  'bigserial',
+]
+
+const integerTypes = [
+  'int',
+  'smallint',
+  'integer',
+  'bigint',
+  'smallserial',
+  'serial',
+  'bigserial',
+]
+
+const textTypes = [
+  'text',
+  'varchar',
+  'character varying',
+  'character',
+  'char',
+]
+
+const otherTypes = [
+  'money',
+  'bytea',
+  'timestamp',
+  'timestamp with time zone',
+  'timestamp without time zone',
+  'date',
+  'date with time zone',
+  'date without time zone',
+  'boolean',
+  'point',
+  'line',
+  'lseg',
+  'box',
+  'path',
+  'polygon',
+  'circle',
+  'cidr',
+  'inet',
+  'macaddr',
+  'macaddr8',
+  'bit',
+  'bit varying',
+  'uuid',
+  'xml',
+  'json',
+  'jsonb',
+  'jsonb',
+]
+
+function isType(typeList, type) {
+  return typeList.indexOf(baseType(type)) >= 0
+}
+
+function baseType (type) {
+  let result = type
+  let p = result.indexOf('[')
+  if (p < 0) {
+    p = result.indexOf(' array')
+  }
+  if (p >= 0) {
+    result = result.substr(0, p)
+  }
+  p = result.indexOf('(')
+  if (p >= 0) {
+    const p2 = result.indexOf(')')
+    result = result.substr(0, p) + ' ' + result.substr(p2 + 1, result.length)
+    result = replaceAll(result, '  ', ' ')
+  }
+  return result.trimEnd().toLowerCase()
 }

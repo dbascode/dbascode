@@ -1,0 +1,15 @@
+schemas:
+  test-schema:
+    types:
+      test-type1:
+        attributes:
+          a1: text
+          a2: text
+    tables:
+      test-table1:
+        columns:
+          col1: wrong-schema.wrong-type
+          col2: test-schema.wrong-type
+          col3: test-schema.test-type1
+          col4: test-schema.test-type1[]
+

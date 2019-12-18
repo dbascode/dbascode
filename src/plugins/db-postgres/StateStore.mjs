@@ -11,8 +11,8 @@ import { executeSql, executeSqlJson } from './psql'
 import State from '../../dbascode/State'
 import { escapeString, parsePgConfig } from './utils'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// const __filename = fileURLToPath(import.meta.url)
+// const __dirname = path.dirname(__filename)
 
 /**
  * PostgreSQL state storage in the same DB
@@ -53,7 +53,8 @@ export default class StateStore extends AbstractStateStore {
    * @inheritDoc
    */
   async getStorageConfigPath () {
-    return `${__dirname}/state-storage.yml`
+    // return `${__dirname}/state-storage.yml`
+    return `src/plugins/db-postgres/state-storage.yml`
   }
 
   /**
