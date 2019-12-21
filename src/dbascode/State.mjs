@@ -3,7 +3,7 @@
  * @copyright 2019 Alex Pravdin
  */
 /**
- * State data
+ * State data.
  */
 export default class State {
   id

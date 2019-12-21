@@ -97,11 +97,11 @@ const dbAsCode = new DbAsCode(
   ],
 );
 
-(async () => {
-  await dbAsCode.initializePlugins()
-
+async function main() {
   switch (command) {
     case planCmd: {
+      console.log(`Running command ${command}`)
+      await dbAsCode.initializePlugins()
       await dbAsCode.determineCurrentDbmsType()
       console.log('Loading changes...')
       const [plan, changes] = await dbAsCode.createPlan()
@@ -127,6 +127,8 @@ const dbAsCode = new DbAsCode(
     }
 
     case migrateCmd: {
+      console.log(`Running command ${command}`)
+      await dbAsCode.initializePlugins()
       /**
        * @var {State} plan
        */
@@ -165,7 +167,19 @@ const dbAsCode = new DbAsCode(
       console.log(`Unknown command '${command}'`)
       process.exit(1)
   }
-})()
+}
 
+(async () => {
+  try {
+    await main()
+  } catch (e) {
+    if (process.env.DBASCODE_DOCKER) {
+      console.error('Unhandled exception: ' + e.message)
+      process.exit(2)
+    } else {
+      throw e
+    }
+  }
+})()
 
 

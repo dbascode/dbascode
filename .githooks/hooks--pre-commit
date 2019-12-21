@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-yarn run jsdoc2md app.mjs
+yarn run jsdoc2md api-docs

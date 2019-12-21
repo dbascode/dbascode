@@ -5,7 +5,7 @@
 import { camelCaseToUnderscore } from './utils'
 
 /**
- * Children prop with DB class object(s) definition
+ * Children prop with DB class object(s) definition.
  */
 export default class ChildDef {
   static single = 'single'

@@ -22,7 +22,7 @@ import Changes from './Changes'
  * @property {boolean} wsl
  */
 /**
- * Main class of the DbAsCode tool
+ * Main class of the DbAsCode tool.
  */
 export default class DbAsCode {
   static version = 2
@@ -139,8 +139,11 @@ export default class DbAsCode {
     let dbms = forcedValue || this.config.dbms
     if (!dbms) {
       const stateFile = this.config.source
-      if (!stateFile || !fs.existsSync(stateFile)) {
-        throw new Error(`Current state file ${stateFile} not set or not found`)
+      if (!stateFile) {
+        throw new Error(`Current state file not set`)
+      }
+      if (!fs.existsSync(stateFile)) {
+        throw new Error(`Current state file ${stateFile} not found`)
       }
       const state = await loadYaml(stateFile)
       if (!isObject(state)) {
@@ -167,13 +170,13 @@ export default class DbAsCode {
 
   /**
    * Create migration plan.
-   * @return {Promise<(State|ChangesContext)[]>}
+   * @return {Promise<State[]|ChangesContext[]>}
    */
   async createPlan () {
     console.log('Loading current DB state...')
     const dbPlugin = this.getDbPlugin()
-    // const prevState = await dbPlugin.getStateStore().getState()
-    const prevState = JSON.parse(fs.readFileSync('1.json'))
+    const prevState = await dbPlugin.getStateStore().getState()
+    // const prevState = JSON.parse(fs.readFileSync('1.json'))
     // fs.writeFileSync('1.json', JSON.stringify(prevState))
     console.log('Loading new state...')
     const curStateRaw = await loadStateYaml([
@@ -297,7 +300,7 @@ export default class DbAsCode {
   /**
    * Execute plugin event
    * @param {string} eventName
-   * @param {*[]} args
+   * @param {array} args
    */
   pluginEvent (eventName, args = []) {
     for (const name of Object.keys(this._pluginsMap)) {

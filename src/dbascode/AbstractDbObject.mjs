@@ -24,7 +24,7 @@ import isObject from 'lodash-es/isObject'
 import { escapeRawText } from '../plugins/db-postgres/utils'
 
 /**
- * Base class for all DB objects
+ * Base class for all DB objects.
  * @property {string} comment
  * @property {string} extends - Object that this object extends, inheriting its children and
  * some properties. Inherited children must have the _isInherited property set to true.

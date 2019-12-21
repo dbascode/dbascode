@@ -10,7 +10,7 @@ import isArray from 'lodash-es/isArray'
 import { circularSafeStringify } from './utils'
 
 /**
- * Context to store changes between two DB trees
+ * Context to store changes between two DB trees.
  */
 export default class ChangesContext {
   stack = []

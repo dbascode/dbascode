@@ -12,7 +12,7 @@ import { joinSql, parseArrayProp } from './utils'
 import isFunction from 'lodash-es/isFunction'
 
 /**
- * Changes calculation routines class
+ * Changes calculation routines.
  */
 export default class Changes {
   /**

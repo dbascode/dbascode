@@ -8,7 +8,7 @@ import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
 
 /**
- * Abstract database class to be inherited by a specific DBMS implementation plugin
+ * Abstract database class to be inherited by a specific DBMS implementation plugin.
  * @property {number} dbmsVersion
  * @property {object} params
  */
@@ -22,15 +22,18 @@ export default class AbstractDataBase extends AbstractDbObject {
     ...this.propDefs.defs,
   ])
   /**
-   * @type {string} Name if DBMS this object is intended for
+   * Name if DBMS this object is intended for
+   * @type {string}
    */
   static dbms
   /**
-   * @type {number} DbAsCode version number this object was generated with
+   * DbAsCode version number this object was generated with
+   * @type {number}
    */
   _version
   /**
-   * @type {number} Postgres plugin version number this object was generated with
+   * Postgres plugin version number this object was generated with
+   * @type {number}
    */
   _pluginVersion
 

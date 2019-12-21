@@ -2,9 +2,16 @@
   "name": "dbascode",
   "version": "0.0.1",
   "author": "Alex Pravdin <mr.alex.pravdin@gmail.com> (mr.alex.pravdin@gmail.com)",
+  "license": "MIT",
+  "main": "app.mjs",
+  "bin": {
+    "dbascode": "./bin/dbascode.sh"
+  },
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs",
+    "api-docs": "jsdoc2md -c jsdoc2md.json ./src/*/*.mjs > API.md",
+    "git-hooks": "./contrib/init.sh",
     "test": "jest",
     "coverage": "jest --coverage"
   },
@@ -24,10 +31,10 @@
     "@babel/plugin-transform-modules-commonjs": "^7.7.4",
     "@babel/preset-env": "^7.7.4",
     "babel-jest": "^24.9.0",
-    "better-docs": "^1.4.6",
     "jest": "^24.9.0",
     "jsdoc": "^3.6.3",
     "jsdoc-export-default-interop": "^0.3.1",
-    "jsdoc-to-markdown": "^5.0.2"
+    "jsdoc-to-markdown": "^5.0.2",
+    "jsdoc-typeof-plugin": "^1.0.0"
   }
 }

@@ -79,7 +79,7 @@ export default class PluginDescriptor {
   /**
    * Execute plugin event
    * @param {string} eventName
-   * @param {*[]} args
+   * @param {array} args
    */
   event (eventName, args = []) {
     if (this.eventHandler) {

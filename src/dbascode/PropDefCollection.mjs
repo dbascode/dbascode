@@ -6,7 +6,7 @@
 import PropDef from './PropDef'
 
 /**
- * Collection of object property definitions
+ * Collection of object property definitions.
  */
 export default class PropDefCollection {
   /**

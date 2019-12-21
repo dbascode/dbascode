@@ -14,7 +14,7 @@ import isString from 'lodash-es/isString'
  * @property {string} name
  */
 /**
- * Object property definition (scalar and non-DB classes)
+ * Object property definition (scalar and non-DB classes).
  */
 export default class PropDef {
   static string = 'string'

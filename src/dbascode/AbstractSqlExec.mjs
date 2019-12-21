@@ -3,7 +3,7 @@
  * @copyright 2019 Alex Pravdin
  */
 /**
- * Abstract ancestor class for all sql execution implementations in plugins
+ * Abstract ancestor class for all sql execution implementations in plugins.
  */
 export default class AbstractSqlExec {
   /**

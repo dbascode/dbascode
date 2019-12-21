@@ -10,7 +10,7 @@
  * @property {string} stderr
  */
 /**
- * Abstract ancestor class for state storage classes
+ * Abstract ancestor class for state storage classes.
  */
 export default class AbstractStateStore {
   /**

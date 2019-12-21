@@ -6,7 +6,7 @@
 import ChildDef from './ChildDef'
 
 /**
- * Collection of children definitions
+ * Collection of children definitions.
  */
 export default class ChildDefCollection {
   /**
