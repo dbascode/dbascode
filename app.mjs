@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
@@ -60,12 +61,12 @@ const cliConfig = yargs
   })
   .option('db-var', {
     type: 'array',
-    default: (process.env.DBAC_DB_VAR || '').split('|'),
+    default: (process.env.DBAC_DB_VAR || '').split('|').filter(Boolean),
     describe: 'Database configuration parameters (see particular DB plugin documentation)',
   })
   .option('plugin', {
     type: 'array',
-    default: (process.env.DBAC_PLUGIN || '').split('|'),
+    default: (process.env.DBAC_PLUGIN || '').split('|').filter(Boolean),
     describe: 'List of plugins to be loaded. Module names to import must be provided.',
   })
   .option('wsl', {
