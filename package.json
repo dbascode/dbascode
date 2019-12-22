@@ -1,11 +1,14 @@
 {
   "name": "dbascode",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Alex Pravdin <mr.alex.pravdin@gmail.com> (mr.alex.pravdin@gmail.com)",
   "license": "MIT",
   "main": "lib/app.js",
   "directories": {
     "lib": "lib"
+  },
+  "bin": {
+    "dbascode": "lib/app.js"
   },
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
