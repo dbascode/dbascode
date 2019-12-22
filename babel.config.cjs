@@ -14,8 +14,12 @@ module.exports = {
     ],
   ],
   sourceType: 'module',
+  ignore: [
+    /node_modules\/(?!lodash-es)/,
+  ],
   plugins: [
     '@babel/plugin-syntax-import-meta',
     '@babel/plugin-proposal-class-properties',
+    '@babel/plugin-transform-modules-commonjs',
   ],
 };

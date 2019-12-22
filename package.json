@@ -1,22 +1,22 @@
 {
   "name": "dbascode",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Alex Pravdin <mr.alex.pravdin@gmail.com> (mr.alex.pravdin@gmail.com)",
   "license": "MIT",
-  "main": "app.mjs",
-  "bin": {
-    "dbascode": "./bin/dbascode.sh"
+  "main": "lib/app.js",
+  "directories": {
+    "lib": "lib"
   },
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs",
     "api-docs": "jsdoc2md -c jsdoc2md.json ./src/*/*.mjs > API.md",
-    "git-hooks": "./contrib/init.sh",
+    "compile": "babel app.mjs -o lib/app.js && babel src -d lib/src --ignore \"src/**/__tests__/*\" && babel node_modules/lodash-es -d lib/node_modules/lodash-es",
+    "publish-npm": "yarn fix-modules && yarn test && yarn coverage && yarn compile && npm publish",
     "test": "jest",
     "coverage": "jest --coverage"
   },
   "dependencies": {
-    "concat-stream": "^2.0.0",
     "glob": "^7.1.4",
     "js-yaml": "^3.13.1",
     "lodash-es": "^4.17.15",
@@ -25,6 +25,7 @@
   },
   "type": "module",
   "devDependencies": {
+    "@babel/cli": "^7.7.7",
     "@babel/core": "^7.7.4",
     "@babel/plugin-proposal-class-properties": "^7.7.4",
     "@babel/plugin-syntax-import-meta": "^7.7.4",

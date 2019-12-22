@@ -12,9 +12,9 @@ import PostgraphilePlugin from './src/plugins/tools-postgres/PostgraphilePlugin'
 import RowLevelSecurityPlugin from './src/plugins/tools-postgres/RowLevelSecurityPlugin'
 import DefaultRowsPlugin from './src/plugins/tools-postgres/DefaultRowsPlugin'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const projectDir = __dirname
+// const __filename = fileURLToPath(import.meta.url)
+// const __dirname = path.dirname(__filename)
+// const projectDir = __dirname
 
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
@@ -34,11 +34,11 @@ const cliConfig = yargs
     desc: 'Create SQL migrations based on config differences',
     builder: yargs => {
       yargs.option('source', {
-        default: process.env.SOURCE,
+        default: process.env.DBAC_SOURCE,
         describe: 'Directory to read database state from on the `migrate` command',
       })
       .option('plan', {
-        default: process.env.PLAN,
+        default: process.env.DBAC_PLAN,
         describe: 'Plan file to load migration data on the `migrate` command',
       })
     }
@@ -49,29 +49,32 @@ const cliConfig = yargs
       'options are set, an SQL dump and current state data will be saved.',
     builder: yargs => {
       yargs.positional('source', {
+        default: process.env.DBAC_SOURCE,
         describe: 'Configuration file to read database state from',
       })
       .option('output', {
-        default: process.env.OUTPUT,
+        default: process.env.DBAC_OUTPUT,
         describe: 'Plan file to store migration data on the `plan` command',
       })
     }
   })
-  .option('db-postgres-var', {
+  .option('db-var', {
     type: 'array',
+    default: (process.env.DBAC_DB_VAR || '').split('|'),
     describe: 'Database configuration parameters (see particular DB plugin documentation)',
   })
-  .option('plugins', {
+  .option('plugin', {
     type: 'array',
+    default: (process.env.DBAC_PLUGIN || '').split('|'),
     describe: 'List of plugins to be loaded. Module names to import must be provided.',
   })
   .option('wsl', {
     type: 'boolean',
-    default: false,
+    default: process.env.DBAC_WSL,
     describe: 'Use WSL to run commands',
   })
   .option('dbms', {
-    default: process.env.DBMS,
+    default: process.env.DBAC_DBMS,
     describe: 'Database management system to work with.',
   })
   .demandCommand()
@@ -82,7 +85,7 @@ const command = cliConfig._[0]
 
 const dbAsCode = new DbAsCode(
   {
-    plugins: cliConfig.plugins || [],
+    plugins: cliConfig.plugin || [],
     dbms: cliConfig.dbms,
     dbVars: cliConfig.dbVar || [],
     source: cliConfig.source,
