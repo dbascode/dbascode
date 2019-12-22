@@ -15,7 +15,6 @@ ADD app.mjs app.mjs
 ADD src/ src/
 
 RUN yarn install --prod \
-	&& chmod +x /dbascode/bin/dbascode.sh \
 	&& yarn fix-modules
 
 ENV DBASCODE_DOCKER=1
