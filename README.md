@@ -9,11 +9,11 @@ migrations) are also supported.
 
 This project is aiming to solve the following problems in database lifetime support:
 
-- Having the full human-readable DB structure at any point of time (commit). In conventional migration systems
+- Having the full human-readable DB structure at any point in time (commit). In conventional migration systems,
 you can not see the structure until you connect to a physical DB instance with all the migrations applied. 
-Or you have to export SQL structure manually.
+Or you have to export the SQL structure manually.
 - Changes tracking. You can easily compare Yaml configuration files between commits and 
-clearly understand what the exact changes were made. In conventional migration systems you can not do that without 
+clearly understand what the exact changes were made. In conventional migration systems, you can not do that without 
 special workarounds on exporting SQL DB structure on each build and store it somewhere. Or you have to 
 deploy backups.  
 - Convenient changes comparison. Raw SQL migrations or structure dumps, XML files are 
@@ -24,7 +24,7 @@ which actually have changed something in the DB.
 
 - Liquibase requires to describe migrations manually. You just move conventional old-style SQL migrations  
 to another syntax (XML or Yaml). It doesn't solve any problems mentioned above.
-- Flyway operates with SQL migrations. The same, it does some automation, but still doesn't work for our goals.
+- Flyway operates with SQL migrations. The same, it does some automation but still doesn't work for our goals.
 
 ### Why not an ORM with migrations?
 
@@ -34,7 +34,7 @@ relations to programming languages and data models.
 
 ## Project State
 
-This project is currently on the very early development stage. It is not recommended to use it in production.
+This project is currently in a very early development stage. It is not recommended to use it in production.
 
 ## Supported Database Types
 
@@ -89,8 +89,8 @@ dbascode <command> [options]
 
 Command | Description
 --------|------------
-`plan <source>` | Compare old and new states and create migration plan. New state is read from the `source` file path. If the `---output` option specified, creates the plan file to be used for migration.
-`migrate` | Performs migration. Either `--plan` or `--migration` options must be specified for migration. If a plan is specified, pgascode will read SQL queries to execute from it. If other migration was performed since creation of the state file, the migration will fail. If a source is specified, pgascode will generate migration plan and execute it immediately.
+`plan <source>` | Compare old and new states and create a migration plan. The new state is read from the `source` file path. If the `---output` option specified, creates the plan file to be used for migration.
+`migrate` | Performs migration. Either `--plan` or `--migration` options must be specified for migration. If a plan is specified, pgascode will read SQL queries to execute from it. If another migration was performed since the state file creation, the migration will fail. If a source is specified, pgascode will generate a migration plan and execute it immediately.
 
 #### Options
 
@@ -109,7 +109,7 @@ Option | Description | Example
 #### Environment Variables
 
 If PgAsCode will not find CLI options passed it will look for options in environment variables. Options are passed using 
-the `DBAC_` variable name prefix and an option name in uppercase (hyphen is replaced by underscore):
+the `DBAC_` variable name prefix and an option name in uppercase (hyphens are replaced by underscores):
 
 ```shell script
 $ DBAC_DB_VAR="host=some.host|port=5432|password=123" DBAC_DBMS=postgres DBAC_PLAN=/var/plan.json pgascode migrate
@@ -124,9 +124,9 @@ State configuration is written in Yaml files to allow convenient readability by 
 DbAsCode is plugin-driven and most of the functionality is implemented in plugins. There are some very 
 basic common configuration options.
 
-Configuration consists of DbObjects and their properties. Properties can contain scalars, arrays, objects, 
-and another DbObjects. For example, a table may contain some scalar properties like table comment and default encoding.
-It also contain a list of columns. In this case we can represent the table as an instance of a DbObject with scalar 
+The configuration consists of DbObjects and their properties. Properties can contain scalars, arrays, objects, 
+and other DbObjects. For example, a table may contain some scalar properties like table comment and default encoding.
+It also contains a list of columns. In this case, we can represent the table as an instance of a DbObject with scalar 
 properties `comment` and `encoding`, and with an array property `columns` which contains columns (which are also 
 DbObject instances).
 
