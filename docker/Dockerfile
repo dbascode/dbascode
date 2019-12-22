@@ -13,7 +13,6 @@ ADD fix-modules.mjs fix-modules.mjs
 ADD package.json package.json
 ADD app.mjs app.mjs
 ADD src/ src/
-ADD bin/ bin/
 
 RUN yarn install --prod \
 	&& chmod +x /dbascode/bin/dbascode.sh \
