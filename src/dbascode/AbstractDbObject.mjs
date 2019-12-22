@@ -2,18 +2,10 @@
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
  */
-
 import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
 import difference from 'lodash-es/difference'
-import {
-  getPropValue,
-  joinSql,
-  objectDifferenceKeys,
-  objectIntersectionKeys,
-  parseArrayProp,
-  replaceAll,
-} from './utils'
+import {getPropValue,joinSql,  objectDifferenceKeys,objectIntersectionKeys,parseArrayProp,replaceAll} from './utils'
 import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
 import PropDefCollection from './PropDefCollection'
@@ -26,8 +18,7 @@ import { escapeRawText } from '../plugins/db-postgres/utils'
 /**
  * Base class for all DB objects.
  * @property {string} comment
- * @property {string} extends - Object that this object extends, inheriting its children and
- * some properties. Inherited children must have the _isInherited property set to true.
+ * @property {string} extends - Object that this object extends, inheriting its children and some properties. Inherited children must have the _isInherited property set to true.
  * @property {object} grant
  * @property {object} revoke
  */

@@ -27,6 +27,32 @@
 <dd><p>State data.</p></dd>
 <dt><a href="#ValidationContext">ValidationContext</a></dt>
 <dd><p>Tree validation context.</p></dd>
+<dt><a href="#AbstractSchemaObject">AbstractSchemaObject</a></dt>
+<dd><p>Abstract class for objects belonging to a schema</p></dd>
+<dt><a href="#DataBase">DataBase</a></dt>
+<dd><p>PostgreSQL database object</p></dd>
+<dt><a href="#ForeignKey">ForeignKey</a></dt>
+<dd><p>Foreign key in a column</p></dd>
+<dt><a href="#Index">Index</a></dt>
+<dd><p>Index in a table</p></dd>
+<dt><a href="#PostgreSqlPlugin">PostgreSqlPlugin</a></dt>
+<dd><p>Postgres plugin descriptor</p></dd>
+<dt><a href="#PrimaryKey">PrimaryKey</a></dt>
+<dd><p>Table primary key object</p></dd>
+<dt><a href="#Role">Role</a></dt>
+<dd><p>Role in a database</p></dd>
+<dt><a href="#Schema">Schema</a></dt>
+<dd><p>Database schema object.</p></dd>
+<dt><a href="#Sequence">Sequence</a></dt>
+<dd><p>Autoincrement sequence class</p></dd>
+<dt><a href="#Table">Table</a></dt>
+<dd><p>Table object</p></dd>
+<dt><a href="#Trigger">Trigger</a></dt>
+<dd><p>Trigger on a table</p></dd>
+<dt><a href="#UniqueKey">UniqueKey</a></dt>
+<dd><p>Unique key of a table</p></dd>
+<dt><a href="#PostgraphilePlugin">PostgraphilePlugin</a></dt>
+<dd><p>Some Postgraphile-specific add-ons</p></dd>
 <dt><a href="#AbstractDataBase">AbstractDataBase</a></dt>
 <dd><p>Abstract database class to be inherited by a specific DBMS implementation plugin.</p></dd>
 <dt><a href="#AbstractSqlExec">AbstractSqlExec</a></dt>
@@ -154,6 +180,16 @@
 <dd><p>Removes duplicates from an array. Returns new copy of the source array.</p></dd>
 <dt><a href="#saveTempSqlFile">saveTempSqlFile(sql)</a> ⇒ <code>*</code></dt>
 <dd></dd>
+<dt><a href="#escapeRawText">escapeRawText(s)</a></dt>
+<dd><p>Escape text to insert to DB (not adds single quotes)</p></dd>
+<dt><a href="#escapeString">escapeString(s)</a></dt>
+<dd><p>Escape string to insert to DB (adds single quotes)</p></dd>
+<dt><a href="#parsePgConfig">parsePgConfig(vars, dbAsCodeConfig)</a></dt>
+<dd><p>Parse DbAsCode config and fill the vars object with the corresponding values</p></dd>
+<dt><a href="#parseTypedef">parseTypedef(def)</a> ⇒ <code><a href="#ArgumentTypeDef">ArgumentTypeDef</a></code></dt>
+<dd><p>Parse type definition of a type argument or function argument</p></dd>
+<dt><a href="#getRowLevelSecurity">getRowLevelSecurity()</a> ⇒ <code>object</code></dt>
+<dd><p>Returns row level security data combined with data inherited from ancestor</p></dd>
 <dt><a href="#processCalculations">processCalculations(obj, args)</a> ⇒ <code>*</code></dt>
 <dd><p>Process calculations in string config values</p></dd>
 <dt><a href="#doLoadConfig">doLoadConfig(configFiles)</a> ⇒ <code>*</code></dt>
@@ -208,6 +244,10 @@
 <dt><a href="#VersionedPropName">VersionedPropName</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#ValidateError">ValidateError</a> : <code>object</code></dt>
+<dd></dd>
+<dt><a href="#FKeyRef">FKeyRef</a> : <code>Object</code></dt>
+<dd></dd>
+<dt><a href="#ArgumentTypeDef">ArgumentTypeDef</a> : <code>object</code></dt>
 <dd></dd>
 <dt><a href="#SqlExecResult">SqlExecResult</a> : <code>object</code></dt>
 <dd></dd>
@@ -1637,6 +1677,833 @@ of the queries should affect DB state if any of the queries has failed.</p>
 <p>Returns string with all errors in the context for human-readable printing.</p>
 
 **Kind**: instance method of [<code>ValidationContext</code>](#ValidationContext)  
+<a name="AbstractSchemaObject"></a>
+
+## AbstractSchemaObject
+<p>Abstract class for objects belonging to a schema</p>
+
+**Kind**: global class  
+
+* [AbstractSchemaObject](#AbstractSchemaObject)
+    * [.getSchema()](#AbstractSchemaObject+getSchema) ⇒ [<code>Schema</code>](#Schema)
+    * [.getObjectIdentifier()](#AbstractSchemaObject+getObjectIdentifier)
+    * [.getSchema()](#AbstractSchemaObject+getSchema) ⇒ [<code>Schema</code>](#Schema)
+    * [.getObjectIdentifier()](#AbstractSchemaObject+getObjectIdentifier)
+
+<a name="AbstractSchemaObject+getSchema"></a>
+
+### abstractSchemaObject.getSchema() ⇒ [<code>Schema</code>](#Schema)
+<p>Returns Schema  object that the current object belongs to</p>
+
+**Kind**: instance method of [<code>AbstractSchemaObject</code>](#AbstractSchemaObject)  
+<a name="AbstractSchemaObject+getObjectIdentifier"></a>
+
+### abstractSchemaObject.getObjectIdentifier()
+**Kind**: instance method of [<code>AbstractSchemaObject</code>](#AbstractSchemaObject)  
+<a name="AbstractSchemaObject+getSchema"></a>
+
+### abstractSchemaObject.getSchema() ⇒ [<code>Schema</code>](#Schema)
+<p>Returns Schema  object that the current object belongs to</p>
+
+**Kind**: instance method of [<code>AbstractSchemaObject</code>](#AbstractSchemaObject)  
+<a name="AbstractSchemaObject+getObjectIdentifier"></a>
+
+### abstractSchemaObject.getObjectIdentifier()
+**Kind**: instance method of [<code>AbstractSchemaObject</code>](#AbstractSchemaObject)  
+<a name="DataBase"></a>
+
+## DataBase
+<p>PostgreSQL database object</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| defaultLocale | <code>string</code> | 
+| extensions | <code>Array.&lt;string&gt;</code> | 
+| roles | <code>Object.&lt;string, Role&gt;</code> | 
+| schemas | <code>Object.&lt;string, Schema&gt;</code> | 
+
+
+* [DataBase](#DataBase)
+    * [.dbms](#DataBase+dbms) : <code>string</code>
+    * [.propDefs](#DataBase+propDefs) : [<code>PropDefCollection</code>](#PropDefCollection)
+    * [.childrenDefs](#DataBase+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.dbms](#DataBase+dbms) : <code>string</code>
+    * [.propDefs](#DataBase+propDefs) : [<code>PropDefCollection</code>](#PropDefCollection)
+    * [.childrenDefs](#DataBase+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.getCreateSql()](#DataBase+getCreateSql) ⇒ <code>string</code>
+    * [.getCalculators()](#DataBase+getCalculators)
+    * [.pluginOnTreeInitialized(config)](#DataBase+pluginOnTreeInitialized)
+    * [.pluginOnCompareObjects(old, cur, context)](#DataBase+pluginOnCompareObjects)
+    * [.getSchema(name)](#DataBase+getSchema) ⇒
+    * [.validate()](#DataBase+validate)
+    * [.getCreateSql()](#DataBase+getCreateSql) ⇒ <code>string</code>
+    * [.getCalculators()](#DataBase+getCalculators)
+    * [.pluginOnTreeInitialized(config)](#DataBase+pluginOnTreeInitialized)
+    * [.pluginOnCompareObjects(old, cur, context)](#DataBase+pluginOnCompareObjects)
+    * [.getSchema(name)](#DataBase+getSchema) ⇒
+    * [.validate()](#DataBase+validate)
+
+<a name="DataBase+dbms"></a>
+
+### dataBase.dbms : <code>string</code>
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+propDefs"></a>
+
+### dataBase.propDefs : [<code>PropDefCollection</code>](#PropDefCollection)
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+childrenDefs"></a>
+
+### dataBase.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+dbms"></a>
+
+### dataBase.dbms : <code>string</code>
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+propDefs"></a>
+
+### dataBase.propDefs : [<code>PropDefCollection</code>](#PropDefCollection)
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+childrenDefs"></a>
+
+### dataBase.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+getCreateSql"></a>
+
+### dataBase.getCreateSql() ⇒ <code>string</code>
+<p>Returns SQL for object creation</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+getCalculators"></a>
+
+### dataBase.getCalculators()
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+pluginOnTreeInitialized"></a>
+
+### dataBase.pluginOnTreeInitialized(config)
+<p>Executes plugins when an object is created and configured</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+
+| Param | Type |
+| --- | --- |
+| config | <code>Object</code> | 
+
+<a name="DataBase+pluginOnCompareObjects"></a>
+
+### dataBase.pluginOnCompareObjects(old, cur, context)
+<p>Executes plugins to provide custom object comparison when calculating changes</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+
+| Param | Type |
+| --- | --- |
+| old | <code>AbstractDbObject</code> | 
+| cur | <code>AbstractDbObject</code> | 
+| context | [<code>ChangesContext</code>](#ChangesContext) | 
+
+<a name="DataBase+getSchema"></a>
+
+### dataBase.getSchema(name) ⇒
+<p>Returns a schema object by name</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+**Returns**: <p>Schema</p>  
+
+| Param | Type |
+| --- | --- |
+| name | <code>string</code> | 
+
+<a name="DataBase+validate"></a>
+
+### dataBase.validate()
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+getCreateSql"></a>
+
+### dataBase.getCreateSql() ⇒ <code>string</code>
+<p>Returns SQL for object creation</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+getCalculators"></a>
+
+### dataBase.getCalculators()
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+pluginOnTreeInitialized"></a>
+
+### dataBase.pluginOnTreeInitialized(config)
+<p>Executes plugins when an object is created and configured</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+
+| Param | Type |
+| --- | --- |
+| config | <code>Object</code> | 
+
+<a name="DataBase+pluginOnCompareObjects"></a>
+
+### dataBase.pluginOnCompareObjects(old, cur, context)
+<p>Executes plugins to provide custom object comparison when calculating changes</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+
+| Param | Type |
+| --- | --- |
+| old | <code>AbstractDbObject</code> | 
+| cur | <code>AbstractDbObject</code> | 
+| context | [<code>ChangesContext</code>](#ChangesContext) | 
+
+<a name="DataBase+getSchema"></a>
+
+### dataBase.getSchema(name) ⇒
+<p>Returns a schema object by name</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+**Returns**: <p>Schema</p>  
+
+| Param | Type |
+| --- | --- |
+| name | <code>string</code> | 
+
+<a name="DataBase+validate"></a>
+
+### dataBase.validate()
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="ForeignKey"></a>
+
+## ForeignKey
+<p>Foreign key in a column</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| column | <code>string</code> | 
+| onUpdate | <code>string</code> | 
+| onDelete | <code>string</code> | 
+| ref | [<code>FKeyRef</code>](#FKeyRef) | 
+
+
+* [ForeignKey](#ForeignKey)
+    * [.applyConfigProperties()](#ForeignKey+applyConfigProperties)
+    * [.getOnUpdate()](#ForeignKey+getOnUpdate) ⇒ <code>string</code>
+    * [.getOnDelete()](#ForeignKey+getOnDelete)
+    * [.getSqlDefinition()](#ForeignKey+getSqlDefinition)
+    * [.getObjectClass()](#ForeignKey+getObjectClass)
+    * [.getParentRelation()](#ForeignKey+getParentRelation)
+    * [.applyConfigProperties()](#ForeignKey+applyConfigProperties)
+    * [.getOnUpdate()](#ForeignKey+getOnUpdate) ⇒ <code>string</code>
+    * [.getOnDelete()](#ForeignKey+getOnDelete)
+    * [.getSqlDefinition()](#ForeignKey+getSqlDefinition)
+    * [.getObjectClass()](#ForeignKey+getObjectClass)
+    * [.getParentRelation()](#ForeignKey+getParentRelation)
+
+<a name="ForeignKey+applyConfigProperties"></a>
+
+### foreignKey.applyConfigProperties()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getOnUpdate"></a>
+
+### foreignKey.getOnUpdate() ⇒ <code>string</code>
+<p>Returns ON UPDATE SQL</p>
+
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getOnDelete"></a>
+
+### foreignKey.getOnDelete()
+<p>Returns ON DELETE SQL</p>
+
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getSqlDefinition"></a>
+
+### foreignKey.getSqlDefinition()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getObjectClass"></a>
+
+### foreignKey.getObjectClass()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getParentRelation"></a>
+
+### foreignKey.getParentRelation()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+applyConfigProperties"></a>
+
+### foreignKey.applyConfigProperties()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getOnUpdate"></a>
+
+### foreignKey.getOnUpdate() ⇒ <code>string</code>
+<p>Returns ON UPDATE SQL</p>
+
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getOnDelete"></a>
+
+### foreignKey.getOnDelete()
+<p>Returns ON DELETE SQL</p>
+
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getSqlDefinition"></a>
+
+### foreignKey.getSqlDefinition()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getObjectClass"></a>
+
+### foreignKey.getObjectClass()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getParentRelation"></a>
+
+### foreignKey.getParentRelation()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="Index"></a>
+
+## Index
+<p>Index in a table</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| columns | <code>Array.&lt;string&gt;</code> | 
+
+
+* [Index](#Index)
+    * [.applyConfigProperties()](#Index+applyConfigProperties)
+    * [.getParentRelation()](#Index+getParentRelation)
+    * [.getObjectIdentifier()](#Index+getObjectIdentifier)
+    * [.getSqlDefinition()](#Index+getSqlDefinition)
+    * [.applyConfigProperties()](#Index+applyConfigProperties)
+    * [.getParentRelation()](#Index+getParentRelation)
+    * [.getObjectIdentifier()](#Index+getObjectIdentifier)
+    * [.getSqlDefinition()](#Index+getSqlDefinition)
+
+<a name="Index+applyConfigProperties"></a>
+
+### index.applyConfigProperties()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getParentRelation"></a>
+
+### index.getParentRelation()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getObjectIdentifier"></a>
+
+### index.getObjectIdentifier()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getSqlDefinition"></a>
+
+### index.getSqlDefinition()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+applyConfigProperties"></a>
+
+### index.applyConfigProperties()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getParentRelation"></a>
+
+### index.getParentRelation()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getObjectIdentifier"></a>
+
+### index.getObjectIdentifier()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getSqlDefinition"></a>
+
+### index.getSqlDefinition()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="PostgreSqlPlugin"></a>
+
+## PostgreSqlPlugin
+<p>Postgres plugin descriptor</p>
+
+**Kind**: global class  
+
+* [PostgreSqlPlugin](#PostgreSqlPlugin)
+    * [.init(dbAsCodeConfig)](#PostgreSqlPlugin+init)
+    * [.init(dbAsCodeConfig)](#PostgreSqlPlugin+init)
+
+<a name="PostgreSqlPlugin+init"></a>
+
+### postgreSqlPlugin.init(dbAsCodeConfig)
+<p>Initialize plugin descriptor with the DbAsCode configuration</p>
+
+**Kind**: instance method of [<code>PostgreSqlPlugin</code>](#PostgreSqlPlugin)  
+
+| Param | Type |
+| --- | --- |
+| dbAsCodeConfig | [<code>DbAsCodeConfig</code>](#DbAsCodeConfig) | 
+
+<a name="PostgreSqlPlugin+init"></a>
+
+### postgreSqlPlugin.init(dbAsCodeConfig)
+<p>Initialize plugin descriptor with the DbAsCode configuration</p>
+
+**Kind**: instance method of [<code>PostgreSqlPlugin</code>](#PostgreSqlPlugin)  
+
+| Param | Type |
+| --- | --- |
+| dbAsCodeConfig | [<code>DbAsCodeConfig</code>](#DbAsCodeConfig) | 
+
+<a name="PrimaryKey"></a>
+
+## PrimaryKey
+<p>Table primary key object</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| columns | <code>Array.&lt;string&gt;</code> | 
+
+
+* [PrimaryKey](#PrimaryKey)
+    * [.applyConfigProperties()](#PrimaryKey+applyConfigProperties)
+    * [.getParentRelation()](#PrimaryKey+getParentRelation)
+    * [.getObjectClass()](#PrimaryKey+getObjectClass)
+    * [.getSqlDefinition()](#PrimaryKey+getSqlDefinition)
+    * [.applyConfigProperties()](#PrimaryKey+applyConfigProperties)
+    * [.getParentRelation()](#PrimaryKey+getParentRelation)
+    * [.getObjectClass()](#PrimaryKey+getObjectClass)
+    * [.getSqlDefinition()](#PrimaryKey+getSqlDefinition)
+
+<a name="PrimaryKey+applyConfigProperties"></a>
+
+### primaryKey.applyConfigProperties()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getParentRelation"></a>
+
+### primaryKey.getParentRelation()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getObjectClass"></a>
+
+### primaryKey.getObjectClass()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getSqlDefinition"></a>
+
+### primaryKey.getSqlDefinition()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+applyConfigProperties"></a>
+
+### primaryKey.applyConfigProperties()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getParentRelation"></a>
+
+### primaryKey.getParentRelation()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getObjectClass"></a>
+
+### primaryKey.getObjectClass()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getSqlDefinition"></a>
+
+### primaryKey.getSqlDefinition()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="Role"></a>
+
+## Role
+<p>Role in a database</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| memberOf | <code>Array.&lt;string&gt;</code> | 
+| isClient | <code>boolean</code> | 
+
+
+* [Role](#Role)
+    * [.getSqlDefinition()](#Role+getSqlDefinition)
+    * [.getSqlDefinition()](#Role+getSqlDefinition)
+
+<a name="Role+getSqlDefinition"></a>
+
+### role.getSqlDefinition()
+**Kind**: instance method of [<code>Role</code>](#Role)  
+<a name="Role+getSqlDefinition"></a>
+
+### role.getSqlDefinition()
+**Kind**: instance method of [<code>Role</code>](#Role)  
+<a name="Schema"></a>
+
+## Schema
+<p>Database schema object.</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| tables | <code>Object.&lt;string, Table&gt;</code> | 
+| types | <code>Object.&lt;string, Type&gt;</code> | 
+| functions | <code>Object.&lt;string, function()&gt;</code> | 
+| sequences | <code>Object.&lt;string, Sequence&gt;</code> | 
+
+
+* [Schema](#Schema)
+    * [.childrenDefs](#Schema+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.childrenDefs](#Schema+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.tableExists(name)](#Schema+tableExists) ⇒ <code>boolean</code>
+    * [.getTable(name)](#Schema+getTable) ⇒ <code>\*</code>
+    * [.getCalculators()](#Schema+getCalculators)
+    * [.tableExists(name)](#Schema+tableExists) ⇒ <code>boolean</code>
+    * [.getTable(name)](#Schema+getTable) ⇒ <code>\*</code>
+    * [.getCalculators()](#Schema+getCalculators)
+
+<a name="Schema+childrenDefs"></a>
+
+### schema.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>Schema</code>](#Schema)  
+<a name="Schema+childrenDefs"></a>
+
+### schema.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>Schema</code>](#Schema)  
+<a name="Schema+tableExists"></a>
+
+### schema.tableExists(name) ⇒ <code>boolean</code>
+<p>Check table exists by name.</p>
+
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+
+| Param |
+| --- |
+| name | 
+
+<a name="Schema+getTable"></a>
+
+### schema.getTable(name) ⇒ <code>\*</code>
+<p>Returns table by name</p>
+
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+
+| Param |
+| --- |
+| name | 
+
+<a name="Schema+getCalculators"></a>
+
+### schema.getCalculators()
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+<a name="Schema+tableExists"></a>
+
+### schema.tableExists(name) ⇒ <code>boolean</code>
+<p>Check table exists by name.</p>
+
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+
+| Param |
+| --- |
+| name | 
+
+<a name="Schema+getTable"></a>
+
+### schema.getTable(name) ⇒ <code>\*</code>
+<p>Returns table by name</p>
+
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+
+| Param |
+| --- |
+| name | 
+
+<a name="Schema+getCalculators"></a>
+
+### schema.getCalculators()
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+<a name="Sequence"></a>
+
+## Sequence
+<p>Autoincrement sequence class</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| table | <code>string</code> | 
+| column | <code>string</code> | 
+
+
+* [Sequence](#Sequence)
+    * [.applyConfigProperties()](#Sequence+applyConfigProperties)
+    * [.getSqlDefinition()](#Sequence+getSqlDefinition)
+    * [.applyConfigProperties()](#Sequence+applyConfigProperties)
+    * [.getSqlDefinition()](#Sequence+getSqlDefinition)
+
+<a name="Sequence+applyConfigProperties"></a>
+
+### sequence.applyConfigProperties()
+**Kind**: instance method of [<code>Sequence</code>](#Sequence)  
+<a name="Sequence+getSqlDefinition"></a>
+
+### sequence.getSqlDefinition()
+**Kind**: instance method of [<code>Sequence</code>](#Sequence)  
+<a name="Sequence+applyConfigProperties"></a>
+
+### sequence.applyConfigProperties()
+**Kind**: instance method of [<code>Sequence</code>](#Sequence)  
+<a name="Sequence+getSqlDefinition"></a>
+
+### sequence.getSqlDefinition()
+**Kind**: instance method of [<code>Sequence</code>](#Sequence)  
+<a name="Table"></a>
+
+## Table
+<p>Table object</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| foreignKeys | [<code>ForeignKey</code>](#ForeignKey) | 
+| columns | <code>Array.&lt;Column&gt;</code> | 
+| indexes | [<code>Array.&lt;Index&gt;</code>](#Index) | 
+| triggers | [<code>Array.&lt;Trigger&gt;</code>](#Trigger) | 
+| uniqueKeys | [<code>Array.&lt;UniqueKey&gt;</code>](#UniqueKey) | 
+| primaryKey | [<code>PrimaryKey</code>](#PrimaryKey) | 
+
+
+* [Table](#Table)
+    * [.childrenDefs](#Table+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.childrenDefs](#Table+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.postprocessTree()](#Table+postprocessTree)
+    * [.setupDependencies()](#Table+setupDependencies)
+    * [.getSqlDefinition()](#Table+getSqlDefinition)
+    * [.postprocessTree()](#Table+postprocessTree)
+    * [.setupDependencies()](#Table+setupDependencies)
+    * [.getSqlDefinition()](#Table+getSqlDefinition)
+
+<a name="Table+childrenDefs"></a>
+
+### table.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>Table</code>](#Table)  
+<a name="Table+childrenDefs"></a>
+
+### table.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>Table</code>](#Table)  
+<a name="Table+postprocessTree"></a>
+
+### table.postprocessTree()
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+setupDependencies"></a>
+
+### table.setupDependencies()
+<p>Fills the dependencies list of this object</p>
+
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+getSqlDefinition"></a>
+
+### table.getSqlDefinition()
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+postprocessTree"></a>
+
+### table.postprocessTree()
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+setupDependencies"></a>
+
+### table.setupDependencies()
+<p>Fills the dependencies list of this object</p>
+
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+getSqlDefinition"></a>
+
+### table.getSqlDefinition()
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Trigger"></a>
+
+## Trigger
+<p>Trigger on a table</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| operation | <code>string</code> | 
+| when | <code>string</code> | 
+| what | <code>string</code> | 
+
+
+* [Trigger](#Trigger)
+    * [.applyConfigProperties()](#Trigger+applyConfigProperties)
+    * [.getSqlDefinition()](#Trigger+getSqlDefinition)
+    * [.getParentRelation()](#Trigger+getParentRelation)
+    * [.getObjectIdentifier()](#Trigger+getObjectIdentifier)
+    * [.getSqlTriggerType()](#Trigger+getSqlTriggerType) ⇒ <code>string</code>
+    * [.applyConfigProperties()](#Trigger+applyConfigProperties)
+    * [.getSqlDefinition()](#Trigger+getSqlDefinition)
+    * [.getParentRelation()](#Trigger+getParentRelation)
+    * [.getObjectIdentifier()](#Trigger+getObjectIdentifier)
+    * [.getSqlTriggerType()](#Trigger+getSqlTriggerType) ⇒ <code>string</code>
+
+<a name="Trigger+applyConfigProperties"></a>
+
+### trigger.applyConfigProperties()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getSqlDefinition"></a>
+
+### trigger.getSqlDefinition()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getParentRelation"></a>
+
+### trigger.getParentRelation()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getObjectIdentifier"></a>
+
+### trigger.getObjectIdentifier()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getSqlTriggerType"></a>
+
+### trigger.getSqlTriggerType() ⇒ <code>string</code>
+<p>Returns SQL trigger type</p>
+
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+applyConfigProperties"></a>
+
+### trigger.applyConfigProperties()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getSqlDefinition"></a>
+
+### trigger.getSqlDefinition()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getParentRelation"></a>
+
+### trigger.getParentRelation()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getObjectIdentifier"></a>
+
+### trigger.getObjectIdentifier()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getSqlTriggerType"></a>
+
+### trigger.getSqlTriggerType() ⇒ <code>string</code>
+<p>Returns SQL trigger type</p>
+
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="UniqueKey"></a>
+
+## UniqueKey
+<p>Unique key of a table</p>
+
+**Kind**: global class  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| columns | <code>Array.&lt;string&gt;</code> | 
+
+
+* [UniqueKey](#UniqueKey)
+    * [.applyConfigProperties()](#UniqueKey+applyConfigProperties)
+    * [.getParentRelation()](#UniqueKey+getParentRelation)
+    * [.getObjectClass()](#UniqueKey+getObjectClass)
+    * [.getSqlDefinition()](#UniqueKey+getSqlDefinition)
+    * [.applyConfigProperties()](#UniqueKey+applyConfigProperties)
+    * [.getParentRelation()](#UniqueKey+getParentRelation)
+    * [.getObjectClass()](#UniqueKey+getObjectClass)
+    * [.getSqlDefinition()](#UniqueKey+getSqlDefinition)
+
+<a name="UniqueKey+applyConfigProperties"></a>
+
+### uniqueKey.applyConfigProperties()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getParentRelation"></a>
+
+### uniqueKey.getParentRelation()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getObjectClass"></a>
+
+### uniqueKey.getObjectClass()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getSqlDefinition"></a>
+
+### uniqueKey.getSqlDefinition()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+applyConfigProperties"></a>
+
+### uniqueKey.applyConfigProperties()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getParentRelation"></a>
+
+### uniqueKey.getParentRelation()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getObjectClass"></a>
+
+### uniqueKey.getObjectClass()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getSqlDefinition"></a>
+
+### uniqueKey.getSqlDefinition()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="PostgraphilePlugin"></a>
+
+## PostgraphilePlugin
+<p>Some Postgraphile-specific add-ons</p>
+
+**Kind**: global class  
+
+* [PostgraphilePlugin](#PostgraphilePlugin)
+    * [.event()](#PostgraphilePlugin+event)
+    * [.onTreeInitialized(db)](#PostgraphilePlugin+onTreeInitialized)
+    * [.applyOmitMixin(inst)](#PostgraphilePlugin+applyOmitMixin)
+    * [.event()](#PostgraphilePlugin+event)
+    * [.onTreeInitialized(db)](#PostgraphilePlugin+onTreeInitialized)
+    * [.applyOmitMixin(inst)](#PostgraphilePlugin+applyOmitMixin)
+
+<a name="PostgraphilePlugin+event"></a>
+
+### postgraphilePlugin.event()
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+<a name="PostgraphilePlugin+onTreeInitialized"></a>
+
+### postgraphilePlugin.onTreeInitialized(db)
+<p>Executed on a DB tree initialization completion</p>
+
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+
+| Param | Type |
+| --- | --- |
+| db | [<code>DataBase</code>](#DataBase) | 
+
+<a name="PostgraphilePlugin+applyOmitMixin"></a>
+
+### postgraphilePlugin.applyOmitMixin(inst)
+<p>Applies Table class mixin</p>
+
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+
+| Param | Type |
+| --- | --- |
+| inst | [<code>Table</code>](#Table) \| <code>Column</code> \| [<code>PrimaryKey</code>](#PrimaryKey) | 
+
+<a name="PostgraphilePlugin+event"></a>
+
+### postgraphilePlugin.event()
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+<a name="PostgraphilePlugin+onTreeInitialized"></a>
+
+### postgraphilePlugin.onTreeInitialized(db)
+<p>Executed on a DB tree initialization completion</p>
+
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+
+| Param | Type |
+| --- | --- |
+| db | [<code>DataBase</code>](#DataBase) | 
+
+<a name="PostgraphilePlugin+applyOmitMixin"></a>
+
+### postgraphilePlugin.applyOmitMixin(inst)
+<p>Applies Table class mixin</p>
+
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+
+| Param | Type |
+| --- | --- |
+| inst | [<code>Table</code>](#Table) \| <code>Column</code> \| [<code>PrimaryKey</code>](#PrimaryKey) | 
+
 <a name="AbstractDataBase"></a>
 
 ## AbstractDataBase
@@ -3061,7 +3928,19 @@ of the queries should affect DB state if any of the queries has failed.</p>
 * [AbstractSchemaObject](#AbstractSchemaObject)
     * [.getSchema()](#AbstractSchemaObject+getSchema) ⇒ [<code>Schema</code>](#Schema)
     * [.getObjectIdentifier()](#AbstractSchemaObject+getObjectIdentifier)
+    * [.getSchema()](#AbstractSchemaObject+getSchema) ⇒ [<code>Schema</code>](#Schema)
+    * [.getObjectIdentifier()](#AbstractSchemaObject+getObjectIdentifier)
 
+<a name="AbstractSchemaObject+getSchema"></a>
+
+### abstractSchemaObject.getSchema() ⇒ [<code>Schema</code>](#Schema)
+<p>Returns Schema  object that the current object belongs to</p>
+
+**Kind**: instance method of [<code>AbstractSchemaObject</code>](#AbstractSchemaObject)  
+<a name="AbstractSchemaObject+getObjectIdentifier"></a>
+
+### abstractSchemaObject.getObjectIdentifier()
+**Kind**: instance method of [<code>AbstractSchemaObject</code>](#AbstractSchemaObject)  
 <a name="AbstractSchemaObject+getSchema"></a>
 
 ### abstractSchemaObject.getSchema() ⇒ [<code>Schema</code>](#Schema)
@@ -3092,6 +3971,15 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.dbms](#DataBase+dbms) : <code>string</code>
     * [.propDefs](#DataBase+propDefs) : [<code>PropDefCollection</code>](#PropDefCollection)
     * [.childrenDefs](#DataBase+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.dbms](#DataBase+dbms) : <code>string</code>
+    * [.propDefs](#DataBase+propDefs) : [<code>PropDefCollection</code>](#PropDefCollection)
+    * [.childrenDefs](#DataBase+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.getCreateSql()](#DataBase+getCreateSql) ⇒ <code>string</code>
+    * [.getCalculators()](#DataBase+getCalculators)
+    * [.pluginOnTreeInitialized(config)](#DataBase+pluginOnTreeInitialized)
+    * [.pluginOnCompareObjects(old, cur, context)](#DataBase+pluginOnCompareObjects)
+    * [.getSchema(name)](#DataBase+getSchema) ⇒
+    * [.validate()](#DataBase+validate)
     * [.getCreateSql()](#DataBase+getCreateSql) ⇒ <code>string</code>
     * [.getCalculators()](#DataBase+getCalculators)
     * [.pluginOnTreeInitialized(config)](#DataBase+pluginOnTreeInitialized)
@@ -3111,6 +3999,68 @@ of the queries should affect DB state if any of the queries has failed.</p>
 
 ### dataBase.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
 **Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+dbms"></a>
+
+### dataBase.dbms : <code>string</code>
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+propDefs"></a>
+
+### dataBase.propDefs : [<code>PropDefCollection</code>](#PropDefCollection)
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+childrenDefs"></a>
+
+### dataBase.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+getCreateSql"></a>
+
+### dataBase.getCreateSql() ⇒ <code>string</code>
+<p>Returns SQL for object creation</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+getCalculators"></a>
+
+### dataBase.getCalculators()
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+<a name="DataBase+pluginOnTreeInitialized"></a>
+
+### dataBase.pluginOnTreeInitialized(config)
+<p>Executes plugins when an object is created and configured</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+
+| Param | Type |
+| --- | --- |
+| config | <code>Object</code> | 
+
+<a name="DataBase+pluginOnCompareObjects"></a>
+
+### dataBase.pluginOnCompareObjects(old, cur, context)
+<p>Executes plugins to provide custom object comparison when calculating changes</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+
+| Param | Type |
+| --- | --- |
+| old | <code>AbstractDbObject</code> | 
+| cur | <code>AbstractDbObject</code> | 
+| context | [<code>ChangesContext</code>](#ChangesContext) | 
+
+<a name="DataBase+getSchema"></a>
+
+### dataBase.getSchema(name) ⇒
+<p>Returns a schema object by name</p>
+
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
+**Returns**: <p>Schema</p>  
+
+| Param | Type |
+| --- | --- |
+| name | <code>string</code> | 
+
+<a name="DataBase+validate"></a>
+
+### dataBase.validate()
+**Kind**: instance method of [<code>DataBase</code>](#DataBase)  
 <a name="DataBase+getCreateSql"></a>
 
 ### dataBase.getCreateSql() ⇒ <code>string</code>
@@ -3184,7 +4134,41 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.getSqlDefinition()](#ForeignKey+getSqlDefinition)
     * [.getObjectClass()](#ForeignKey+getObjectClass)
     * [.getParentRelation()](#ForeignKey+getParentRelation)
+    * [.applyConfigProperties()](#ForeignKey+applyConfigProperties)
+    * [.getOnUpdate()](#ForeignKey+getOnUpdate) ⇒ <code>string</code>
+    * [.getOnDelete()](#ForeignKey+getOnDelete)
+    * [.getSqlDefinition()](#ForeignKey+getSqlDefinition)
+    * [.getObjectClass()](#ForeignKey+getObjectClass)
+    * [.getParentRelation()](#ForeignKey+getParentRelation)
 
+<a name="ForeignKey+applyConfigProperties"></a>
+
+### foreignKey.applyConfigProperties()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getOnUpdate"></a>
+
+### foreignKey.getOnUpdate() ⇒ <code>string</code>
+<p>Returns ON UPDATE SQL</p>
+
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getOnDelete"></a>
+
+### foreignKey.getOnDelete()
+<p>Returns ON DELETE SQL</p>
+
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getSqlDefinition"></a>
+
+### foreignKey.getSqlDefinition()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getObjectClass"></a>
+
+### foreignKey.getObjectClass()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
+<a name="ForeignKey+getParentRelation"></a>
+
+### foreignKey.getParentRelation()
+**Kind**: instance method of [<code>ForeignKey</code>](#ForeignKey)  
 <a name="ForeignKey+applyConfigProperties"></a>
 
 ### foreignKey.applyConfigProperties()
@@ -3231,7 +4215,27 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.getParentRelation()](#Index+getParentRelation)
     * [.getObjectIdentifier()](#Index+getObjectIdentifier)
     * [.getSqlDefinition()](#Index+getSqlDefinition)
+    * [.applyConfigProperties()](#Index+applyConfigProperties)
+    * [.getParentRelation()](#Index+getParentRelation)
+    * [.getObjectIdentifier()](#Index+getObjectIdentifier)
+    * [.getSqlDefinition()](#Index+getSqlDefinition)
 
+<a name="Index+applyConfigProperties"></a>
+
+### index.applyConfigProperties()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getParentRelation"></a>
+
+### index.getParentRelation()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getObjectIdentifier"></a>
+
+### index.getObjectIdentifier()
+**Kind**: instance method of [<code>Index</code>](#Index)  
+<a name="Index+getSqlDefinition"></a>
+
+### index.getSqlDefinition()
+**Kind**: instance method of [<code>Index</code>](#Index)  
 <a name="Index+applyConfigProperties"></a>
 
 ### index.applyConfigProperties()
@@ -3254,6 +4258,22 @@ of the queries should affect DB state if any of the queries has failed.</p>
 <p>Postgres plugin descriptor</p>
 
 **Kind**: global class  
+
+* [PostgreSqlPlugin](#PostgreSqlPlugin)
+    * [.init(dbAsCodeConfig)](#PostgreSqlPlugin+init)
+    * [.init(dbAsCodeConfig)](#PostgreSqlPlugin+init)
+
+<a name="PostgreSqlPlugin+init"></a>
+
+### postgreSqlPlugin.init(dbAsCodeConfig)
+<p>Initialize plugin descriptor with the DbAsCode configuration</p>
+
+**Kind**: instance method of [<code>PostgreSqlPlugin</code>](#PostgreSqlPlugin)  
+
+| Param | Type |
+| --- | --- |
+| dbAsCodeConfig | [<code>DbAsCodeConfig</code>](#DbAsCodeConfig) | 
+
 <a name="PostgreSqlPlugin+init"></a>
 
 ### postgreSqlPlugin.init(dbAsCodeConfig)
@@ -3283,7 +4303,27 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.getParentRelation()](#PrimaryKey+getParentRelation)
     * [.getObjectClass()](#PrimaryKey+getObjectClass)
     * [.getSqlDefinition()](#PrimaryKey+getSqlDefinition)
+    * [.applyConfigProperties()](#PrimaryKey+applyConfigProperties)
+    * [.getParentRelation()](#PrimaryKey+getParentRelation)
+    * [.getObjectClass()](#PrimaryKey+getObjectClass)
+    * [.getSqlDefinition()](#PrimaryKey+getSqlDefinition)
 
+<a name="PrimaryKey+applyConfigProperties"></a>
+
+### primaryKey.applyConfigProperties()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getParentRelation"></a>
+
+### primaryKey.getParentRelation()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getObjectClass"></a>
+
+### primaryKey.getObjectClass()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
+<a name="PrimaryKey+getSqlDefinition"></a>
+
+### primaryKey.getSqlDefinition()
+**Kind**: instance method of [<code>PrimaryKey</code>](#PrimaryKey)  
 <a name="PrimaryKey+applyConfigProperties"></a>
 
 ### primaryKey.applyConfigProperties()
@@ -3313,6 +4353,15 @@ of the queries should affect DB state if any of the queries has failed.</p>
 | memberOf | <code>Array.&lt;string&gt;</code> | 
 | isClient | <code>boolean</code> | 
 
+
+* [Role](#Role)
+    * [.getSqlDefinition()](#Role+getSqlDefinition)
+    * [.getSqlDefinition()](#Role+getSqlDefinition)
+
+<a name="Role+getSqlDefinition"></a>
+
+### role.getSqlDefinition()
+**Kind**: instance method of [<code>Role</code>](#Role)  
 <a name="Role+getSqlDefinition"></a>
 
 ### role.getSqlDefinition()
@@ -3335,6 +4384,10 @@ of the queries should affect DB state if any of the queries has failed.</p>
 
 * [Schema](#Schema)
     * [.childrenDefs](#Schema+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.childrenDefs](#Schema+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.tableExists(name)](#Schema+tableExists) ⇒ <code>boolean</code>
+    * [.getTable(name)](#Schema+getTable) ⇒ <code>\*</code>
+    * [.getCalculators()](#Schema+getCalculators)
     * [.tableExists(name)](#Schema+tableExists) ⇒ <code>boolean</code>
     * [.getTable(name)](#Schema+getTable) ⇒ <code>\*</code>
     * [.getCalculators()](#Schema+getCalculators)
@@ -3343,6 +4396,36 @@ of the queries should affect DB state if any of the queries has failed.</p>
 
 ### schema.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
 **Kind**: instance property of [<code>Schema</code>](#Schema)  
+<a name="Schema+childrenDefs"></a>
+
+### schema.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>Schema</code>](#Schema)  
+<a name="Schema+tableExists"></a>
+
+### schema.tableExists(name) ⇒ <code>boolean</code>
+<p>Check table exists by name.</p>
+
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+
+| Param |
+| --- |
+| name | 
+
+<a name="Schema+getTable"></a>
+
+### schema.getTable(name) ⇒ <code>\*</code>
+<p>Returns table by name</p>
+
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
+
+| Param |
+| --- |
+| name | 
+
+<a name="Schema+getCalculators"></a>
+
+### schema.getCalculators()
+**Kind**: instance method of [<code>Schema</code>](#Schema)  
 <a name="Schema+tableExists"></a>
 
 ### schema.tableExists(name) ⇒ <code>boolean</code>
@@ -3386,7 +4469,17 @@ of the queries should affect DB state if any of the queries has failed.</p>
 * [Sequence](#Sequence)
     * [.applyConfigProperties()](#Sequence+applyConfigProperties)
     * [.getSqlDefinition()](#Sequence+getSqlDefinition)
+    * [.applyConfigProperties()](#Sequence+applyConfigProperties)
+    * [.getSqlDefinition()](#Sequence+getSqlDefinition)
 
+<a name="Sequence+applyConfigProperties"></a>
+
+### sequence.applyConfigProperties()
+**Kind**: instance method of [<code>Sequence</code>](#Sequence)  
+<a name="Sequence+getSqlDefinition"></a>
+
+### sequence.getSqlDefinition()
+**Kind**: instance method of [<code>Sequence</code>](#Sequence)  
 <a name="Sequence+applyConfigProperties"></a>
 
 ### sequence.applyConfigProperties()
@@ -3415,6 +4508,10 @@ of the queries should affect DB state if any of the queries has failed.</p>
 
 * [Table](#Table)
     * [.childrenDefs](#Table+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.childrenDefs](#Table+childrenDefs) : [<code>ChildDefCollection</code>](#ChildDefCollection)
+    * [.postprocessTree()](#Table+postprocessTree)
+    * [.setupDependencies()](#Table+setupDependencies)
+    * [.getSqlDefinition()](#Table+getSqlDefinition)
     * [.postprocessTree()](#Table+postprocessTree)
     * [.setupDependencies()](#Table+setupDependencies)
     * [.getSqlDefinition()](#Table+getSqlDefinition)
@@ -3423,6 +4520,24 @@ of the queries should affect DB state if any of the queries has failed.</p>
 
 ### table.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
 **Kind**: instance property of [<code>Table</code>](#Table)  
+<a name="Table+childrenDefs"></a>
+
+### table.childrenDefs : [<code>ChildDefCollection</code>](#ChildDefCollection)
+**Kind**: instance property of [<code>Table</code>](#Table)  
+<a name="Table+postprocessTree"></a>
+
+### table.postprocessTree()
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+setupDependencies"></a>
+
+### table.setupDependencies()
+<p>Fills the dependencies list of this object</p>
+
+**Kind**: instance method of [<code>Table</code>](#Table)  
+<a name="Table+getSqlDefinition"></a>
+
+### table.getSqlDefinition()
+**Kind**: instance method of [<code>Table</code>](#Table)  
 <a name="Table+postprocessTree"></a>
 
 ### table.postprocessTree()
@@ -3458,7 +4573,34 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.getParentRelation()](#Trigger+getParentRelation)
     * [.getObjectIdentifier()](#Trigger+getObjectIdentifier)
     * [.getSqlTriggerType()](#Trigger+getSqlTriggerType) ⇒ <code>string</code>
+    * [.applyConfigProperties()](#Trigger+applyConfigProperties)
+    * [.getSqlDefinition()](#Trigger+getSqlDefinition)
+    * [.getParentRelation()](#Trigger+getParentRelation)
+    * [.getObjectIdentifier()](#Trigger+getObjectIdentifier)
+    * [.getSqlTriggerType()](#Trigger+getSqlTriggerType) ⇒ <code>string</code>
 
+<a name="Trigger+applyConfigProperties"></a>
+
+### trigger.applyConfigProperties()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getSqlDefinition"></a>
+
+### trigger.getSqlDefinition()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getParentRelation"></a>
+
+### trigger.getParentRelation()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getObjectIdentifier"></a>
+
+### trigger.getObjectIdentifier()
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
+<a name="Trigger+getSqlTriggerType"></a>
+
+### trigger.getSqlTriggerType() ⇒ <code>string</code>
+<p>Returns SQL trigger type</p>
+
+**Kind**: instance method of [<code>Trigger</code>](#Trigger)  
 <a name="Trigger+applyConfigProperties"></a>
 
 ### trigger.applyConfigProperties()
@@ -3499,7 +4641,27 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.getParentRelation()](#UniqueKey+getParentRelation)
     * [.getObjectClass()](#UniqueKey+getObjectClass)
     * [.getSqlDefinition()](#UniqueKey+getSqlDefinition)
+    * [.applyConfigProperties()](#UniqueKey+applyConfigProperties)
+    * [.getParentRelation()](#UniqueKey+getParentRelation)
+    * [.getObjectClass()](#UniqueKey+getObjectClass)
+    * [.getSqlDefinition()](#UniqueKey+getSqlDefinition)
 
+<a name="UniqueKey+applyConfigProperties"></a>
+
+### uniqueKey.applyConfigProperties()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getParentRelation"></a>
+
+### uniqueKey.getParentRelation()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getObjectClass"></a>
+
+### uniqueKey.getObjectClass()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
+<a name="UniqueKey+getSqlDefinition"></a>
+
+### uniqueKey.getSqlDefinition()
+**Kind**: instance method of [<code>UniqueKey</code>](#UniqueKey)  
 <a name="UniqueKey+applyConfigProperties"></a>
 
 ### uniqueKey.applyConfigProperties()
@@ -3527,6 +4689,35 @@ of the queries should affect DB state if any of the queries has failed.</p>
     * [.event()](#PostgraphilePlugin+event)
     * [.onTreeInitialized(db)](#PostgraphilePlugin+onTreeInitialized)
     * [.applyOmitMixin(inst)](#PostgraphilePlugin+applyOmitMixin)
+    * [.event()](#PostgraphilePlugin+event)
+    * [.onTreeInitialized(db)](#PostgraphilePlugin+onTreeInitialized)
+    * [.applyOmitMixin(inst)](#PostgraphilePlugin+applyOmitMixin)
+
+<a name="PostgraphilePlugin+event"></a>
+
+### postgraphilePlugin.event()
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+<a name="PostgraphilePlugin+onTreeInitialized"></a>
+
+### postgraphilePlugin.onTreeInitialized(db)
+<p>Executed on a DB tree initialization completion</p>
+
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+
+| Param | Type |
+| --- | --- |
+| db | [<code>DataBase</code>](#DataBase) | 
+
+<a name="PostgraphilePlugin+applyOmitMixin"></a>
+
+### postgraphilePlugin.applyOmitMixin(inst)
+<p>Applies Table class mixin</p>
+
+**Kind**: instance method of [<code>PostgraphilePlugin</code>](#PostgraphilePlugin)  
+
+| Param | Type |
+| --- | --- |
+| inst | [<code>Table</code>](#Table) \| <code>Column</code> \| [<code>PrimaryKey</code>](#PrimaryKey) | 
 
 <a name="PostgraphilePlugin+event"></a>
 
@@ -3803,6 +4994,57 @@ of the queries should affect DB state if any of the queries has failed.</p>
 | --- |
 | sql | 
 
+<a name="escapeRawText"></a>
+
+## escapeRawText(s)
+<p>Escape text to insert to DB (not adds single quotes)</p>
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| s | <code>string</code> | 
+
+<a name="escapeString"></a>
+
+## escapeString(s)
+<p>Escape string to insert to DB (adds single quotes)</p>
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| s | <code>string</code> | 
+
+<a name="parsePgConfig"></a>
+
+## parsePgConfig(vars, dbAsCodeConfig)
+<p>Parse DbAsCode config and fill the vars object with the corresponding values</p>
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| vars | <code>object</code> | 
+| dbAsCodeConfig | [<code>DbAsCodeConfig</code>](#DbAsCodeConfig) | 
+
+<a name="parseTypedef"></a>
+
+## parseTypedef(def) ⇒ [<code>ArgumentTypeDef</code>](#ArgumentTypeDef)
+<p>Parse type definition of a type argument or function argument</p>
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| def | <code>string</code> \| [<code>ArgumentTypeDef</code>](#ArgumentTypeDef) | 
+
+<a name="getRowLevelSecurity"></a>
+
+## getRowLevelSecurity() ⇒ <code>object</code>
+<p>Returns row level security data combined with data inherited from ancestor</p>
+
+**Kind**: global function  
 <a name="processCalculations"></a>
 
 ## processCalculations(obj, args) ⇒ <code>\*</code>
@@ -4078,6 +5320,30 @@ of the queries should affect DB state if any of the queries has failed.</p>
 | --- | --- |
 | path | <code>string</code> | 
 | message | <code>string</code> | 
+
+<a name="FKeyRef"></a>
+
+## FKeyRef : <code>Object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| schema | <code>string</code> | 
+| table | <code>string</code> | 
+| column | <code>string</code> | 
+
+<a name="ArgumentTypeDef"></a>
+
+## ArgumentTypeDef : <code>object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| schema | <code>string</code> \| <code>undefined</code> | 
+| type | <code>string</code> | 
+| isArray | <code>boolean</code> | 
 
 <a name="SqlExecResult"></a>
 

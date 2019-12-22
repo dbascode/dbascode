@@ -10,7 +10,7 @@
   "scripts": {
     "app": "node --experimental-modules --es-module-specifier-resolution=node app.mjs",
     "fix-modules": "node --experimental-modules --es-module-specifier-resolution=node fix-modules.mjs",
-    "api-docs": "jsdoc2md -c jsdoc2md.json ./src/*/*.mjs > API.md",
+    "api-docs": "jsdoc2md -c jsdoc2md.json \"./src/**/!(__tests__)/*.mjs\" > API.md",
     "compile": "babel app.mjs -o lib/app.js && babel src -d lib/src --ignore \"src/**/__tests__/*\" && babel node_modules/lodash-es -d lib/node_modules/lodash-es",
     "publish-npm": "yarn fix-modules && yarn test && yarn coverage && yarn compile && npm publish",
     "test": "jest",

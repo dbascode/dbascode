@@ -117,6 +117,68 @@ $ DBAC_DB_VAR="host=some.host|port=5432|password=123" DBAC_DBMS=postgres DBAC_PL
 
 Options `--plugins` and `--db-var` should be passed as single variables with list values separated by the `|` character.
 
+## Configuration Syntax
+
+State configuration is written in Yaml files to allow convenient readability by humans.
+
+DbAsCode is plugin-driven and most of the functionality is implemented in plugins. There are some very 
+basic common configuration options.
+
+Configuration consists of DbObjects and their properties. Properties can contain scalars, arrays, objects, 
+and another DbObjects. For example, a table may contain some scalar properties like table comment and default encoding.
+It also contain a list of columns. In this case we can represent the table as an instance of a DbObject with scalar 
+properties `comment` and `encoding`, and with an array property `columns` which contains columns (which are also 
+DbObject instances).
+
+For the details of the possible configuration options refer to the [API docs](API.md). 
+
+Also, check docs of particular plugins:
+
+- [PostgreSQL](src/plugins/db-postgres/README.md)
+
+
+## Examples
+
+```yaml
+# Schema for DbAsCode state storage
+schemas:
+  dbascode:
+    tables:
+      state:
+        comment: Current state storage for PgAsCode
+        omit: true
+        columns:
+          id:
+            type: int
+          date:
+            type: timestamp with time zone
+            default:
+              value: now()
+              raw: true
+          state:
+            type: text
+          migration:
+            type: text
+            allow_null: true
+          dbascode_version:
+            type: int
+          plugin_version:
+            type: int
+        indexes:
+          - date
+          - dbascode_version
+          - plugin_version
+        primary_key: id 
+```
+
+## Plugins development
+
+[See plugins development documentation](PLUGIN-DEV.md).
+
+## API
+
+[See the API docs](API.md).
+
 ## License
 
 [MIT](LICENSE.md)
