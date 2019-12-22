@@ -275,7 +275,7 @@ export default class DbAsCode {
    */
   getMigrationSql (changes, prevTree, curTree) {
     let sqlDump = this.changes.getChangesSql(prevTree, curTree, changes)
-    if (changes.hasChanges()) {
+    if (changes.hasSqlChanges()) {
       if (sqlDump.trim().length === 0) {
         throw new Error('Changes in state detected, but SQL dump is empty.')
       }

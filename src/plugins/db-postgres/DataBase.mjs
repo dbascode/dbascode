@@ -71,28 +71,6 @@ export default class DataBase extends AbstractDataBase {
   }
 
   /**
-   * Executes plugins when an object is created and configured
-   * @param {Object} config
-   */
-  pluginOnTreeInitialized(config = {}) {
-    for (const plugin of Object.values(this._plugins)) {
-      plugin.onTreeInitialized(this)
-    }
-  }
-
-  /**
-   * Executes plugins to provide custom object comparison when calculating changes
-   * @param {AbstractDbObject} old
-   * @param {AbstractDbObject} cur
-   * @param {ChangesContext} context
-   */
-  pluginOnCompareObjects (old, cur, context) {
-    for (const plugin of Object.values(this._plugins)) {
-      plugin.onCompareObjects(old, cur, context)
-    }
-  }
-
-  /**
    * Returns a schema object by name
    * @param {string} name
    * @returns Schema
@@ -113,5 +91,16 @@ export default class DataBase extends AbstractDataBase {
       return
     }
     super.validate(previous, context)
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getAlterPropSql (compared, propName, oldValue, curValue) {
+    if (propName === 'dbmsVersion') {
+      return undefined;
+    } else {
+      return super.getAlterPropSql(compared, propName, oldValue, curValue)
+    }
   }
 }

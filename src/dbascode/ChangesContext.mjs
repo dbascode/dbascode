@@ -10,10 +10,20 @@ import isArray from 'lodash-es/isArray'
 import { circularSafeStringify } from './utils'
 
 /**
+ * @typedef ChangeItem
+ * @property {string} path
+ * @property {*} old
+ * @property {*} cur
+ * @property {boolean} allowEmptySql
+ */
+/**
  * Context to store changes between two DB trees.
  */
 export default class ChangesContext {
   stack = []
+  /**
+   * @type {ChangeItem[]}
+   */
   changes = []
   path = []
   deep = false
@@ -43,8 +53,9 @@ export default class ChangesContext {
   }
 
   addChange (old, cur) {
-    const path = this.path.join('')
-    this.changes.push([path[0] === '.' ? path.substr(1) : path, old, cur])
+    let path = this.path.join('')
+    path = path[0] === '.' ? path.substr(1) : path
+    this.changes.push({path, old, cur})
   }
 
   /**
@@ -54,11 +65,24 @@ export default class ChangesContext {
    * @param {*} cur
    */
   addChangeWithPath (path, old, cur) {
-    this.changes.push([path[0] === '.' ? path.substr(1) : path, old, cur])
+    path[0] === '.' ? path.substr(1) : path
+    this.changes.push({path, old, cur})
   }
 
+  /**
+   * Do we have any changes.
+   * @returns {boolean}
+   */
   hasChanges () {
     return this.changes.length > 0
+  }
+
+  /**
+   * Do we have changes that must be reflected in SQL.
+   * @returns {boolean}
+   */
+  hasSqlChanges () {
+    return this.changes.filter(item => !item.allowEmptySql).length > 0
   }
 
   prettyPrint (colored) {
@@ -72,7 +96,7 @@ export default class ChangesContext {
     const printVal = v => (isObject(v) || isArray(v) ? "\n" : '') + circularSafeStringify(v, true)
 
     const result = []
-    for (const [path, old, cur] of this.changes) {
+    for (const {path, old, cur} of this.changes) {
       if (old && cur) {
         result.push(
           `${coloredText(`~ ${path}`, editColor)}: ${coloredText(printVal(old), editColor)} => ${coloredText(printVal(cur), editColor)}\n`

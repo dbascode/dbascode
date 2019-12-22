@@ -553,7 +553,7 @@ export default class AbstractDbObject {
   /**
    * Returns SQL for object update
    * @param {AbstractDbObject} compared
-   * @param {object} changes - dot-separated paths to the changed properties with ald and new values (empty if the whole object changed)
+   * @param {Object.<string, ChangedPropertyDef>} changes - dot-separated paths to the changed properties with old and new values (empty if the whole object changed)
    * @returns {string}
    */
   getAlterSql (compared, changes) {
@@ -577,6 +577,8 @@ export default class AbstractDbObject {
             result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', false)} ${s};`)
           }
         }
+      } else {
+        change.allowEmptySql()
       }
     }
     if (dropAndRecreate) {
@@ -592,7 +594,7 @@ export default class AbstractDbObject {
    * @param {string} propName
    * @param {*} oldValue
    * @param {*} curValue
-   * @return {string|string[]}
+   * @return {string|string[]|undefined}
    */
   getAlterPropSql (compared, propName, oldValue, curValue) {
     return '';

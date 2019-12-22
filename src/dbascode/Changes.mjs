@@ -12,6 +12,12 @@ import { joinSql, parseArrayProp } from './utils'
 import isFunction from 'lodash-es/isFunction'
 
 /**
+ * @typedef {object} ChangedPropertyDef
+ * @property old
+ * @property cur
+ * @property {function} allowEmptySql
+ */
+/**
  * Changes calculation routines.
  */
 export default class Changes {
@@ -23,7 +29,7 @@ export default class Changes {
    */
   getChangesSql (previous, current, changes) {
     const changedObjects = {}, permissionChangedObjects = {}, commentChangedObjects = {}
-    const addChange = (list, objPath, oldObj, curObj) => {
+    const addChange = (list, objPath, oldObj, curObj, changeItem) => {
       if (!list[objPath]) {
         const changeObj = {
           /**
@@ -38,13 +44,14 @@ export default class Changes {
         }
         changeObj.creating = () => changeObj.create = true
         changeObj.dropping = () => changeObj.drop = true
-        changeObj.changeProp = (path, old, cur) => changeObj.changedProps[path] = { old, cur }
+        changeObj.changeProp = (path, old, cur) => changeObj.changedProps[path] = { old, cur, allowEmptySql: () => changeItem.allowEmptySql = true }
         list[objPath] = changeObj
       }
       return list[objPath]
     }
 
-    for (const [path, old, cur] of changes.changes) {
+    for (const changeItem of changes.changes) {
+      const {path, old, cur} = changeItem
       let objCur = current
       let objOld = previous
       let lastDbObjCur = objCur
@@ -74,7 +81,7 @@ export default class Changes {
 
       const isPermissionChange = (propertyPathAry[0] === 'grant' || propertyPathAry[0] === 'revoke')
       const isCommentChange = (propertyPathAry[0] === 'comment')
-      const curChange = (list) => addChange(list, objectPath, lastDbObjOld, lastDbObjCur)
+      const curChange = (list) => addChange(list, objectPath, lastDbObjOld, lastDbObjCur, changeItem)
 
       const curUndefined = lastDbObjCur === undefined
       const oldUndefined = lastDbObjOld === undefined

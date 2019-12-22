@@ -17,7 +17,7 @@ export default class AbstractDataBase extends AbstractDbObject {
    * @type {PropDefCollection}
    */
   static propDefs = new PropDefCollection([
-    new PropDef('dbmsVersion', { type: PropDef.map }),
+    new PropDef('dbmsVersion', { type: PropDef.number }),
     new PropDef('params', { type: PropDef.map }),
     ...this.propDefs.defs,
   ])
