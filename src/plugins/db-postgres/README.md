@@ -151,7 +151,7 @@ Option | Type | Default | Description
 `table` | `language` | `sql` | Function language.
 `returns` | `string` | | Return type name (in the form `schema.type` or `type`).
 `arguments` | `Object<name, type>` | | Map of function arguments. Values must be in the in the form `schema.type` or `type`.
-*`code` | `string` | | Function code. It is recommended to store function body in a separate file and include in the config using the [$file operator](README.md#Operators). 
+*`code` | `string` | | Function code. It is recommended to store function body in a separate file and include in the config using the [$file operator](/README.md#Operators). 
 `cost` | `number` | `10` | Function cost.
 `security_definer` | `boolean` | `false` | Whether to add the `SECURITY DEFINER` option.
 `stability` | `string` | `"volatile"` | The `STABILITY` option value.
