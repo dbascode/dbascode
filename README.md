@@ -90,7 +90,7 @@ $ dbascode <command> [options]
 
 Command | Description
 --------|------------
-<code>plan&nbsp;&lt;source&gt;&nbsp;[options]</code> | Compare old and new states and create a migration plan. The new state is read from the `source` file path. If the `---output` option specified, creates the plan file to be used for migration. DbAsCode will print changes in human-readable format to `stdout`. You can redirect the output to a file and save it as an artifact during CI/CD.
+<pre lang="shell script">plan&nbsp;&lt;source&gt;&nbsp;[options]</pre> | Compare old and new states and create a migration plan. The new state is read from the `source` file path. If the `---output` option specified, creates the plan file to be used for migration. DbAsCode will print changes in human-readable format to `stdout`. You can redirect the output to a file and save it as an artifact during CI/CD.
 <code>migrate&nbsp;[options]</code> | Performs migration. Either `--plan` or `--migration` options must be specified for migration. If a plan is specified, pgascode will read SQL queries to execute from it. If another migration was performed since the state file creation, the migration will fail. If a source is specified, pgascode will generate a migration plan and execute it immediately.
 
 #### Options
