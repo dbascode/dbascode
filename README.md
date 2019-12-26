@@ -95,9 +95,9 @@ Command | Description
 
 #### Options
 
-Option | Description
--------|------------
-<pre>--help</pre> | Display CLI help.
+Option              | Description
+--------------------|------------
+<pre> --help </pre> | Display CLI help.
 <pre>--version</pre> | Display the tool version.
 <pre>--db-var</pre> | Database configuration parameter (see particular DB plugin documentation). Multiple options are allowed. <br>Example:<br> `--db-var host=db.id.ap-northeast-1.rds.amazonaws.com --db-var db=mydbname --db-var user=root --db-var password=123`
 <pre>--plugin</pre> | List of plugins to be loaded. Module names to import must be provided. <br>Example:<br> `--plugin=myplugin1 --plugin=myplugin2`
