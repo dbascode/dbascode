@@ -140,7 +140,7 @@ This example assumes the following:
 - `/source` - directory in the container where the host directory `/my-project/config` is mounted making the container's path `/source/db.yml` pointing to the `/my-project/config/db.yml`.
 - `/output` - directory in the container where the host directory `/my-project/output` is mounted and where DbAsCode will save the plan. Plan will be available by the `/my-project/output/plan.json` path.
 
-## Configuration Syntax
+## Configuration
 
 State configuration is written in Yaml files to allow convenient readability by humans.
 
@@ -153,15 +153,51 @@ It also contains a list of columns. In this case, we can represent the table as 
 properties `comment` and `encoding`, and with an array property `columns` which contains columns (which are also 
 DbObject instances).
 
-For the details of the possible configuration options refer to the [API docs](API.md). 
+The following options are common for DB objects:
 
-Also, check docs of particular plugins:
+Option | Type | Description
+-------|------|------------
+`comment` | `string` | Defines text comment for the object.
+`extends` | `string` | Defines the object name to extend. There are no base extension functionality. Each plugin must implement its own logic of what exactly an object inherits from an ancestor. 
+`grant` | `<permission_object>` | Defines permissions to grant to the object.
+`revoke` | `<permission_object>` | Defines permissions to revoke from the object.
 
-- [PostgreSQL](src/plugins/db-postgres/README.md)
+The `permission_object` format:
 
-### Special Value Syntax
+```text
+{
+  grant | revoke: {
+    <operation_name>: <role name> | <role name>[]
+  }
+}
+```
 
-You can use the following special values syntax:
+- `operation_name` - the name of operation granted or revoked for a user or role. Examples: `all`, `select`, `update`, `execute`, etc.
+- `role name` - string name of a role or a user. You can pass either a single role name or an array of roles.
+
+All objects describing databases itself (root state config objects) also have the following options:
+
+Option | Type | Description
+-------|------|------------
+`dbms` | `string` | The name of the database management system. It is used to match a proper plugin to handle the configuration. Either configuration value or CLI option or environment variable must be provided.
+`dbms_version` | `number` | Defines the database engine version. Should be used by a plugin for proper configuration verifications and migrations depending on the version.
+
+
+Please read documentation of the following plugins to get what options they allow to use:
+
+- Database engines
+  - [PostgreSQL](src/plugins/db-postgres/README.md) (built-in)
+  - PostgreSQL plugins
+    - [RowLevelSecurity](src/plugins/tools-postgres-rls/README.md) (built-in) - Manage row-level security on tables.
+    - [Postgraphile](src/plugins/tools-postgres-postgraphile/README.md) (built-in) - Add support for some [Postgraphile](https://www.graphile.org/postgraphile/) features.
+    - [DefaultRows](src/plugins/tools-postgres-default-rows/README.md) (built-in) - Define default rows automatically inserted on table creation.
+
+Built-in plugins are loaded automatically.
+
+<a name="Operators"></a>
+### Operators in values 
+
+You can use the following operators to substitute dynamic values:
 
 Operator | Description | Example
 ---------|-------------|--------
@@ -171,36 +207,57 @@ Operator | Description | Example
 
 ## Examples
 
+PostgreSQL:
+
 ```yaml
-# Schema for DbAsCode state storage
+dbms: postgresql
+dbms_version: 12
+extensions:
+  - plv8
+roles: 
+    sys_all:
+    sys_admin:
+      member_of: sys_all
+      is_client: true
+    sys_user:
+      member_of: sys_all
+      is_client: true
+    sys_anonymous:
+      member_of: sys_all
+      is_client: true
 schemas:
-  dbascode:
+  app-public:
     tables:
-      state:
-        comment: Current state storage for PgAsCode
-        omit: true
+      base_table:
+        comment: 'Base table for all other tables'
         columns:
           id:
-            type: int
-          date:
+            type: bigint
+            autoincrement: true
+      
+      user:
+        comment: 'Users in the system'
+        extends: base_table
+        columns:
+          name:
+            type: text
+          email:
+            type: text
+            allow_null: true
+          registreded_at:
             type: timestamp with time zone
             default:
               value: now()
               raw: true
-          state:
-            type: text
-          migration:
-            type: text
-            allow_null: true
-          dbascode_version:
-            type: int
-          plugin_version:
-            type: int
         indexes:
-          - date
-          - dbascode_version
-          - plugin_version
-        primary_key: id 
+          - name
+        unique_keys:
+          - email
+        grant:
+          select: [sys_user, sys_admin]
+          insert: [sys_admin]
+        revoke: 
+          all: sys_anonymous
 ```
 
 ## Plugins development

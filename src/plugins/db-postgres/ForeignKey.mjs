@@ -92,4 +92,18 @@ export default class ForeignKey extends AbstractSchemaObject {
   getParentRelation (operation) {
     return 'ON'
   }
+
+  /**
+   * @inheritDoc
+   */
+  validate (previous, context) {
+    const onValues = ['restrict', 'cascade']
+    if (onValues.indexOf(this.onDelete.toLowerCase()) < 0) {
+      context.addError(this, "on_delete must be `restrict` or `cascade`")
+    }
+    if (onValues.indexOf(this.onUpdate.toLowerCase()) < 0) {
+      context.addError(this, "on_update must be `restrict` or `cascade`")
+    }
+    super.validate(previous, context)
+  }
 }

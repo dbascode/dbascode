@@ -60,6 +60,22 @@ export default class Trigger extends AbstractSchemaObject {
    * @return {string}
    */
   getSqlTriggerType() {
-    return (`${this.when} ${this.operation}`).toUpperCase()
+    const when = this.when === 'instead_of' ? 'instead of' : this.when
+    return (`${when} ${this.operation}`).toUpperCase()
+  }
+
+  /**
+   * @inheritDoc
+   */
+  validate (previous, context) {
+    const operations = ['insert', 'update', 'select']
+    if (operations.indexOf(this.operation.toLowerCase()) < 0) {
+      context.addError(this, "Trigger operation must be one of the following: `insert`, `update`, `select`")
+    }
+    const when = ['before', 'after', 'instead_of']
+    if (when.indexOf(this.when.toLowerCase()) < 0) {
+      context.addError(this, "Trigger event type must be one of the following: `before`, `after`, or `instead_of`")
+    }
+    super.validate(previous, context)
   }
 }
