@@ -3,7 +3,7 @@
  * @copyright 2019 Alex Pravdin
  */
 import AbstractDbObject from './AbstractDbObject'
-import { dispose } from './utils'
+import { dispose } from './utils';
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
 

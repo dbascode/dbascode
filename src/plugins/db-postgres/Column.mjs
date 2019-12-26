@@ -10,8 +10,8 @@ import PrimaryKey from './PrimaryKey'
 import ForeignKey from './ForeignKey'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
-import { escapeString } from './utils'
-import { replaceAll } from '../../dbascode/utils'
+import { escapeString } from './utils';
+import { replaceAll } from '../../dbascode/utils';
 
 /**
  * Column in a table

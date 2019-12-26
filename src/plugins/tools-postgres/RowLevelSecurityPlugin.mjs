@@ -7,7 +7,14 @@ import { processCalculations } from '../../dbascode/AbstractDbObject'
 import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
 
 /**
- * Add row-level security functionality
+ * @typedef {object} RowLevelSecurityMixin Mixin applied to tables with the row level security routines.
+ * @extends Table
+ * @property {object} defaultAcl
+ * @property {object} rowLevelSecurity
+ * @method getRowLevelSecurity Returns row level security data combined with data inherited from ancestor
+ */
+/**
+ * Row-level security functionality plugin
  */
 class RowLevelSecurityPlugin extends PluginDescriptor {
   /**
@@ -31,7 +38,7 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
       const schema = db.schemas[schemaName]
       for (const tableName of Object.keys(schema.tables)) {
         const table = schema.tables[tableName]
-        this.applyOmitMixin(table)
+        this.applyMixin(table)
       }
     }
   }
@@ -40,14 +47,14 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
    * Applies Table class mixin
    * @param {Table} inst
    */
-  applyOmitMixin(inst) {
+  applyMixin(inst) {
     const config = processCalculations(inst, inst._rawConfig)
     const rowLevelSecurity = {}
     for (const op of Object.keys(config.row_level_security || {})) {
       rowLevelSecurity[op] = config.row_level_security[op]
     }
 
-    inst.applyMixin({
+    const mixin = {
       defaultAcl: config.default_acl || [],
       rowLevelSecurity: rowLevelSecurity,
 
@@ -87,7 +94,8 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         }
         return result
       },
-    })
+    }
+    inst.applyMixin(mixin)
   }
 }
 

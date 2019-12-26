@@ -2,15 +2,15 @@
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
  */
-import AbstractDbObject from '../../dbascode/AbstractDbObject'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
+import AbstractSchemaObject from './AbstractSchemaObject'
 
 /**
  * Unique key of a table
  * @property {string[]} columns
  */
-export default class UniqueKey extends AbstractDbObject {
+export default class UniqueKey extends AbstractSchemaObject {
 
   static propDefs = new PropDefCollection([
     new PropDef('columns', { type: PropDef.array, isDefault: true }),

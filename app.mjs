@@ -4,18 +4,12 @@
  * @copyright 2019 Alex Pravdin
  */
 import fs from 'fs'
-import path from 'path'
 import yargs from 'yargs'
-import { fileURLToPath } from 'url'
 import DbAsCode from './src/dbascode/DbAsCode'
 import PostgreSqlPlugin from './src/plugins/db-postgres/PostgreSqlPlugin'
 import PostgraphilePlugin from './src/plugins/tools-postgres/PostgraphilePlugin'
 import RowLevelSecurityPlugin from './src/plugins/tools-postgres/RowLevelSecurityPlugin'
 import DefaultRowsPlugin from './src/plugins/tools-postgres/DefaultRowsPlugin'
-
-// const __filename = fileURLToPath(import.meta.url)
-// const __dirname = path.dirname(__filename)
-// const projectDir = __dirname
 
 const migrateCmd = 'migrate'
 const planCmd = 'plan'
@@ -133,9 +127,6 @@ async function main() {
     case migrateCmd: {
       console.log(`Running command ${command}`)
       await dbAsCode.initializePlugins()
-      /**
-       * @var {State} plan
-       */
       let plan
       if (!cliConfig.plan && !cliConfig.source) {
         throw new Error('Either `plan` or `source` option must be specified to migrate.')

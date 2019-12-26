@@ -1,4 +1,7 @@
 {
+    "source": {
+        "includePattern": "\\.?js$"
+    },
     "plugins": [
         "plugins/markdown",
         "node_modules/jsdoc-typeof-plugin",

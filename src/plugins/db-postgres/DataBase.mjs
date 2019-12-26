@@ -3,7 +3,6 @@
  * @copyright 2019 Alex Pravdin
  */
 
-import AbstractDbObject from '../../dbascode/AbstractDbObject'
 import Role from './Role'
 import Schema from './Schema'
 import ChildDef from '../../dbascode/ChildDef'

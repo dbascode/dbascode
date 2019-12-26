@@ -184,9 +184,6 @@ export default class DbAsCode {
       this.config.source,
     ])
     const dbClass = dbPlugin.dbClass
-    /**
-     * @var {AbstractDataBase} prevTree
-     */
     const prevTree = dbClass.createFromState(
       dbClass,
       prevState.raw,
@@ -196,9 +193,6 @@ export default class DbAsCode {
     if (prevTree) {
       this.pluginEvent(TREE_INITIALIZED, [prevTree])
     }
-    /**
-     * @var {AbstractDataBase} curTree
-     */
     const curTree = dbClass.createFromState(
       dbClass,
       curStateRaw,

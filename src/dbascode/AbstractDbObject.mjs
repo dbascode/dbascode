@@ -5,7 +5,14 @@
 import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
 import difference from 'lodash-es/difference'
-import {getPropValue,joinSql,  objectDifferenceKeys,objectIntersectionKeys,parseArrayProp,replaceAll} from './utils'
+import {
+  getPropValue,
+  joinSql,
+  objectDifferenceKeys,
+  objectIntersectionKeys,
+  parseArrayProp,
+  replaceAll,
+} from './utils';
 import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
 import PropDefCollection from './PropDefCollection'
@@ -13,7 +20,7 @@ import PropDef from './PropDef'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
-import { escapeRawText } from '../plugins/db-postgres/utils'
+import { escapeRawText } from '../plugins/db-postgres/utils';
 
 /**
  * Base class for all DB objects.
@@ -65,6 +72,7 @@ export default class AbstractDbObject {
   /**
    * List of properties definitions
    * @type {PropDefCollection}
+   * @static
    */
   static propDefs = new PropDefCollection([
     new PropDef('comment'),
@@ -264,10 +272,10 @@ export default class AbstractDbObject {
    * @returns {string}
    */
   getCommentChangesSql (previous) {
-    const comment = this.getComment();
-    const prevComment = previous ? previous.getComment() : ''
+    const comment = this.getQuotedComment();
+    const prevComment = previous ? previous.getQuotedComment() : ''
     if (prevComment !== comment) {
-      return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.getComment()}';`
+      return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.getQuotedComment()}';`
     }
   }
 
@@ -275,7 +283,7 @@ export default class AbstractDbObject {
    * Returns this object comment
    * @returns {string}
    */
-  getComment () {
+  getQuotedComment () {
     return this.comment ? escapeRawText(this.comment) : ''
   }
 
