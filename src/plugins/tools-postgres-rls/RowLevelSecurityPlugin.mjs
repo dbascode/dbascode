@@ -79,9 +79,45 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
             const checkType = op === 'insert' ? 'WITH CHECK' : 'USING'
             addSql.push(`CREATE POLICY "${inst.getParentedNameFlat()}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
           }
-          if (inst.defaultAcl.length > 0) {
+          const defaultAcl = inst.defaultAcl
+          if (defaultAcl && defaultAcl.length > 0) {
             const defActTable = inst.getSchema().getTable('default_acl')
-            addSql.push(`INSERT INTO ${defActTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ('${inst.name}', '${JSON.stringify(inst.defaultAcl)}'::json);`)
+            const aclSql = []
+            const opMap = {
+              select: 0b0001,
+              update: 0b0010,
+              delete: 0b0100,
+              insert: 0b1000,
+              all: 0b1111,
+            }
+            for (const rule of defaultAcl) {
+              let mask = 0, perm = 0
+              for (const op of Array.isArray(rule.allow) ? rule.allow : [rule.allow]) {
+                const bits = opMap[op]
+                if (bits) {
+                  mask = mask | bits
+                  perm = perm | bits
+                }
+              }
+              for (const op of Array.isArray(rule.deny) ? rule.deny : [rule.deny]) {
+                const bits = opMap[op]
+                if (bits) {
+                  mask = mask | bits
+                  perm = perm & !bits
+                }
+              }
+              if (mask !== 0) {
+                const pad = '0000'
+                const maskStr = mask.toString(2)
+                const permStr = perm.toString(2)
+                const sqlData = []
+                sqlData.push(`'${rule.role}'`);
+                sqlData.push(pad.substring(0, pad.length - maskStr.length) + maskStr)
+                sqlData.push(pad.substring(0, pad.length - permStr.length) + permStr)
+                aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().getQuotedName()}.row_acl`)
+              }
+            }
+            addSql.push(`INSERT INTO ${defActTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.name}', ARRAY[${aclSql.join(', ')}] );`)
           }
         }
         return origMethod(operation, addSql)
