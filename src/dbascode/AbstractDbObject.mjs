@@ -686,6 +686,9 @@ export default class AbstractDbObject {
       const pathItem = pathAry[i]
       const prop = parseArrayProp(pathItem)
       child = parent[prop.name]
+      if (child === undefined) {
+        return undefined
+      }
       if (prop.index !== null) {
         child = child[prop.index]
       }
