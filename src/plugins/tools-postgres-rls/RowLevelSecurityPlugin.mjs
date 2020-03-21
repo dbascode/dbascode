@@ -130,6 +130,19 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         }
         return result
       },
+
+      validate (origMethod, previous, context) {
+        origMethod(previous, context)
+          const defaultAcl = inst.defaultAcl
+          if (defaultAcl && defaultAcl.length > 0) {
+            for (let i = 0; i < defaultAcl.length; i++) {
+              const rule = defaultAcl[i]
+              if (!rule.role) {
+                context.addError(inst, `Table ${inst.getParentedName()} default ACL rule ${i}: role name must be set.`)
+              }
+            }
+          }
+      },
     }
     inst.applyMixin(mixin)
   }
