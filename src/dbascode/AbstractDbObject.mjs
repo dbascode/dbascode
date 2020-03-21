@@ -357,9 +357,14 @@ export default class AbstractDbObject {
         // calls, so skip them here.
         if (!child.getCreatedByParent()) {
           result.push(child.getCreateSqlWithChildren());
+        } else {
+          result.push(child.getCommentChangesSql(undefined))
+          result.push(child.getPermissionsChangesSql(undefined))
         }
       }
     }
+    result.push(this.getCommentChangesSql(undefined))
+    result.push(this.getPermissionsChangesSql(undefined))
     return joinSql(result)
   }
 
@@ -790,7 +795,7 @@ export default class AbstractDbObject {
         this[prop] = (...args) => {
           return v.apply(
             this,
-            [() => origFn.apply(this, args), ...args]
+            [(...newArgs) => origFn.apply(this, newArgs.length === 0 ? args : newArgs), ...args]
           )
         }
       } else {
@@ -999,6 +1004,10 @@ export default class AbstractDbObject {
         context
       )
     }
+  }
+
+  getComparingProps(compared) {
+
   }
 }
 

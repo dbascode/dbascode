@@ -7,11 +7,9 @@ import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
 import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
-
-export default new PluginDescriptor({
-  name: 'postgraphile',
-  version: 1,
-})
+import PropDef from '../../dbascode/PropDef'
+import clone from 'lodash-es/clone'
+import { joinSql } from '../../dbascode/utils'
 
 /**
  * Some Postgraphile-specific add-ons
@@ -45,6 +43,10 @@ class PostgraphilePlugin extends PluginDescriptor {
         if (table.primaryKey) {
           this.applyOmitMixin(table.primaryKey)
         }
+      }
+      for (const functionName of Object.keys(schema.functions)) {
+        const func = schema.functions[functionName]
+        this.applyOmitMixin(func)
       }
     }
   }
@@ -83,10 +85,29 @@ class PostgraphilePlugin extends PluginDescriptor {
       getQuotedComment: (origMethod) => {
         const omitComment = inst.getOmitComment()
         if (omitComment !== null && omitComment !== undefined) {
-          return `${origMethod()}\n${omitComment}`.trim()
+          return `${omitComment}\n${origMethod()}`.trim()
         } else {
           return origMethod()
         }
+      },
+
+      getPropDefCollection (origMethod) {
+        const result = origMethod()
+        result.addProp(new PropDef('omit', { type: PropDef.bool }))
+        return result
+      },
+
+      getAlterSql (origMethod, compared, changes) {
+        let newChanges, omitSql
+        if (changes.omit) {
+          newChanges = clone(changes)
+          delete newChanges.omit
+          omitSql = inst.getCommentChangesSql(compared)
+        } else {
+          newChanges = changes
+        }
+        const result = origMethod(compared, newChanges)
+        return omitSql ? joinSql([result, omitSql]) : result
       },
     })
     if (type === 'Table' && inst.primaryKey) {
@@ -94,3 +115,8 @@ class PostgraphilePlugin extends PluginDescriptor {
     }
   }
 }
+
+export default new PostgraphilePlugin({
+  name: 'postgraphile',
+  version: 1,
+})

@@ -162,6 +162,9 @@ $BODY$`
     }
   }
 
+  /**
+   * @inheritDoc
+   */
   setupDependencies () {
     super.setupDependencies()
     const db = this.getDb()

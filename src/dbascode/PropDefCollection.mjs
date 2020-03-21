@@ -52,4 +52,8 @@ export default class PropDefCollection {
   findPropByName (name) {
     return this.defs.find(def => def.name === name)
   }
+
+  addProp (propDef) {
+    this.defs.push(propDef)
+  }
 }
