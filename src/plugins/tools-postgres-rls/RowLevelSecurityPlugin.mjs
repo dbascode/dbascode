@@ -133,6 +133,11 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         return joinSql(sql)
       },
 
+      getDropDefAclRecordsSql() {
+        const defAclTable = inst.getSchema().getTable('default_acl')
+        return `DELETE FROM ${defAclTable.getObjectIdentifier('delete')} WHERE "table" = '${inst.getParentedName()}';`
+      },
+
       getPropDefCollection (origMethod) {
         const result = new PropDefCollection([...origMethod().defs])
         result.addProp(new PropDef('rowLevelSecurity', { type: PropDef.map }))
@@ -153,9 +158,16 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         sql.push(origMethod(compared, newChanges))
         if (recreateDefaultAcl) {
           const defAclTable = inst.getSchema().getTable('default_acl')
-          sql.push(`DELETE FROM ${defAclTable.getObjectIdentifier('delete')} WHERE "table" = '${inst.getParentedName()}';`)
+          sql.push(inst.getDropDefAclRecordsSql())
           sql.push(inst.getCreateDefAclRecordsSql())
         }
+        return joinSql(sql)
+      },
+
+      getDropSql (origMethod) {
+        const sql = []
+        sql.push(origMethod())
+        sql.push(inst.getDropDefAclRecordsSql())
         return joinSql(sql)
       },
 
