@@ -32,13 +32,14 @@ export default class Column extends AbstractSchemaObject {
     new PropDef('foreignKey'),
     new PropDef('allowNull', { type: PropDef.bool }),
     new PropDef('defaultValue', {
+      type: PropDef.map,
       allowNull: true,
       configName: 'default',
       defaultValue: null,
       normalize: (obj, value) => {
         const def = isObject(value) ? value : { value, raw: false }
         if (def.raw) {
-          return def.value
+          return def.value === 'undefined' ? undefined : def.value
         } else {
           if (obj.isTextual()) {
             return escapeString(def.value)
@@ -154,7 +155,7 @@ export default class Column extends AbstractSchemaObject {
    * @returns {boolean}
    */
   getAllowNull () {
-    return this.isAutoIncrement ? false : this.allowNull || this.defaultValue === null
+    return this.isAutoIncrement ? false : (this.allowNull || this.defaultValue === null)
   }
 
   /**
