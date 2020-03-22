@@ -65,7 +65,7 @@ export default class Function extends AbstractSchemaObject {
    * @inheritDoc
    */
   getObjectClass (operation) {
-    return this.returns ? 'FUNCTION' : 'PROCEDURE'
+    return this.getIsFunction() ? 'FUNCTION' : 'PROCEDURE'
   }
 
   /**
@@ -130,15 +130,27 @@ export default class Function extends AbstractSchemaObject {
   }
 
   /**
+   * Check if this function returns a result and should be declared as function.
+   * Otherwise should be declared as procedure.
+   * @return boolean
+   */
+  getIsFunction() {
+    return this.returns && this.returns.type
+  }
+
+  /**
    * @inheritDoc
    */
   getSqlDefinition (operation, addSql) {
-    const returns = this.returns ? `RETURNS ${this.getArgType(this.returns)}` : ''
-    const cost = this.cost ? `COST ${this.cost}` : ''
+    const isFunction = this.getIsFunction()
+    const returns = isFunction ? `RETURNS ${this.getArgType(this.returns)}` : ''
+    const cost = this.cost && isFunction ? `COST ${this.cost}` : ''
     const leakProof = this.isLeakProof ? 'LEAKPROOF' : 'NOT LEAKPROOF'
     const securityDefiner = this.isSecurityDefiner ? 'SECURITY DEFINER' : ''
+    const stability = isFunction ? this.getStabilitySql() : ''
+    const parallelSafe = isFunction ? this.getParallelSafety() : ''
     return `${returns} LANGUAGE '${this.language}'
-  ${cost} ${this.getStabilitySql()} ${leakProof} ${securityDefiner} ${this.getParallelSafety()}
+  ${cost} ${stability} ${isFunction ? leakProof : ''} ${securityDefiner} ${parallelSafe}
 AS $BODY$
 ${this.code}
 $BODY$`
@@ -158,6 +170,11 @@ $BODY$`
     switch (propName) {
       case 'code':
       case 'language':
+      case 'isSecurityDefiner':
+      case 'isLeakProof':
+      case 'cost':
+      case 'stability':
+      case 'parallelSafety':
         return this.getSqlDefinition('create', [])
     }
   }

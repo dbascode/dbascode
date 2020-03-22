@@ -197,7 +197,8 @@ export default class DbAsCode {
       dbClass,
       curStateRaw,
       DbAsCode.version,
-      dbPlugin.version
+      dbPlugin.version,
+      true,
     )
     if (curTree) {
       this.pluginEvent(TREE_INITIALIZED, [curTree])

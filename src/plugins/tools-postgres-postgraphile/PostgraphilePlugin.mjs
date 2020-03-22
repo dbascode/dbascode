@@ -10,6 +10,7 @@ import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
 import PropDef from '../../dbascode/PropDef'
 import clone from 'lodash-es/clone'
 import { joinSql } from '../../dbascode/utils'
+import PropDefCollection from '../../dbascode/PropDefCollection'
 
 /**
  * Some Postgraphile-specific add-ons
@@ -92,7 +93,7 @@ class PostgraphilePlugin extends PluginDescriptor {
       },
 
       getPropDefCollection (origMethod) {
-        const result = origMethod()
+        const result = new PropDefCollection([...origMethod().defs])
         result.addProp(new PropDef('omit', { type: PropDef.bool }))
         return result
       },

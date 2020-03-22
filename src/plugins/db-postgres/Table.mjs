@@ -42,8 +42,8 @@ export default class Table extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  postprocessTree () {
-    super.postprocessTree()
+  postprocessTree (isNew) {
+    super.postprocessTree(isNew)
     if (this.extends) {
       // Add inherited objects
       const ancestor = this.getSchema().getTable(this.extends)

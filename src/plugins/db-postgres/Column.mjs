@@ -55,7 +55,7 @@ export default class Column extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  postprocessTree () {
+  postprocessTree (isNew) {
     if (this.isAutoIncrement) {
       // Implicitly create autoincrement sequence for the parent table and make this
       // column primary key.
@@ -73,6 +73,8 @@ export default class Column extends AbstractSchemaObject {
         schemaConfig[seqDef.configPropName][seqName] = {
           table: tableName,
           column: this.name,
+          grant: table.grant,
+          revoke: table.revoke,
         }
         tableConfig[pkDef.configPropName] = {
           columns: this.name,

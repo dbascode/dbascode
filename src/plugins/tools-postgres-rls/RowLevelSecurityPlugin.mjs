@@ -5,6 +5,10 @@
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
 import { processCalculations } from '../../dbascode/AbstractDbObject'
 import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
+import PropDef from '../../dbascode/PropDef'
+import PropDefCollection from '../../dbascode/PropDefCollection'
+import { parseTypedef } from '../db-postgres/utils'
+import { joinSql, parseArrayProp } from '../../dbascode/utils'
 
 /**
  * @typedef {object} RowLevelSecurityMixin Mixin applied to tables with the row level security routines.
@@ -79,48 +83,80 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
             const checkType = op === 'insert' ? 'WITH CHECK' : 'USING'
             addSql.push(`CREATE POLICY "${inst.getParentedNameFlat()}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
           }
-          const defaultAcl = inst.defaultAcl
-          if (defaultAcl && defaultAcl.length > 0) {
-            const defActTable = inst.getSchema().getTable('default_acl')
-            const aclSql = []
-            const opMap = {
-              select: 0b0001,
-              update: 0b0010,
-              delete: 0b0100,
-              insert: 0b1000,
-              all: 0b1111,
-            }
-            for (const rule of defaultAcl) {
-              let mask = 0, perm = 0
-              for (const op of Array.isArray(rule.allow) ? rule.allow : [rule.allow]) {
-                const bits = opMap[op]
-                if (bits) {
-                  mask = mask | bits
-                  perm = perm | bits
-                }
-              }
-              for (const op of Array.isArray(rule.deny) ? rule.deny : [rule.deny]) {
-                const bits = opMap[op]
-                if (bits) {
-                  mask = mask | bits
-                  perm = perm & !bits
-                }
-              }
-              if (mask !== 0) {
-                const pad = '0000'
-                const maskStr = mask.toString(2)
-                const permStr = perm.toString(2)
-                const sqlData = []
-                sqlData.push(`'${rule.role}'`);
-                sqlData.push(pad.substring(0, pad.length - maskStr.length) + maskStr)
-                sqlData.push(pad.substring(0, pad.length - permStr.length) + permStr)
-                aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().getQuotedName()}.row_acl`)
+        }
+        addSql.push(inst.getCreateDefAclRecordsSql())
+        return origMethod(operation, addSql)
+      },
+
+      getCreateDefAclRecordsSql() {
+        const sql = []
+        const defaultAcl = inst.defaultAcl
+        if (defaultAcl && defaultAcl.length > 0) {
+          const defAclTable = inst.getSchema().getTable('default_acl')
+          const aclSql = []
+          const opMap = {
+            select: 0b0001,
+            update: 0b0010,
+            delete: 0b0100,
+            insert: 0b1000,
+            all: 0b1111,
+          }
+          for (const rule of defaultAcl) {
+            let mask = 0, perm = 0
+            for (const op of rule.allow ? (Array.isArray(rule.allow) ? rule.allow : [rule.allow]) : []) {
+              const bits = opMap[op]
+              if (bits) {
+                mask = mask | bits
+                perm = perm | bits
               }
             }
-            addSql.push(`INSERT INTO ${defActTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.name}', ARRAY[${aclSql.join(', ')}] );`)
+            for (const op of rule.deny ? (Array.isArray(rule.deny) ? rule.deny : [rule.deny]) : []) {
+              const bits = opMap[op]
+              if (bits) {
+                mask = mask | bits
+                perm = perm & !bits
+              }
+            }
+            if (mask !== 0) {
+              const pad = '0000'
+              const maskStr = mask.toString(2)
+              const permStr = perm.toString(2)
+              const sqlData = []
+              sqlData.push(`'${rule.role}'`);
+              sqlData.push(`B'${pad.substring(0, pad.length - maskStr.length) + maskStr}'`)
+              sqlData.push(`B'${pad.substring(0, pad.length - permStr.length) + permStr}'`)
+              aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().getQuotedName()}.row_acl`)
+            }
+          }
+          sql.push(`INSERT INTO ${defAclTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.getParentedName()}', ARRAY[${aclSql.join(', ')}] );`)
+        }
+        return joinSql(sql)
+      },
+
+      getPropDefCollection (origMethod) {
+        const result = new PropDefCollection([...origMethod().defs])
+        result.addProp(new PropDef('rowLevelSecurity', { type: PropDef.map }))
+        result.addProp(new PropDef('defaultAcl', { type: PropDef.map }))
+        return result
+      },
+
+      getAlterSql (origMethod, compared, changes) {
+        let recreateDefaultAcl = false, newChanges = {...changes}
+        for (const propName of Object.keys(changes)) {
+          const propDef = parseArrayProp(propName)
+          if (propDef.name === 'defaultAcl') {
+            recreateDefaultAcl = true
+            delete newChanges[propName]
           }
         }
-        return origMethod(operation, addSql)
+        const sql = []
+        sql.push(origMethod(compared, newChanges))
+        if (recreateDefaultAcl) {
+          const defAclTable = inst.getSchema().getTable('default_acl')
+          sql.push(`DELETE FROM ${defAclTable.getObjectIdentifier('delete')} WHERE "table" = '${inst.getParentedName()}';`)
+          sql.push(inst.getCreateDefAclRecordsSql())
+        }
+        return joinSql(sql)
       },
 
       setupDependencies: (origMethod) => {

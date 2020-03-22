@@ -68,6 +68,7 @@ export default class AbstractDataBase extends AbstractDbObject {
     cfg,
     dbAsCodeVersion,
     pluginVersion,
+    isNew,
   ) {
     if (!cfg) {
       return undefined
@@ -79,7 +80,7 @@ export default class AbstractDataBase extends AbstractDbObject {
     result._version = dbAsCodeVersion
     result._pluginVersion = pluginVersion
     result.applyConfig(cfg)
-    result.postprocessTree()
+    result.postprocessTree(isNew)
     result.setupDependencies()
     return result
   }

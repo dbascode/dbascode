@@ -820,9 +820,9 @@ export default class AbstractDbObject {
    * Executed after all the explicit objects are created from the state. It's time to create implicit
    * objects if any.
    */
-  postprocessTree () {
+  postprocessTree (isNew) {
     for (const child of this.getAllChildren()) {
-      child.postprocessTree()
+      child.postprocessTree(isNew)
     }
   }
 
