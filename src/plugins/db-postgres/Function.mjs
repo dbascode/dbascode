@@ -72,7 +72,7 @@ export default class Function extends AbstractSchemaObject {
    * @inheritDoc
    */
   getObjectIdentifier (operation, isParentContext) {
-    if (operation === 'create') {
+    if (operation === 'create' || operation === 'alter') {
       return `${super.getObjectIdentifier(operation, false)}(${this.getFunctionArgs()})`
     } else {
       return `${super.getObjectIdentifier(operation, false)}(${this.getArgTypesList()})`

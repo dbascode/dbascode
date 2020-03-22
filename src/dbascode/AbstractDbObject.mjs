@@ -758,7 +758,7 @@ export default class AbstractDbObject {
    */
   processCalculations (value) {
     let result = value
-    const matches = [...value.matchAll(/\$\{\s*(\w+(\.\w+)*)([^}]*)\s*\}/)]
+    const matches = [...value.matchAll(/\$\{\s*(\w+(\.\w+)*)([^}]*)\s*\}/g)]
     if (matches.length > 0) {
       let calculators = this._calcCache
       if (calculators === undefined) {

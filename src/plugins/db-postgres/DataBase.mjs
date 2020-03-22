@@ -65,7 +65,7 @@ export default class DataBase extends AbstractDataBase {
   getCalculators () {
     return {
       rootUserName: this._rootUserName,
-      param: this.params,
+      params: this.params,
     }
   }
 
