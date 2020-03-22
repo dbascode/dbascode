@@ -575,7 +575,8 @@ export default class AbstractDbObject {
     let dropAndRecreate = false
     for (const propName of Object.keys(changes)) {
       const change = changes[propName]
-      const propDef = this.getPropDefCollection().findPropByName(propName)
+      const parsedPropName = parseArrayProp(propName)
+      const propDef = this.getPropDefCollection().findPropByName(parsedPropName.path[0])
       if (propDef && propDef.recreateOnChange) {
         dropAndRecreate = true
         result = []
@@ -594,8 +595,8 @@ export default class AbstractDbObject {
         change.allowEmptySql()
       }
     }
-    if (dropAndRecreate) {
-      result.push(this.getDropSqlWithChildren())
+    if (dropAndRecreate && compared) {
+      result.push(compared.getDropSqlWithChildren())
       result.push(this.getCreateSqlWithChildren())
     }
     return joinSql(result)

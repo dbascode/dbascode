@@ -60,7 +60,9 @@ export function parseTypedef (def) {
     isArray = def.isArray || def.is_array
   } else {
     const _type = replaceAll(def, '"', '')
-    const [id1, id2] = _type.split('.')
+    const [m1, m2] = _type.matchAll(/(\${[^}]+}|[^.]+)/g)
+    const id1 = m1 ? m1[0] : undefined
+    const id2 = m2 ? m2[0] : undefined
     if (id1 && id2) {
       schema = id1
       type = id2

@@ -184,11 +184,13 @@ export function parseArrayProp (name) {
     return {
       name: propName,
       index: Number(index),
+      path: propName.split('.')
     }
   } else {
     return {
       name,
       index: null,
+      path: name.split('.')
     }
   }
 }
