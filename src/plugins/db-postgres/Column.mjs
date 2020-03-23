@@ -37,6 +37,9 @@ export default class Column extends AbstractSchemaObject {
       configName: 'default',
       defaultValue: null,
       normalize: (obj, value) => {
+        if (value === 'undefined') {
+          value = undefined
+        }
         const def = isObject(value) ? value : { value, raw: false }
         if (def.raw) {
           return def.value === 'undefined' ? undefined : def.value
