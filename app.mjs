@@ -64,7 +64,7 @@ const cliConfig = yargs
     describe: 'List of plugins to be loaded. Module names to import must be provided.',
   })
   .option('wsl', {
-    type: 'boolean',
+    type: 'string',
     default: process.env.DBAC_WSL,
     describe: 'Use WSL to run commands',
   })
@@ -84,7 +84,9 @@ const dbAsCode = new DbAsCode(
     dbms: cliConfig.dbms,
     dbVars: cliConfig.dbVar || [],
     source: cliConfig.source,
-    wsl: cliConfig.wsl,
+    wsl: (Object.keys(cliConfig).indexOf('wsl') >= 0)
+      ? (cliConfig.wsl || true)
+      : false,
   },
   [
     // 'file://' + __dirname + '/src/plugins/db-postgres/postgresql/PostgreSqlPlugin.mjs',

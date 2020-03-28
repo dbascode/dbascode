@@ -10,6 +10,7 @@ import isObject from 'lodash-es/isObject'
 import difference from 'lodash-es/difference'
 import intersection from 'lodash-es/intersection'
 import isArray from 'lodash-es/isArray'
+import isString from 'lodash-es/isString'
 
 const fs = _fs.promises
 
@@ -133,12 +134,16 @@ export function circularSafeStringify (o, forPrint) {
   }, forPrint ? 2 : undefined)
 }
 
-export function convertPathToWsl (path) {
+export function convertPathToWsl (path, wsl) {
   const p = path.split('\\')
   if (p[0][1] === ':') {
     p[0] = p[0].substr(0, 1).toLowerCase()
-    p.unshift('mnt')
-    p.unshift('')
+    if (isString(wsl)) {
+      p.unshift(wsl)
+    } else {
+      p.unshift('mnt')
+      p.unshift('')
+    }
   }
   return p.join('/')
 }

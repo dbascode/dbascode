@@ -25,7 +25,7 @@ export async function executeSql (query, config) {
     commonCmd.push('-t')
   }
   if (config.isFile) {
-    commonCmd.push('--file=' + (config.wsl ? convertPathToWsl(query) : query))
+    commonCmd.push('--file=' + (config.wsl ? convertPathToWsl(query, config.wsl) : query))
   } else {
     commonCmd.push('-c')
     commonCmd.push(config.wsl ? escapeShellArg(query) : query)
