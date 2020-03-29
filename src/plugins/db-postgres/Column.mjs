@@ -237,7 +237,7 @@ export default class Column extends AbstractSchemaObject {
       } else {
         // Check new column
         const isNewTable = (!context.prevTree || !context.prevTree.getChildByPath(this.getParent().getPath()))
-        if (!isNewTable && (this.allowNull === false && !this.defaultValue)) {
+        if (!isNewTable && (this.allowNull === false && this.defaultValue === undefined)) {
           context.addError(this, `Can not add non-null column without default default value to an existing table`)
         }
       }

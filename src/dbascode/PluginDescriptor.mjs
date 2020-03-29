@@ -55,6 +55,13 @@ export default class PluginDescriptor {
   }
 
   /**
+   * Returns database name
+   * @return String
+   */
+  getDbName() {
+  }
+
+  /**
    * Returns state storage instance
    * @return {*}
    */

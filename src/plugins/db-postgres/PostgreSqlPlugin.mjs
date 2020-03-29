@@ -31,6 +31,13 @@ class PostgreSqlPlugin extends PluginDescriptor{
     parsePgConfig(this.dbConfig, dbAsCodeConfig)
     this.dbConfig.wsl = dbAsCodeConfig.wsl
   }
+
+  /**
+   * @inheritDoc
+   */
+  getDbName () {
+    return this.dbConfig.db
+  }
 }
 
 export default new PostgreSqlPlugin({

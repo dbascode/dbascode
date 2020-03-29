@@ -5,6 +5,7 @@
 
 import { replaceAll } from '../../dbascode/utils'
 import isObject from 'lodash-es/isObject'
+import isFunction from 'lodash-es/isFunction'
 
 /**
  * Escape text to insert to DB (not adds single quotes)
@@ -24,6 +25,34 @@ export function escapeString(s) {
   s = replaceAll(s, "'", "''")
   s = replaceAll(s, "\r", '')
   return `'${s}'`
+}
+
+/**
+ * Escapes a db identifier
+ * @param {string} s
+ * @return {string}
+ */
+export function escapeName(s) {
+  const invalidChars = ['"', "'", c => c.charCodeAt(0) < 33]
+  for (const char of invalidChars) {
+    let invalidChar = null
+    if (isFunction(char)) {
+      for (let i = 0; i < s.length; i++) {
+        if (char(s[i])) {
+          invalidChar = s[i]
+          break
+        }
+      }
+    } else {
+      if (s.indexOf(char) >= 0) {
+        invalidChar = char
+      }
+    }
+    if (invalidChar !== null) {
+      throw new Error(`DB identifier ${s} contains invalid character: ${char}`)
+    }
+  }
+  return `"${s}"`
 }
 
 /**

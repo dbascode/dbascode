@@ -186,16 +186,17 @@ export default class DbAsCode {
     const dbClass = dbPlugin.dbClass
     const prevTree = dbClass.createFromState(
       dbClass,
-      prevState.raw,
+      {...prevState.raw, name: dbPlugin.getDbName()},
       prevState.dbAsCodeVersion,
       prevState.pluginVersion,
+      false,
     )
     if (prevTree) {
       this.pluginEvent(TREE_INITIALIZED, [prevTree])
     }
     const curTree = dbClass.createFromState(
       dbClass,
-      curStateRaw,
+      {...curStateRaw, name: dbPlugin.getDbName()},
       DbAsCode.version,
       dbPlugin.version,
       true,

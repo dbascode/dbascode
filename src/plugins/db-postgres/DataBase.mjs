@@ -10,6 +10,8 @@ import ChildDefCollection from '../../dbascode/ChildDefCollection'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
 import AbstractDataBase from '../../dbascode/AbstractDataBase'
+import { joinSql, parseArrayProp } from '../../dbascode/utils'
+import { escapeName } from './utils'
 
 /**
  * PostgreSQL database object
@@ -50,13 +52,13 @@ export default class DataBase extends AbstractDataBase {
    * @returns {string}
    */
   getCreateSql() {
-    let result = ''
+    let sql = []
     if (this.extensions.length > 0) {
       for (const ext of this.extensions) {
-        result += `CREATE EXTENSION IF NOT EXISTS "${ext}";\n`
+        sql.push(`CREATE EXTENSION IF NOT EXISTS ${escapeName(ext)};`)
       }
     }
-    return result
+    return joinSql(sql)
   }
 
   /**
@@ -101,5 +103,29 @@ export default class DataBase extends AbstractDataBase {
     } else {
       return super.getAlterPropSql(compared, propName, oldValue, curValue)
     }
+  }
+
+  /**
+   * @inheritDoc
+   */
+  getAlterSql (compared, changes) {
+    const newChanges = {...changes}
+    const result = []
+    for (const propName of Object.keys(changes)) {
+      const parsedPropName = parseArrayProp(propName)
+      const change = changes[propName]
+      if (parsedPropName.name === 'extensions') {
+        delete newChanges[propName]
+        const replace = change.cur && change.old
+        if (!change.cur || replace) {
+          result.push(`DROP EXTENSION "${escapeName(change.old)}";`)
+        }
+        if (!change.old || replace) {
+          result.push(`CREATE EXTENSION IF NOT EXISTS ${escapeName(change.cur)};`)
+        }
+      }
+    }
+    result.push(super.getAlterSql(compared, newChanges))
+    return joinSql(result)
   }
 }

@@ -61,6 +61,7 @@ export default class AbstractDataBase extends AbstractDbObject {
    * @param {Object|null} cfg
    * @param {number} dbAsCodeVersion
    * @param {number} pluginVersion
+   * @param {boolean} isNew
    * @return {AbstractDataBase|null}
    */
   static createFromState(
@@ -74,7 +75,7 @@ export default class AbstractDataBase extends AbstractDbObject {
       return undefined
     }
     const result = new class_({
-      name: '',
+      name: cfg.name || '',
       rawConfig: cfg,
     })
     result._version = dbAsCodeVersion
