@@ -916,6 +916,10 @@ export default class AbstractDbObject {
     }
     for (const def of defs.defs) {
       const createAndAdd = (name, cfg) => {
+        if (name && name[0] === '.') {
+          // Don't process templates
+          return
+        }
         const child =
           new def.class_(
             processCalculations(this, {

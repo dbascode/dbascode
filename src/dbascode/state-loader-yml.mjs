@@ -70,20 +70,27 @@ function recurseApplyFsContext(cfg, dirName) {
  * Postprocessing
  * @param {*} cfg
  * @param {string} [dir] - Last directory context
+ * @param {string} [keyName] name of the key of this value
  * @returns {*}
  */
-function recursePostProcess(cfg, dir) {
+function recursePostProcess(cfg, dir, keyName) {
   if (isObject(cfg)) {
     for (const k of Object.keys(cfg)) {
-      cfg[k] = recursePostProcess(cfg[k], cfg.__dirName)
+      cfg[k] = recursePostProcess(cfg[k], cfg.__dirName, k)
     }
   } else if (isArray(cfg)) {
     for (const k of cfg) {
-      cfg[k] = recursePostProcess(cfg[k], dir)
+      cfg[k] = recursePostProcess(cfg[k], dir, k)
     }
   } else if (isString(cfg)) {
     if (cfg.substr(0, 9) === '$include ') {
       return loadStateYaml([path.join(dir, cfg.substr(9))])
+    } else if (cfg === '$include-it') {
+      let fn = path.join(dir, `${keyName}.yml`);
+      if (!fs.existsSync(fn)) {
+        fn = fn.join(dir, `${keyName}.yaml`);
+      }
+      return loadStateYaml([fn])
     } else if (cfg.substr(0, 6) === '$file ') {
       return fs.readFileSync(path.join(dir, cfg.substr(6))).toString()
     }
@@ -107,7 +114,11 @@ function filterConfig(cfg) {
     const result = {...cfg}
     delete result.__dirName
     for (const name of Object.keys(result)) {
-      result[name] = filterConfig(result[name])
+      if (name[0] === '.') {
+        delete result[name]
+      } else {
+        result[name] = filterConfig(result[name])
+      }
     }
     return result
   }
