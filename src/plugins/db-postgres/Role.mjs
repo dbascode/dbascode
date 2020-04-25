@@ -6,6 +6,7 @@
 import AbstractDbObject from '../../dbascode/AbstractDbObject'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
+import SqlRules from './SqlRules'
 
 /**
  * Role in a database
@@ -19,6 +20,10 @@ export default class Role extends AbstractDbObject {
     new PropDef('isClient', { type: PropDef.bool }),
     ...this.propDefs.defs,
   ])
+  /**
+   * @type {typeof SqlRules}
+   */
+  static sqlRules = SqlRules
 
   /**
    * @inheritDoc
@@ -26,11 +31,11 @@ export default class Role extends AbstractDbObject {
   getSqlDefinition (operation, addSql) {
     if (this.memberOf.length > 0) {
       for (const memberOf of this.memberOf) {
-        addSql.push(`GRANT "${memberOf}" TO ${this.getQuotedName()};`)
+        addSql.push(`GRANT "${memberOf}" TO ${this.sql.getEscapedName()};`)
       }
     }
     if (this.isClient) {
-      addSql.push(`GRANT ${this.getQuotedName()} TO current_user;`)
+      addSql.push(`GRANT ${this.sql.getEscapedName()} TO current_user;`)
     }
     return `WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION`
   }

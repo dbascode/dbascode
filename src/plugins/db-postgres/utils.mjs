@@ -6,54 +6,7 @@
 import { replaceAll } from '../../dbascode/utils'
 import isObject from 'lodash-es/isObject'
 import isFunction from 'lodash-es/isFunction'
-
-/**
- * Escape text to insert to DB (not adds single quotes)
- * @param {string} s
- */
-export function escapeRawText(s) {
-  s = replaceAll(s, "'", "''")
-  s = replaceAll(s, "\r", '')
-  return s
-}
-
-/**
- * Escape string to insert to DB (adds single quotes)
- * @param {string} s
- */
-export function escapeString(s) {
-  s = replaceAll(s, "'", "''")
-  s = replaceAll(s, "\r", '')
-  return `'${s}'`
-}
-
-/**
- * Escapes a db identifier
- * @param {string} s
- * @return {string}
- */
-export function escapeName(s) {
-  const invalidChars = ['"', "'", c => c.charCodeAt(0) < 33]
-  for (const char of invalidChars) {
-    let invalidChar = null
-    if (isFunction(char)) {
-      for (let i = 0; i < s.length; i++) {
-        if (char(s[i])) {
-          invalidChar = s[i]
-          break
-        }
-      }
-    } else {
-      if (s.indexOf(char) >= 0) {
-        invalidChar = char
-      }
-    }
-    if (invalidChar !== null) {
-      throw new Error(`DB identifier ${s} contains invalid character: ${char}`)
-    }
-  }
-  return `"${s}"`
-}
+import SqlRules from './SqlRules'
 
 /**
  * Parse DbAsCode config and fill the vars object with the corresponding values
@@ -101,13 +54,124 @@ export function parseTypedef (def) {
       throw new Error('Invalid type definition')
     }
   }
-  if (type.substr(-2, 2) === '[]') {
-    type = type.substring(0, type.length - 2)
+  let p = type.indexOf('[')
+  if (p < 0) {
+    p = type.indexOf(' array')
+  }
+  if (p >= 0) {
+    type = type.substr(0, p)
     isArray = true
   }
+  p = type.indexOf('(')
+  if (p >= 0) {
+    const p2 = type.indexOf(')')
+    type = type.substr(0, p) + ' ' + type.substr(p2 + 1, type.length)
+    type = replaceAll(type, '  ', ' ')
+    type = type.toLowerCase()
+  }
+  type = type.trimEnd()
+
   return {
     schema,
     type,
     isArray,
   }
+}
+
+/**
+ * Convert type definition to string
+ * @param {ArgumentTypeDef} def
+ */
+export function stringifyTypeDef (def) {
+  const sql = SqlRules
+  return `${def.schema ? sql.escapeSqlId(def.schema) + '.' : ''}${def.type}${def.isArray ? '[]' : ''}`
+}
+
+/**
+ * Builtin numeric types
+ * @type {string[]}
+ */
+export const builtinNumericTypes = [
+  'int',
+  'smallint',
+  'integer',
+  'bigint',
+  'decimal',
+  'numeric',
+  'real',
+  'double',
+  'smallserial',
+  'serial',
+  'bigserial',
+]
+
+/**
+ * Builtin integer types
+ * @type {string[]}
+ */
+export const builtinIntegerTypes = [
+  'int',
+  'smallint',
+  'integer',
+  'bigint',
+  'smallserial',
+  'serial',
+  'bigserial',
+]
+
+/**
+ * Builtin text types
+ * @type {string[]}
+ */
+export const builtinTextTypes = [
+  'text',
+  'varchar',
+  'character varying',
+  'character',
+  'char',
+]
+
+/**
+ * Builtin other types (not numeric and not textual)
+ * @type {string[]}
+ */
+export const builtinOtherTypes = [
+  'money',
+  'bytea',
+  'timestamp',
+  'timestamp with time zone',
+  'timestamp without time zone',
+  'date',
+  'date with time zone',
+  'date without time zone',
+  'boolean',
+  'point',
+  'line',
+  'lseg',
+  'box',
+  'path',
+  'polygon',
+  'circle',
+  'cidr',
+  'inet',
+  'macaddr',
+  'macaddr8',
+  'bit',
+  'bit varying',
+  'uuid',
+  'xml',
+  'json',
+  'jsonb',
+  'jsonb',
+]
+
+/**
+ *
+ * @param {string[]} typeList List of types to compare. Usually - builtin ones.
+ * @param {string|ArgumentTypeDef} type
+ * @return {boolean}
+ */
+export function isType(typeList, type) {
+  const t = parseTypedef(type)
+  return !t.schema && typeList.indexOf(t.type) >= 0
 }

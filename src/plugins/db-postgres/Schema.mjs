@@ -9,6 +9,7 @@ import Table from './Table'
 import Sequence from './Sequence'
 import ChildDef from '../../dbascode/ChildDef'
 import ChildDefCollection from '../../dbascode/ChildDefCollection'
+import SqlRules from './SqlRules'
 
 /**
  * Database schema object.
@@ -18,6 +19,10 @@ import ChildDefCollection from '../../dbascode/ChildDefCollection'
  * @property {Object.<string, Sequence>} sequences
  */
 export default class Schema extends AbstractDbObject {
+  /**
+   * @type {typeof SqlRules}
+   */
+  static sqlRules = SqlRules
   /**
    * @type {ChildDefCollection}
    */

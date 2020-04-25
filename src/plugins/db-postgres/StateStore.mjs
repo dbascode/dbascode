@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url'
 import AbstractStateStore from '../../dbascode/AbstractStateStore'
 import { executeSql, executeSqlJson } from './psql'
 import State from '../../dbascode/State'
-import { escapeString, parsePgConfig } from './utils'
+import SqlRules from './SqlRules'
 
 // const __filename = fileURLToPath(import.meta.url)
 // const __dirname = path.dirname(__filename)
@@ -64,8 +64,8 @@ export default class StateStore extends AbstractStateStore {
       `INSERT INTO dbascode.state (id, state, migration, dbascode_version, plugin_version) 
       VALUES (
       ${state.id}, 
-      ${escapeString(JSON.stringify(state.raw, null, 2))}, 
-      ${escapeString(state.migrationSql)},
+      ${SqlRules.escapeStringExpr(JSON.stringify(state.raw, null, 2))}, 
+      ${SqlRules.escapeStringExpr(state.migrationSql)},
       ${Number(state.dbAsCodeVersion)}, 
       ${Number(state.pluginVersion)}
       );`

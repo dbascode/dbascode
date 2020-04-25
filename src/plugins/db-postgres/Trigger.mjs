@@ -21,6 +21,8 @@ export default class Trigger extends AbstractSchemaObject {
     ...this.propDefs.defs,
   ])
 
+  static droppedByParent = true
+
   /**
    * @inheritDoc
    */

@@ -12,6 +12,7 @@ import ChildDef from '../../dbascode/ChildDef'
 import ForeignKey from './ForeignKey'
 import ChildDefCollection from '../../dbascode/ChildDefCollection'
 import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import { parseTypedef } from './utils'
 
 /**
  * Table object
@@ -90,24 +91,8 @@ export default class Table extends AbstractSchemaObject {
    */
   setupDependencies() {
     super.setupDependencies()
-    const tableDeps = {}
-    const db = this.getDb()
-    const schema = this.getSchema()
-    for (const child of this.getChildrenByType(ForeignKey)) {
-      const ref = child.ref
-      const refSchema = ref.schema ? db.getSchema(ref.schema) : schema
-      const refTable = refSchema.getTable(ref.table)
-      if (!refTable) {
-        throw new Error(`Foreign key ${this.name}.${child.name} reference table ${ref.table} not found`)
-      }
-      tableDeps[ref.table] = refTable
-    }
     if (this.extends) {
-      tableDeps[this.extends] = 1
-    }
-    for (const tableName of Object.keys(tableDeps)) {
-      const table = tableDeps[tableName]
-      this._dependencies.push((table instanceof AbstractDbObject ? table : schema.getTable(tableName)).getPath())
+      this._dependencies.push(this.getDb().findChildBySqlTypeDef(parseTypedef(this.extends)))
     }
   }
 

@@ -29,15 +29,28 @@ export default class ChildDef {
    * @type {string}
    */
   configPropName = ''
+  /**
+   * Name of the group where uniqueness of children is checked
+   * @type {string|null}
+   */
+  uniqueGroup = null
 
   /**
    * Constructor
    * @param {typeof AbstractDbObject} class_
-   * @param {string} propType - property type (single, map, or array)
+   * @param {string} [propType] - property type (single, map, or array)
+   * @param {string} [uniqueGroup] - Name of the group where uniqueness of children is checked
    */
-  constructor (class_, propType = ChildDef.map) {
+  constructor (class_, propType = ChildDef.map, uniqueGroup = undefined) {
     this.class_ = class_
     this.propType = propType
+    if (uniqueGroup !== undefined) {
+      this.uniqueGroup = uniqueGroup
+    } else if (propType !== ChildDef.map) {
+      this.uniqueGroup = null
+    } else {
+      this.uniqueGroup = 'default'
+    }
     this.propName = this.getPropertyName()
     this.configPropName = this.getConfigName()
   }

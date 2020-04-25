@@ -6,13 +6,14 @@ import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
 import difference from 'lodash-es/difference'
 import {
+  arrayUnique,
   getPropValue,
   joinSql,
   objectDifferenceKeys,
   objectIntersectionKeys,
   parseArrayProp,
   replaceAll,
-} from './utils';
+} from './utils'
 import ChildDef from './ChildDef'
 import cloneDeep from 'lodash-es/cloneDeep'
 import PropDefCollection from './PropDefCollection'
@@ -20,7 +21,7 @@ import PropDef from './PropDef'
 import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
-import { escapeRawText } from '../plugins/db-postgres/utils';
+import AbstractSqlRules from './AbstractSqlRules'
 
 /**
  * Base class for all DB objects.
@@ -63,6 +64,16 @@ export default class AbstractDbObject {
    * @type {boolean}
    */
   _isInherited = false
+  /**
+   * Basic SQL quotation and escaping routines class
+   * @type {typeof AbstractSqlRules}
+   */
+  static sqlRules = null
+  /**
+   * SQL rules instance
+   * @type {AbstractSqlRules}
+   */
+  sql = null
 
   /**
    * List of children definitions
@@ -123,6 +134,8 @@ export default class AbstractDbObject {
       isInherited = false,
     }
   ) {
+    this.sql = new this.constructor.sqlRules(this)
+    this.sql.validateSqlIdAndThrow(name)
     this.name = name
     this._parent = parent
     this._rawConfig = rawConfig
@@ -131,9 +144,9 @@ export default class AbstractDbObject {
     if (propDefs) {
       propDefs.initProps(this)
     }
-    const defs = this.getChildrenDefCollection()
-    if (defs) {
-      defs.initProps(this)
+    const childrenDefs = this.getChildrenDefCollection()
+    if (childrenDefs) {
+      childrenDefs.initProps(this)
     }
   }
 
@@ -220,6 +233,18 @@ export default class AbstractDbObject {
   }
 
   /**
+   * Returns all children of all DB types recursively
+   * @return {AbstractDbObject[]}
+   */
+  getAllChildrenRecurse () {
+    let children = this.getAllChildren()
+    for (const child of [...children]) {
+      children = [...children, ...child.getAllChildrenRecurse()]
+    }
+    return children
+  }
+
+  /**
    * Returns all children by the specified ChildDef
    * @param {ChildDef} def
    * @return {AbstractDbObject[]}
@@ -244,13 +269,23 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Search for children of the specified definition and name
+   * Search for a child of the specified definition and name
    * @param {ChildDef} def
    * @param {string} name
    * @return {AbstractDbObject}
    */
   findChildByDefAndName (def, name) {
     return this.getChildrenByDef(def).filter(item => item.name === name).shift()
+  }
+
+  /**
+   * Search for children of the specified definition and name
+   * @param {string} group
+   * @param {string} name
+   * @return {AbstractDbObject}
+   */
+  findChildByUniqueGroupAndName (group, name) {
+    return this.getChildrenDefCollection().findChildInUniqueGroup(this, group, name)
   }
 
   /**
@@ -272,10 +307,10 @@ export default class AbstractDbObject {
    * @returns {string}
    */
   getCommentChangesSql (previous) {
-    const comment = this.getQuotedComment();
-    const prevComment = previous ? previous.getQuotedComment() : ''
+    const comment = this.getComment();
+    const prevComment = previous ? previous.getComment() : ''
     if (prevComment !== comment) {
-      return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.getQuotedComment()}';`
+      return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.sql.escapeStringExpr(comment)}';`
     }
   }
 
@@ -283,8 +318,8 @@ export default class AbstractDbObject {
    * Returns this object comment
    * @returns {string}
    */
-  getQuotedComment () {
-    return this.comment ? escapeRawText(this.comment) : ''
+  getComment() {
+    return this.comment
   }
 
   /**
@@ -368,45 +403,174 @@ export default class AbstractDbObject {
     return joinSql(result)
   }
 
-  getChildrenCreateOrder (children) {
-    if (children.length === 0) {
-      return children
+  createBackDependencies (deps) {
+    const result = {}
+    for (const dependentName in deps) {
+      for (const dependencyName of deps[dependentName]) {
+        if (!result[dependencyName]) {
+          result[dependencyName] = {}
+        }
+        result[dependencyName][dependentName] = 1
+      }
     }
+    for (const dependencyName in result) {
+      result[dependencyName] = Object.keys(result[dependencyName])
+    }
+    return result
+  }
+
+  /**
+   *
+   * @param {ChangesContext} changes
+   * @param {AbstractDataBase} prevTree
+   * @return
+   */
+  getChildrenModificationCommands (changes, prevTree) {
+    if (changes.changes.length === 0) {
+      return []
+    }
+
+    const result = []
+    const changeMap = {}
+    for (const change of changes.changes) {
+      changeMap[change.path] = change
+    }
+
+    const deps = this.getAllDependencies()
+    // const backDeps = this.createBackDependencies(deps)
+
     const childMap = {}
-    for (const child of children) {
+    childMap[''] = this
+    for (const child of this.getAllChildrenRecurse()) {
       childMap[child.getPath()] = child
     }
-    const deps = this.getAllDependencies()
-    let result = {}
-    let lastResultLength
-    do {
-      lastResultLength = Object.keys(result).length
-      for (const dependentPath of Object.keys(childMap)) {
-        let dependencies = deps[dependentPath]
-        if (dependencies && dependencies.length > 0) {
-          for (let i = 0; i < dependencies.length; i++) {
-            const dependencyPath = dependencies[i]
-            if (result[dependencyPath]) {
-              delete dependencies[i]
+
+    const oldChildMap = {}
+    if (prevTree) {
+      for (const child of this.getAllChildrenRecurse()) {
+        oldChildMap[child.getPath()] = child
+      }
+    }
+    const oldDeps = prevTree ? prevTree.getAllDependencies() : {}
+    const oldBackDeps = prevTree ? prevTree.createBackDependencies(oldDeps) : {}
+
+    const getLastProp = function (path) {
+      const p = parseArrayProp(path).path
+      return [
+        p.splice(p.length - 1, 1).join('.'),
+        p[p.length - 1],
+      ]
+    }
+
+    const getDBObjectAndProp = function (path, map) {
+      let result, propName = '', objPath = path, lastResult = null
+      do {
+        result = map[objPath]
+        if (result === lastResult) {
+          throw new Error(`Can't find ${path}`)
+        }
+        lastResult = result
+        if (!result) {
+          const [shortPath, propAdd] = getLastProp(objPath)
+          objPath = shortPath
+          propName = propName + (propName.length ? '.' : '') + propAdd
+        }
+      } while (!result)
+      return [result, propName]
+    }
+
+    const objAlreadyExists = function (objPath) {
+      return !(changeMap[objPath] && !changeMap[objPath].old)
+    }
+
+    const mergeDependenciesToParent = function (objPath, parentPath) {
+      // Remove dependency on parent
+      deps[objPath] = deps[objPath].filter(p => p !== parentPath)
+      // Merge parent deps and obj deps
+      deps[parentPath] = arrayUnique([...deps[parentPath], ...deps[objPath]])
+      // Remove dependencies of the object
+      delete deps[objPath]
+    }
+
+    const ensureExists = function (path) {
+      const [obj, propName] = getDBObjectAndProp(path, childMap)
+      const objPath = obj.getPath()
+      const objExists = objAlreadyExists(objPath)
+      const parentPath = obj.getParent() ? obj.getParent().getPath() : null
+      const parentExists = parentPath !== null ? objAlreadyExists(parentPath) : false
+
+      if (obj.getCreatedByParent()) {
+        if (objExists) {
+          // Nothing to do here, object already exists
+          return
+        } else {
+          if (parentExists) {
+            // If parent already exists then it will be altered to add obj object. Do nothing and go through dependencies.
+          } else {
+            // Object will be created by its parent - move all obj dependencies to the parent dependencies
+            mergeDependenciesToParent(objPath, parentPath)
+            ensureExists(parentPath)
+            delete changeMap[objPath]
+            delete changeMap[path]
+            return
+          }
+        }
+      } else {
+        if (!objExists) {
+          const defs = obj.getChildrenDefCollection()
+          if (defs) {
+            const defsToCreate = defs.defs.filter(def => def.class_.createdByParent)
+            // Dependencies of defsToCreate should be treated as the obj dependencies
+            for (const def of defsToCreate) {
+              for (const child of obj.getChildrenByDef(def)) {
+                mergeDependenciesToParent(child.getPath(), objPath)
+              }
             }
           }
-          deps[dependentPath] = dependencies.filter(Boolean)
-        }
-        dependencies = deps[dependentPath]
-        if (!dependencies || dependencies.length === 0) {
-          result[dependentPath] = childMap[dependentPath]
-          delete deps[dependentPath]
-          delete childMap[dependentPath]
         }
       }
-      if (Object.keys(result).length === lastResultLength) {
-        // Probably we found dependencies not from this object's children.
-        // Hope the rest of them will be resolved by parent.
-        result = { ...result, ...childMap }
-        break
+
+      const objDeps = deps[objPath]
+      if (!objDeps || objDeps.length === 0) {
+        if (changeMap[objPath]) {
+          result.push(changeMap[objPath])
+          delete changeMap[objPath]
+        }
+        if (propName && changeMap[path]) {
+          result.push(changeMap[path])
+          delete changeMap[path]
+        }
+      } else {
+        for (let i = objDeps.length - 1; i >= 0; i--) {
+          ensureExists(objDeps[i])
+          objDeps.pop()
+        }
+        if (changeMap[objPath]) {
+          result.push(changeMap[objPath])
+          delete changeMap[objPath]
+        }
+        if (propName && changeMap[path]) {
+          result.push(changeMap[path])
+          delete changeMap[path]
+        }
       }
-    } while (Object.keys(result).length !== children.length)
-    return Object.values(result)
+    }
+
+    const ensureDropped = function (path) {
+
+    }
+
+    for (const change of changes.changes) {
+      if (change.cur) {
+        // Modification or creation
+        ensureExists(change.path)
+      } else {
+        // Deletion
+        ensureDropped(change.path)
+      }
+    }
+
+    return result
   }
 
   getChildrenDropOrder (children) {
@@ -537,15 +701,15 @@ export default class AbstractDbObject {
    */
   getObjectIdentifier (operation, isParentContext = false) {
     if (isParentContext) {
-      return this.getQuotedName()
+      return this.sql.getEscapedName()
     } else {
       const relType = this.getParentRelation(operation)
       if (relType === 'ON') { // create index Index on table schema.table
-        return `${this.getQuotedName()} ON ${this.getParent().getParentedName(true)}`
+        return `${this.sql.getEscapedName()} ON ${this.getParent().sql.getFullyQualifiedEscapedName()}`
       } else if (relType === '.') { // comment on column schema.table.column
-        return `${this.getParent().getParentedName(true)}.${this.getQuotedName()}`
+        return `${this.getParent().sql.getFullyQualifiedEscapedName()}`
       } else {
-        return this.getQuotedName()
+        return this.sql.getEscapedName()
       }
     }
   }
@@ -648,35 +812,6 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Returns name of this object prepended by _parent's name for SQL use
-   * @returns {string}
-   */
-  getParentedName (quoted = false) {
-    return (
-      this._parent
-        ? (quoted ? this._parent.getQuotedName() : this._parent.name) + '.'
-        : ''
-    ) + (quoted ? this.getQuotedName() : this.name)
-  }
-
-  /**
-   * Returns name of this object prepended by _parent's name separated by underscore
-   * @returns {string}
-   */
-  getParentedNameFlat (quoted = false) {
-    const result = (this._parent ? this._parent.name + '_' : '') + this.name
-    return quoted ? `"${result}"` : result
-  }
-
-  /**
-   * Returns name escaped for DB identifiers
-   * @returns {string}
-   */
-  getQuotedName () {
-    return `"${this.name}"`
-  }
-
-  /**
    * Returns a child by its path
    * @param path
    * @return {AbstractDbObject|*}
@@ -705,9 +840,9 @@ export default class AbstractDbObject {
 
   /**
    * Returns full path of the object
-   * @returns {string}
+   * @returns {string[]}
    */
-  getPath () {
+  getPathArray () {
     const path = []
     let curObject = this
     let prevObject = null
@@ -729,7 +864,15 @@ export default class AbstractDbObject {
       prevObject = curObject
       curObject = parent
     } while (curObject && curObject.getClassName() !== 'DataBase')
-    return reverse(path).join('.')
+    return reverse(path)
+  }
+
+  /**
+   * Returns full path of the object
+   * @returns {string}
+   */
+  getPath () {
+    return this.getPathArray().join('.')
   }
 
   /**
@@ -834,6 +977,7 @@ export default class AbstractDbObject {
   setupDependencies () {
     for (const child of this.getAllChildren()) {
       child.setupDependencies()
+      child._dependencies.push(this.getPath())
     }
   }
 
@@ -988,10 +1132,13 @@ export default class AbstractDbObject {
         this[def.propName].push(child);
         break
       case ChildDef.map:
+        if (!this.getChildrenDefCollection().isChildUnique(this, child)) {
+          throw new Error(`Object with name ${child.name} already exists`)
+        }
         this[def.propName][child.name] = child;
         break
       default:
-        throw new Error(`Unknown propType ${def.propType} for the object of ${child.constructor.name}`)
+        throw new Error(`Unknown propType ${def.propType} for the object of ${child.getClassName()}`)
     }
   }
 

@@ -33,6 +33,9 @@ export default class ChangesContext {
   }
 
   isInStack (v) {
+    if (v === undefined) {
+      return false
+    }
     return this.stack.indexOf(v) >= 0
   }
 

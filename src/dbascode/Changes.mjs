@@ -166,34 +166,52 @@ export default class Changes {
    */
   collectChanges (old, current, deep = false) {
     const context = new ChangesContext(deep)
-    this.hasChanges(current, old, context)
+    this.compareValues(current, old, context)
     return context
   }
 
-  arrayHasChanges (v2, v1, context) {
+  /**
+   * Compare arrays
+   * @param {array} v2
+   * @param {array} v1
+   * @param {ChangesContext} context
+   * @return {void}
+   * @private
+   */
+  compareArrays (v2, v1, context) {
     for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
       context.addToPath(i)
       try {
-        this.hasChangesInValues(v2[i], v1[i], context)
+        this.compareValues(v2[i], v1[i], context)
       } finally {
         context.popPath()
       }
     }
-    return false
   }
 
-  getComparingProps (obj, context) {
+  /**
+   * Returns a list of properties for the object to compare
+   * @param {AbstractDbObject|object} obj
+   * @param {boolean} includeChildren
+   * @param {string|null} skipMode
+   * @return {string[]}
+   */
+  getComparingProps (obj, includeChildren, skipMode) {
     if (obj instanceof AbstractDbObject) {
       const props = []
-      if (context.deep) {
+      if (includeChildren) {
         const childrenCol = obj.getChildrenDefCollection()
         if (childrenCol) {
-          childrenCol.defs.forEach(def => props.push(def.propName))
+          childrenCol.defs.forEach(
+            def => (!skipClass(def.class_, skipMode) ? props.push(def.propName) : null)
+          )
         }
       }
-      const propCol = obj.getPropDefCollection()
-      if (propCol) {
-        propCol.defs.forEach(def => props.push(def.name))
+      if (!skipMode) {
+        const propCol = obj.getPropDefCollection()
+        if (propCol) {
+          propCol.defs.forEach(def => props.push(def.name))
+        }
       }
       return props
     } else {
@@ -204,34 +222,37 @@ export default class Changes {
   /**
    *
    * @param {AbstractDbObject} obj
-   * @return {{class: string}}
+   * @param {string|null} skipMode
+   * @return {object}
    */
-  getObjectForChangeLog (obj) {
-    const props = this.getComparingProps(obj, { deep: false })
+  getObjectForChangeLog (obj, skipMode) {
+    const props = this.getComparingProps(obj, false, null)
     const result = { class: obj.getClassName() }
+    const defs = obj.getChildrenDefCollection()
     for (const prop of props) {
       result[prop] = obj[prop]
     }
-    const defs = obj.getChildrenDefCollection()
     if (defs) {
-      for (const def of defs.defs) {
+      // Do not add independent objects to changelog - they will have their own change operations.
+      // Loop through skipped children.
+      for (const def of defs.defs.filter(def => skipClass(def.class_, skipMode))) {
         const prop = def.propName
         const v = obj[prop]
         if (v !== undefined && v !== null) {
           switch (def.propType) {
             case ChildDef.single:
-              result[prop] = this.getObjectForChangeLog(v)
+              result[prop] = this.getObjectForChangeLog(v, skipMode)
               break
             case ChildDef.map:
               result[prop] = {}
               for (const sp of Object.keys(v)) {
-                result[prop][sp] = this.getObjectForChangeLog(v[sp])
+                result[prop][sp] = this.getObjectForChangeLog(v[sp], skipMode)
               }
               break
             case ChildDef.array:
               result[prop] = []
               for (const item of v) {
-                result[prop].push(this.getObjectForChangeLog(item))
+                result[prop].push(this.getObjectForChangeLog(item, skipMode))
               }
               break
             default:
@@ -243,27 +264,42 @@ export default class Changes {
     return result
   }
 
+  /**
+   * Merge arrays and unique values
+   * @param {array} a1
+   * @param {array} a2
+   * @return {array}
+   */
   mergeAndUnique (a1, a2) {
     return a1.concat(a2).filter((item, i, a) => a.indexOf(item) === i)
   }
 
-  objectHasChanges (v2, v1, context) {
+  /**
+   * Compare objects and get changes between them.
+   * @param {object|AbstractDbObject|undefined} v2
+   * @param {object|AbstractDbObject|undefined} v1
+   * @param {ChangesContext} context
+   * @param {string|null} skipMode - skip plain values and objects created/dropped by parent (when new object is created/old is dropped). Pass 'create' if skipping on creation, 'drop' if on dropping.
+   * @return {void}
+   * @private
+   */
+  compareObjects (v2, v1, context, skipMode) {
     if (context.isInStack(v1) || context.isInStack(v2)) {
-      return false
+      return
     }
     context.addToStack(v1)
     context.addToStack(v2)
 
     try {
-      const v1Props = this.getComparingProps(v1, context)
-      const v2Props = this.getComparingProps(v2, context)
+      let v1Props = v1 ? this.getComparingProps(v1, context.deep, skipMode) : []
+      let v2Props = v2 ? this.getComparingProps(v2, context.deep, skipMode) : []
 
       for (const prop of this.mergeAndUnique(v1Props, v2Props)) {
         context.addToPath(prop)
         try {
-          const v1Value = v1[prop]
-          const v2Value = v2[prop]
-          this.hasChangesInValues(v2Value, v1Value, context)
+          const v1Value = v1 ? v1[prop] : undefined
+          const v2Value = v2 ? v2[prop] : undefined
+          this.compareValues(v2Value, v1Value, context)
         } finally {
           context.popPath()
         }
@@ -276,48 +312,70 @@ export default class Changes {
   }
 
   /**
-   *
+   * Compare any values and get changes between them.
    * @param {AbstractDbObject|*} v2
    * @param {AbstractDbObject|*} v1
    * @param {ChangesContext} context
-   * @return {boolean}
+   * @return {void}
+   * @private
    */
-  hasChangesInValues (v2, v1, context) {
+  compareValues (v2, v1, context) {
     if (v1 instanceof AbstractDbObject && v2 instanceof AbstractDbObject) {
       if (v1._isInherited && v2._isInherited) {
-        return false
+        return
       }
-      this.hasChanges(v2, v1, context)
-      // v1.getDb().pluginOnCompareObjects(v1, v2, context)
+      this.compareObjects(v2, v1, context, null)
     } else if (isFunction(v1) && isFunction(v2)) {
-      return false
+      // Do nothing with functions
     } else if (isArray(v1) && isArray(v2)) {
-      return this.arrayHasChanges(v2, v1, context)
+      this.compareArrays(v2, v1, context)
     } else if (isObject(v1) && isObject(v2)) {
-      return this.objectHasChanges(v2, v1, context)
+      // Do not add to changes between plain objects, lookup deeper
+      this.compareObjects(v2, v1, context, null)
+    } else if (isObject(v1) && v2 === undefined) {
+      // Do not add to changes between plain objects
+      // Lookup deeper as usual for plain objects, lookup for DB object only if v1 is a DB object
+      const isDbObj = v1 instanceof AbstractDbObject
+      if (isDbObj) {
+        context.addChange(
+          this.getObjectForChangeLog(v1, 'drop'),
+          v2,
+        )
+      }
+      this.compareObjects(v2, v1, context, isDbObj ? 'drop' : null)
+    } else if (isObject(v2) && v1 === undefined) {
+      // Do not add to changes between plain objects
+      // Lookup deeper as usual for plain objects, lookup for DB object only if v2 is a DB object
+      const isDbObj = v2 instanceof AbstractDbObject
+      if (isDbObj) {
+        context.addChange(
+          v1,
+          this.getObjectForChangeLog(v2, 'create'),
+        )
+      }
+      this.compareObjects(v2, v1, context, isDbObj ? 'create' : null)
     } else {
       if (v1 !== v2) {
         context.addChange(
-          v1 instanceof AbstractDbObject ? this.getObjectForChangeLog(v1) : v1,
-          v2 instanceof AbstractDbObject ? this.getObjectForChangeLog(v2) : v2,
+          v1 instanceof AbstractDbObject ? this.getObjectForChangeLog(v1, null) : v1,
+          v2 instanceof AbstractDbObject ? this.getObjectForChangeLog(v2, null) : v2,
         )
-        return true
-      } else {
-        return false
       }
     }
   }
 
-  hasChanges (current, old, context) {
-    if (old === undefined || current === undefined) {
-      context.addChange(
-        old ? this.getObjectForChangeLog(old) : undefined,
-        current ? this.getObjectForChangeLog(current) : undefined
-      )
-      return true
-    } else {
-      return this.objectHasChanges(current, old, context)
-    }
-  }
+}
 
+/**
+ * Where to skip this class of objects or not
+ * @param {typeof AbstractDbObject} class_
+ * @param {string|null} mode
+ * @return {boolean}
+ */
+function skipClass(class_, mode) {
+  return (
+    mode === null ||
+    mode === 'create' && class_.createdByParent ||
+    mode === 'drop' && class_.droppedByParent
+  )
 }

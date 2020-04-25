@@ -42,6 +42,7 @@ export default class Function extends AbstractSchemaObject {
    */
   getConfigForApply (config) {
     const result = super.getConfigForApply(config)
+    // noinspection JSAnnotator
     if (result && result.arguments) {
       for (const name of Object.keys(result.arguments)) {
         result.arguments[name] = parseTypedef(result.arguments[name])
@@ -182,20 +183,65 @@ $BODY$`
   /**
    * @inheritDoc
    */
+  validate (previous, context) {
+    super.validate(previous, context)
+    if (this.code === null) {
+      context.addError(this, `Function or procedure code can not be empty`)
+    }
+  }
+
+  /**
+   * @inheritDoc
+   */
   setupDependencies () {
     super.setupDependencies()
+    this._dependencies = arrayUnique([
+      ...this._dependencies,
+      ...this.getArgsAndReturnsDependencies(),
+      // ...this.getCodeDependencies(),
+    ])
+  }
+
+  /**
+   * Collects dependencies from function arguments and return value.
+   * @return {String[]}
+   */
+  getArgsAndReturnsDependencies () {
     const db = this.getDb()
     const types = {...this.args, ...(this.returns ? {__ret: this.returns} : undefined)}
+    const result = []
     for (const name of Object.keys(types)) {
       const { schema, type } = types[name]
       if (schema && type) {
         const schemaObj = db.getSchema(schema)
         const object = schemaObj.types[type] || schemaObj.tables[type]
         if (object) {
-          this._dependencies.push(object.getPath())
+          result.push(object.getPath())
         }
       }
     }
-    this._dependencies = arrayUnique(this._dependencies)
+    return result
+  }
+
+  /**
+   * Collects dependencies from function code.
+   * @return {String[]}
+   */
+  getCodeDependencies () {
+    const db = this.getDb()
+    const thisSchema = this.getSchema()
+    const result = []
+    const allDbObjects = db.getAllChildren()
+
+    for (const child of allDbObjects) {
+      const path = child.getPathArray()
+      const re = path.map(item => `(?:"|)${item}(?:"|)`)
+      const r = new RegExp(`/(?:^|[^\\w])${re.join('\\.')}(?:$|[^\\w])/g`)
+      const matches = [...this.code.matchAll(r)]
+      if (matches.length > 0) {
+        result.push('')
+      }
+    }
+    return result
   }
 }

@@ -78,4 +78,59 @@ export default class ChildDefCollection {
     }
     throw new Error(`Definition for class ${object.constructor.name} not found`)
   }
+
+  /**
+   * Search for ChildDef by DB object property name
+   * @param propName
+   * @return {ChildDef|null}
+   */
+  findDefByPropName (propName) {
+    for (const def of this.defs) {
+      if (def.propName === propName) {
+        return def
+      }
+    }
+    return null
+  }
+
+  /**
+   *
+   * @param {AbstractDbObject} object
+   * @param {AbstractDbObject} child
+   * @return {boolean}
+   */
+  isChildUnique (object, child) {
+    const childDef = object.getChildrenDefCollection().getDefByObject(child)
+    if (childDef.uniqueGroup === null) {
+      return true
+    }
+    const map = {}
+    const objectDefs = object.getChildrenDefCollection().defs.filter(def => def.uniqueGroup !== null)
+    for (const def of objectDefs) {
+      if (map[def.uniqueGroup] === undefined) {
+        map[def.uniqueGroup] = {}
+      }
+      for (const ch of object.getChildrenByDef(def)) {
+        map[def.uniqueGroup][ch.name] = 1
+      }
+    }
+    return map[childDef.uniqueGroup][child.name] === undefined
+  }
+
+  /**
+   * Find child
+   * @param {AbstractDbObject} object
+   * @param {string} groupName
+   * @param {string} childName
+   * @return {AbstractDbObject|null}
+   */
+  findChildInUniqueGroup (object, groupName, childName) {
+    for (const def of this.defs.filter(d => d.uniqueGroup === groupName)) {
+      const child = object.findChildByDefAndName(def, childName)
+      if (child) {
+        return child
+      }
+    }
+    return null
+  }
 }

@@ -74,8 +74,8 @@ export default class ForeignKey extends AbstractSchemaObject {
   getSqlDefinition (operation, addSql) {
     const ref = this.ref
     const refSchema = ref.schema ? this.getDb().getSchema(ref.schema) : this.getSchema()
-    return `FOREIGN KEY ("${this.column}")
-      REFERENCES ${refSchema.getQuotedName()}."${ref.table}" ("${ref.column}") 
+    return `FOREIGN KEY (${this.sql.escapeSqlId(this.column)})
+      REFERENCES ${refSchema.sql.getEscapedName()}.${this.sql.escapeSqlId(ref.table)} (${this.sql.escapeSqlId(ref.column)}) 
       MATCH SIMPLE ON UPDATE ${this.getOnUpdate()} ON DELETE ${this.getOnDelete()}`;
   }
 
@@ -91,6 +91,20 @@ export default class ForeignKey extends AbstractSchemaObject {
    */
   getParentRelation (operation) {
     return 'ON'
+  }
+
+  /**
+   * Fills the dependencies list of this object
+   */
+  setupDependencies() {
+    super.setupDependencies()
+    const ref = this.ref
+    const refSchema = ref.schema ? this.getDb().getSchema(ref.schema) : this.getSchema()
+    const refTable = refSchema.getTable(ref.table)
+    if (!refTable) {
+      throw new Error(`Foreign key ${this.getParent().name}.${this.name} reference table ${ref.table} not found`)
+    }
+    this._dependencies.push(refTable.getPath())
   }
 
   /**

@@ -13,6 +13,8 @@ import PropDef from '../../dbascode/PropDef'
  */
 export default class Index extends AbstractSchemaObject {
 
+  static droppedByParent = true
+
   static propDefs = new PropDefCollection([
     new PropDef('columns', { type: PropDef.array, isDefault: true }),
     ...this.propDefs.defs,
@@ -38,7 +40,7 @@ export default class Index extends AbstractSchemaObject {
    */
   getObjectIdentifier (operation, isParentContext = false) {
     if (operation === 'drop') {
-      return `${this.getSchema().getQuotedName()}.${this.getQuotedName()}`
+      return `${this.getSchema().sql.getEscapedName()}.${this.getSqlQuotedName()}`
     } else {
       return super.getObjectIdentifier(operation, isParentContext)
     }

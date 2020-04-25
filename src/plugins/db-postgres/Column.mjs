@@ -10,12 +10,19 @@ import PrimaryKey from './PrimaryKey'
 import ForeignKey from './ForeignKey'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
-import { escapeString } from './utils';
-import { replaceAll } from '../../dbascode/utils';
+import {
+  builtinIntegerTypes,
+  builtinNumericTypes,
+  builtinOtherTypes,
+  builtinTextTypes,
+  isType,
+  parseTypedef,
+  stringifyTypeDef
+} from './utils'
 
 /**
  * Column in a table
- * @property {string} type
+ * @property {ArgumentTypeDef} type
  * @property {string} foreignKey
  * @property {boolean} allowNull
  * @property {string|null} defaultValue
@@ -28,7 +35,13 @@ export default class Column extends AbstractSchemaObject {
   static alterWithParent = true
 
   static propDefs = new PropDefCollection([
-    new PropDef('type', { isDefault: true }),
+    new PropDef('type', {
+      type: PropDef.map,
+      isDefault: true,
+      normalize: (obj, value) => {
+        return parseTypedef(value)
+      },
+    }),
     new PropDef('foreignKey'),
     new PropDef('allowNull', { type: PropDef.bool }),
     new PropDef('defaultValue', {
@@ -45,7 +58,7 @@ export default class Column extends AbstractSchemaObject {
           return def.value === 'undefined' ? undefined : def.value
         } else {
           if (obj.isTextual()) {
-            return escapeString(def.value)
+            return obj.sql.escapeString(def.value)
           } else {
             return def.value
           }
@@ -127,7 +140,7 @@ export default class Column extends AbstractSchemaObject {
       (`DEFAULT nextval('${this.getAutoIncSeqName()}'::regclass)`) :
       (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
     const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
-    return `${this.getType()} ${allowNull} ${defaultValue}`.trim()
+    return `${this.getSqlType()} ${allowNull} ${defaultValue}`.trim()
   }
 
   /**
@@ -142,15 +155,15 @@ export default class Column extends AbstractSchemaObject {
    * @returns {string}
    */
   getAutoIncSeqName () {
-    return `${this.getSchema().getQuotedName()}."${this.getParent().name}_${this.name}_seq"`
+    return `${this.getSchema().sql.getEscapedName()}."${this.getParent().name}_${this.name}_seq"`
   }
 
   /**
    * Returns field type
    * @returns {string}
    */
-  getType () {
-    return this.type
+  getSqlType () {
+    return stringifyTypeDef(this.type)
   }
 
   /**
@@ -174,7 +187,7 @@ export default class Column extends AbstractSchemaObject {
           const dv = this.getDefaultValueSql()
           return dv ? `SET DEFAULT ${dv}` : 'DROP DEFAULT'
         case 'type':
-          return `TYPE ${this.getType()}`
+          return `TYPE ${this.getSqlType()}`
       }
     }
     return undefined
@@ -185,7 +198,7 @@ export default class Column extends AbstractSchemaObject {
    * @returns {boolean}
    */
   isTextual () {
-    return isType(textTypes, this.type)
+    return isType(builtinTextTypes, this.type)
   }
 
   /**
@@ -193,15 +206,17 @@ export default class Column extends AbstractSchemaObject {
    * @returns {boolean}
    */
   isNumeric () {
-    return isType(numericTypes, this.type)
+    return isType(builtinNumericTypes, this.type)
   }
 
   /**
-   * Is this field of a custom type
-   * @returns {boolean}
+   * @inheritDoc
    */
-  isCustomType () {
-    return this.type.indexOf('.') >= 0
+  setupDependencies () {
+    super.setupDependencies()
+    if (this.type.schema) {
+      this._dependencies.push(this.getDb().findChildBySqlTypeDef(this.type).getPath())
+    }
   }
 
   /**
@@ -209,24 +224,21 @@ export default class Column extends AbstractSchemaObject {
    * @param {Column} previous
    */
   validate (previous, context) {
-    if (this.isAutoIncrement && !isType(integerTypes, this.type)) {
-      context.addError(this, `Autoincrement values are only allowed on integer fields, ${this.type} specified`)
+    if (this.isAutoIncrement && (this.type.schema || !isType(builtinIntegerTypes, this.type.type))) {
+      context.addError(this, `Autoincrement values are only allowed on integer fields, ${stringifyTypeDef(this.type)} specified`)
     }
-    if (this.isCustomType()) {
-      let [schemaName, typeName] = this.type.split('.')
-      schemaName = replaceAll(schemaName, '"', '')
-      typeName = replaceAll(typeName, '"', '')
-      const schema = this.getDb().getSchema(schemaName)
+    if (this.type.schema) {
+      const schema = this.getDb().getSchema(this.type.schema)
       if (schema) {
-        const type = schema.types[baseType(typeName)]
+        const type = schema.types[this.type.type]
         if (!type) {
-          context.addError(this, `Unknown column type: ${this.type} - type ${typeName} not found in schema ${schemaName}`)
+          context.addError(this, `Unknown column type: ${stringifyTypeDef(this.type)} - type ${this.type.type} not found in schema ${this.type.schema}`)
         }
       } else {
-        context.addError(this, `Unknown column type: ${this.type} - schema ${schemaName} not found`)
+        context.addError(this, `Unknown column type: ${stringifyTypeDef(this.type)} - schema ${this.type.schema} not found`)
       }
     } else {
-      if (!this.isNumeric() && !this.isTextual() && !isType(otherTypes, this.type)) {
+      if (!this.isNumeric() && !this.isTextual() && !isType(builtinOtherTypes, this.type)) {
         context.addError(this, `Unknown column type: ${this.type}`)
       }
       if (previous) {
@@ -244,88 +256,4 @@ export default class Column extends AbstractSchemaObject {
     }
     super.validate(previous, context)
   }
-}
-
-const numericTypes = [
-  'int',
-  'smallint',
-  'integer',
-  'bigint',
-  'decimal',
-  'numeric',
-  'real',
-  'double',
-  'smallserial',
-  'serial',
-  'bigserial',
-]
-
-const integerTypes = [
-  'int',
-  'smallint',
-  'integer',
-  'bigint',
-  'smallserial',
-  'serial',
-  'bigserial',
-]
-
-const textTypes = [
-  'text',
-  'varchar',
-  'character varying',
-  'character',
-  'char',
-]
-
-const otherTypes = [
-  'money',
-  'bytea',
-  'timestamp',
-  'timestamp with time zone',
-  'timestamp without time zone',
-  'date',
-  'date with time zone',
-  'date without time zone',
-  'boolean',
-  'point',
-  'line',
-  'lseg',
-  'box',
-  'path',
-  'polygon',
-  'circle',
-  'cidr',
-  'inet',
-  'macaddr',
-  'macaddr8',
-  'bit',
-  'bit varying',
-  'uuid',
-  'xml',
-  'json',
-  'jsonb',
-  'jsonb',
-]
-
-function isType(typeList, type) {
-  return typeList.indexOf(baseType(type)) >= 0
-}
-
-function baseType (type) {
-  let result = type
-  let p = result.indexOf('[')
-  if (p < 0) {
-    p = result.indexOf(' array')
-  }
-  if (p >= 0) {
-    result = result.substr(0, p)
-  }
-  p = result.indexOf('(')
-  if (p >= 0) {
-    const p2 = result.indexOf(')')
-    result = result.substr(0, p) + ' ' + result.substr(p2 + 1, result.length)
-    result = replaceAll(result, '  ', ' ')
-  }
-  return result.trimEnd().toLowerCase()
 }

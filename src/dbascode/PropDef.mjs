@@ -60,8 +60,8 @@ export default class PropDef {
   ) {
     this.allowNull = allowNull
     this.recreateOnChange = recreateOnChange
-    if (type === PropDef.map && isDefault) {
-      throw new Error(`Map property ${name} can not be default`)
+    if (type === PropDef.map && isDefault && !normalize) {
+      throw new Error(`Map property ${name} can be default only if normalize function is provided.`)
     }
     if (!configName) {
       configName = camelCaseToUnderscore(name)

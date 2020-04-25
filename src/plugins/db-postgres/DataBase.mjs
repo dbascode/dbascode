@@ -11,7 +11,7 @@ import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
 import AbstractDataBase from '../../dbascode/AbstractDataBase'
 import { joinSql, parseArrayProp } from '../../dbascode/utils'
-import { escapeName } from './utils'
+import SqlRules from './SqlRules'
 
 /**
  * PostgreSQL database object
@@ -46,6 +46,10 @@ export default class DataBase extends AbstractDataBase {
     new ChildDef(Role),
     new ChildDef(Schema),
   ])
+  /**
+   * @type {typeof SqlRules}
+   */
+  static sqlRules = SqlRules
 
   /**
    * Returns SQL for object creation
@@ -55,7 +59,7 @@ export default class DataBase extends AbstractDataBase {
     let sql = []
     if (this.extensions.length > 0) {
       for (const ext of this.extensions) {
-        sql.push(`CREATE EXTENSION IF NOT EXISTS ${escapeName(ext)};`)
+        sql.push(`CREATE EXTENSION IF NOT EXISTS ${SqlRules.escapeStringExpr(ext)};`)
       }
     }
     return joinSql(sql)
@@ -91,6 +95,12 @@ export default class DataBase extends AbstractDataBase {
       context.addError(this, `PostgreSQL version below 9.4 is not supported. Version ${this.dbmsVersion} is defined.`)
       return
     }
+    for (const extName of this.extensions) {
+      const invalidChars = []
+      if (!this.sql.validateSqlId(extName, invalidChars)) {
+        context.addError(this, `Invalid chars (${invalidChars.join(', ')}) in extension name ${extName}.`)
+      }
+    }
     super.validate(previous, context)
   }
 
@@ -118,14 +128,24 @@ export default class DataBase extends AbstractDataBase {
         delete newChanges[propName]
         const replace = change.cur && change.old
         if (!change.cur || replace) {
-          result.push(`DROP EXTENSION "${escapeName(change.old)}";`)
+          result.push(`DROP EXTENSION "${SqlRules.escapeStringExpr(change.old)}";`)
         }
         if (!change.old || replace) {
-          result.push(`CREATE EXTENSION IF NOT EXISTS ${escapeName(change.cur)};`)
+          result.push(`CREATE EXTENSION IF NOT EXISTS ${SqlRules.escapeStringExpr(change.cur)};`)
         }
       }
     }
     result.push(super.getAlterSql(compared, newChanges))
     return joinSql(result)
+  }
+
+  /**
+   * Find child by SQL type definition
+   * @param {ArgumentTypeDef} def
+   * @return {AbstractDbObject|null}
+   */
+  findChildBySqlTypeDef (def) {
+    const schema = this.getSchema(def.schema)
+    return schema.findChildByUniqueGroupAndName('default', def.type)
   }
 }

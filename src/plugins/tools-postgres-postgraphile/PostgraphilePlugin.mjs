@@ -83,7 +83,7 @@ class PostgraphilePlugin extends PluginDescriptor {
         }
       },
 
-      getQuotedComment: (origMethod) => {
+      getComment: (origMethod) => {
         const omitComment = inst.getOmitComment()
         if (omitComment !== null && omitComment !== undefined) {
           return `${omitComment}\n${origMethod()}`.trim()

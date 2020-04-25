@@ -81,7 +81,8 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
           addSql.push(`ALTER TABLE ${inst.getObjectIdentifier('alter')} ENABLE ROW LEVEL SECURITY;`)
           for (const op in rls) {
             const checkType = op === 'insert' ? 'WITH CHECK' : 'USING'
-            addSql.push(`CREATE POLICY "${inst.getParentedNameFlat()}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
+            const name = `${inst.getParent().sql.getName()}_${inst.sql.getName()}`
+            addSql.push(`CREATE POLICY "${name}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
           }
         }
         addSql.push(inst.getCreateDefAclRecordsSql())
@@ -125,17 +126,17 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
               sqlData.push(`'${rule.role}'`);
               sqlData.push(`B'${pad.substring(0, pad.length - maskStr.length) + maskStr}'`)
               sqlData.push(`B'${pad.substring(0, pad.length - permStr.length) + permStr}'`)
-              aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().getQuotedName()}.row_acl`)
+              aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().sql.getEscapedName()}.row_acl`)
             }
           }
-          sql.push(`INSERT INTO ${defAclTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.getParentedName()}', ARRAY[${aclSql.join(', ')}] );`)
+          sql.push(`INSERT INTO ${defAclTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.sql.getFullyQualifiedName()}', ARRAY[${aclSql.join(', ')}] );`)
         }
         return joinSql(sql)
       },
 
       getDropDefAclRecordsSql() {
         const defAclTable = inst.getSchema().getTable('default_acl')
-        return `DELETE FROM ${defAclTable.getObjectIdentifier('delete')} WHERE "table" = '${inst.getParentedName()}';`
+        return `DELETE FROM ${defAclTable.getObjectIdentifier('delete')} WHERE "table" = '${inst.sql.getFullyQualifiedName()}';`
       },
 
       getPropDefCollection (origMethod) {
@@ -186,7 +187,7 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
             for (let i = 0; i < defaultAcl.length; i++) {
               const rule = defaultAcl[i]
               if (!rule.role) {
-                context.addError(inst, `Table ${inst.getParentedName()} default ACL rule ${i}: role name must be set.`)
+                context.addError(inst, `Table ${inst.sql.getFullyQualifiedName()} default ACL rule ${i}: role name must be set.`)
               }
             }
           }

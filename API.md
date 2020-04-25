@@ -285,9 +285,9 @@ Useful for adding custom migrations on the plugin version change.</p>
     * [.getAlterOperator()](#AbstractDbObject+getAlterOperator) ⇒ <code>string</code>
     * [.getAlterWithParentOperator()](#AbstractDbObject+getAlterWithParentOperator) ⇒ <code>string</code>
     * [.getFullAlterSql()](#AbstractDbObject+getFullAlterSql) ⇒ <code>string</code>
-    * [.getParentedName()](#AbstractDbObject+getParentedName) ⇒ <code>string</code>
-    * [.getParentedNameFlat()](#AbstractDbObject+getParentedNameFlat) ⇒ <code>string</code>
-    * [.getQuotedName()](#AbstractDbObject+getQuotedName) ⇒ <code>string</code>
+    * [.getSqlParentedName()](#AbstractDbObject+getParentedName) ⇒ <code>string</code>
+    * [.getSqlParentedNameFlat()](#AbstractDbObject+getParentedNameFlat) ⇒ <code>string</code>
+    * [.getSqlQuotedName()](#AbstractDbObject+getQuotedName) ⇒ <code>string</code>
     * [.getChildByPath(path)](#AbstractDbObject+getChildByPath) ⇒ [<code>AbstractDbObject</code>](#AbstractDbObject) \| <code>\*</code>
     * [.getPath()](#AbstractDbObject+getPath) ⇒ <code>string</code>
     * [.getDb()](#AbstractDbObject+getDb) ⇒ [<code>AbstractDataBase</code>](#AbstractDataBase)
@@ -670,21 +670,21 @@ This object still can be dropped separately by altering its prent object.</p>
 <p>Returns ALTER SQL for  objects which are fully recreated on alteration.</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  
-<a name="AbstractDbObject+getParentedName"></a>
+<a name="AbstractDbObject+getSqlParentedName"></a>
 
-### abstractDbObject.getParentedName() ⇒ <code>string</code>
+### abstractDbObject.getSqlParentedName() ⇒ <code>string</code>
 <p>Returns name of this object prepended by _parent's name for SQL use</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  
-<a name="AbstractDbObject+getParentedNameFlat"></a>
+<a name="AbstractDbObject+getSqlParentedNameFlat"></a>
 
-### abstractDbObject.getParentedNameFlat() ⇒ <code>string</code>
+### abstractDbObject.getSqlParentedNameFlat() ⇒ <code>string</code>
 <p>Returns name of this object prepended by _parent's name separated by underscore</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  
-<a name="AbstractDbObject+getQuotedName"></a>
+<a name="AbstractDbObject+getSqlQuotedName"></a>
 
-### abstractDbObject.getQuotedName() ⇒ <code>string</code>
+### abstractDbObject.getSqlQuotedName() ⇒ <code>string</code>
 <p>Returns name escaped for DB identifiers</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  

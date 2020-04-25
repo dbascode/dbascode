@@ -3,11 +3,17 @@
  * @copyright 2019 Alex Pravdin
  */
 import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import SqlRules from './SqlRules'
 
 /**
  * Abstract class for objects belonging to a schema
  */
 export default class AbstractSchemaObject extends AbstractDbObject {
+  /**
+   * @type {typeof SqlRules}
+   */
+  static sqlRules = SqlRules
+
   /**
    * Returns Schema  object that the current object belongs to
    * @returns {Schema}
@@ -27,7 +33,7 @@ export default class AbstractSchemaObject extends AbstractDbObject {
     if (!isParentContext) {
       const relType = this.getParentRelation(operation)
       if (!relType || relType === '-') {
-        return this.getParentedName(true)
+        return this.sql.getFullyQualifiedEscapedName()
       }
     }
     return super.getObjectIdentifier(operation, isParentContext)
