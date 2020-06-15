@@ -14,24 +14,44 @@ import { circularSafeStringify } from './utils'
  * @property {string} path
  * @property {*} old
  * @property {*} cur
+ // * @property {*} oldDbObj
+ // * @property {*} curDbObj
  * @property {boolean} allowEmptySql
  */
 /**
  * Context to store changes between two DB trees.
  */
 export default class ChangesContext {
+  /**
+   * @type {*[]}
+   */
   stack = []
   /**
    * @type {ChangeItem[]}
    */
   changes = []
+  /**
+   * @type {string[]}
+   */
   path = []
+  /**
+   * Whether to iterate over children
+   * @type {boolean}
+   */
   deep = false
 
+  /**
+   * @param {boolean} [deep]
+   */
   constructor (deep = false) {
     this.deep = deep
   }
 
+  /**
+   * Check object already in stack
+   * @param v
+   * @return {boolean}
+   */
   isInStack (v) {
     if (v === undefined) {
       return false
@@ -73,21 +93,10 @@ export default class ChangesContext {
   }
 
   /**
-   * Do we have any changes.
-   * @returns {boolean}
+   * Print changes to console
+   * @param {boolean} colored
+   * @return {string}
    */
-  hasChanges () {
-    return this.changes.length > 0
-  }
-
-  /**
-   * Do we have changes that must be reflected in SQL.
-   * @returns {boolean}
-   */
-  hasSqlChanges () {
-    return this.changes.filter(item => !item.allowEmptySql).length > 0
-  }
-
   prettyPrint (colored) {
     const useColors = colored && supportsColor.stdout
     const delColor = color.FgRed

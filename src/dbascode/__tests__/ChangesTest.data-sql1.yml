@@ -1,0 +1,15 @@
+dbms: postgres
+schemas:
+  public_schema:
+    tables:
+      T1:
+        columns:
+          id: int
+          name: text
+          value:
+            type: text
+            comment: Comment
+            allow_null: true
+      T2:
+        columns:
+          id: int

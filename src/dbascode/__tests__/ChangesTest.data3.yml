@@ -1,0 +1,44 @@
+dbms: postgres
+roles:
+  test1:
+  test2:
+schemas:
+  public_schema:
+    functions:
+      F1:
+        arguments:
+          A1: public_schema.T1
+          A2: public_schema.T2
+        returns: public_schema.TY2
+      F2:
+        arguments:
+          A1: public_schema.T2
+
+    tables:
+      T1:
+        columns:
+          id: int
+      T2:
+        comment: Test comment T2
+        columns:
+          id: text
+      T3:
+        comment: Test comment T3
+        columns:
+          col1: public_schema.TY3
+      T5:
+        columns:
+          col1:
+            type: int
+            foreign_key: T1.id
+    types:
+      TY1:
+        attributes:
+          t1: public_schema.T1
+      TY2:
+        attributes:
+          t4: public_schema.TY4
+      TY3:
+        enum: ['a1', 'a2']
+      TY4:
+        enum: ['b1', 'b2']

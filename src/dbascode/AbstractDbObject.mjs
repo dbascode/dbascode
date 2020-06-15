@@ -4,13 +4,9 @@
  */
 import isFunction from 'lodash-es/isFunction'
 import reverse from 'lodash-es/reverse'
-import difference from 'lodash-es/difference'
 import {
-  arrayUnique,
   getPropValue,
   joinSql,
-  objectDifferenceKeys,
-  objectIntersectionKeys,
   parseArrayProp,
   replaceAll,
 } from './utils'
@@ -22,6 +18,12 @@ import isArray from 'lodash-es/isArray'
 import isString from 'lodash-es/isString'
 import isObject from 'lodash-es/isObject'
 import AbstractSqlRules from './AbstractSqlRules'
+
+/**
+ * @typedef {object} AlterPropContext
+ * @property {boolean} allowEmptySql - this change allows empty result SQL.
+ * @property {boolean} separateSql - SQL returned by this call is a separate and should be added after the regular one.
+ */
 
 /**
  * Base class for all DB objects.
@@ -302,19 +304,6 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Returns SQL for comments update
-   * @param {AbstractDbObject} previous
-   * @returns {string}
-   */
-  getCommentChangesSql (previous) {
-    const comment = this.getComment();
-    const prevComment = previous ? previous.getComment() : ''
-    if (prevComment !== comment) {
-      return `COMMENT ON ${this.getObjectClass('comment')} ${this.getObjectIdentifier('comment', false)} IS '${this.sql.escapeStringExpr(comment)}';`
-    }
-  }
-
-  /**
    * Returns this object comment
    * @returns {string}
    */
@@ -323,62 +312,10 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Returns SQL for permissions update
-   * @param previous
-   * @returns {string}
-   */
-  getPermissionsChangesSql (previous) {
-    const old = previous, cur = this
-    const result = []
-    const curGrant = cur ? cur.grant : {}, curRevoke = cur ? cur.revoke : {}
-    const oldGrant = old ? old.grant : {}, oldRevoke = old ? old.revoke : {}
-    const addGrantOps = objectDifferenceKeys(curGrant, oldGrant)
-    const removeGrantOps = objectDifferenceKeys(oldGrant, curGrant)
-    const addRevokeOps = objectDifferenceKeys(curRevoke, oldRevoke)
-    // const removeRevokeOps = objectDifferenceKeys(oldRevoke, curRevoke)
-    const sameGrantOps = objectIntersectionKeys(curGrant, oldGrant)
-    const sameRevokeOps = objectIntersectionKeys(curRevoke, oldRevoke)
-
-    for (const op of addGrantOps) {
-      for (const role of curGrant[op]) {
-        result.push(cur.getPermissionSql('GRANT', op, role))
-      }
-    }
-    for (const op of removeGrantOps) {
-      for (const role of oldGrant[op]) {
-        result.push(old.getPermissionSql('REVOKE', op, role))
-      }
-    }
-    for (const op of addRevokeOps) {
-      for (const role of curRevoke[op]) {
-        result.push(cur.getPermissionSql('REVOKE', op, role))
-      }
-    }
-    for (const op of sameGrantOps) {
-      const addGrantRoles = difference(curGrant[op], oldGrant[op])
-      const removeGrantRoles = difference(oldGrant[op], curGrant[op])
-      for (const role of addGrantRoles) {
-        result.push(cur.getPermissionSql('GRANT', op, role))
-      }
-      for (const role of removeGrantRoles) {
-        result.push(cur.getPermissionSql('REVOKE', op, role))
-      }
-    }
-    for (const op of sameRevokeOps) {
-      const addRevokeRoles = difference(curRevoke[op], oldRevoke[op])
-      // const removeRevokeRoles = difference(oldRevoke[op], curRevoke[op])
-      for (const role of addRevokeRoles) {
-        result.push(cur.getPermissionSql('REVOKE', op, role))
-      }
-    }
-    return joinSql(result)
-  }
-
-  /**
    * Returns CREATE SQL statement for the object and all its children
    * @returns {string}
    */
-  getCreateSqlWithChildren () {
+  getChangesCreateSql () {
     const result = []
     // If we are here on the object that should be created by its parent then we are altering parent
     // and need to get special SQL. This method will not be called when creating such children with
@@ -387,19 +324,7 @@ export default class AbstractDbObject {
       result.push(this.getSeparateCreateSql())
     } else {
       result.push(this.getCreateSql())
-      for (const child of this.getChildrenCreateOrder(this.getAllChildren())) {
-        // Children created by the current object are processed in the getCreateSql-getSqlDefinition
-        // calls, so skip them here.
-        if (!child.getCreatedByParent()) {
-          result.push(child.getCreateSqlWithChildren());
-        } else {
-          result.push(child.getCommentChangesSql(undefined))
-          result.push(child.getPermissionsChangesSql(undefined))
-        }
-      }
     }
-    result.push(this.getCommentChangesSql(undefined))
-    result.push(this.getPermissionsChangesSql(undefined))
     return joinSql(result)
   }
 
@@ -420,179 +345,14 @@ export default class AbstractDbObject {
   }
 
   /**
-   *
-   * @param {ChangesContext} changes
-   * @param {AbstractDataBase} prevTree
-   * @return
-   */
-  getChildrenModificationCommands (changes, prevTree) {
-    if (changes.changes.length === 0) {
-      return []
-    }
-
-    const result = []
-    const changeMap = {}
-    for (const change of changes.changes) {
-      changeMap[change.path] = change
-    }
-
-    const deps = this.getAllDependencies()
-    // const backDeps = this.createBackDependencies(deps)
-
-    const childMap = {}
-    childMap[''] = this
-    for (const child of this.getAllChildrenRecurse()) {
-      childMap[child.getPath()] = child
-    }
-
-    const oldChildMap = {}
-    if (prevTree) {
-      for (const child of this.getAllChildrenRecurse()) {
-        oldChildMap[child.getPath()] = child
-      }
-    }
-    const oldDeps = prevTree ? prevTree.getAllDependencies() : {}
-    const oldBackDeps = prevTree ? prevTree.createBackDependencies(oldDeps) : {}
-
-    const getLastProp = function (path) {
-      const p = parseArrayProp(path).path
-      return [
-        p.splice(p.length - 1, 1).join('.'),
-        p[p.length - 1],
-      ]
-    }
-
-    const getDBObjectAndProp = function (path, map) {
-      let result, propName = '', objPath = path, lastResult = null
-      do {
-        result = map[objPath]
-        if (result === lastResult) {
-          throw new Error(`Can't find ${path}`)
-        }
-        lastResult = result
-        if (!result) {
-          const [shortPath, propAdd] = getLastProp(objPath)
-          objPath = shortPath
-          propName = propName + (propName.length ? '.' : '') + propAdd
-        }
-      } while (!result)
-      return [result, propName]
-    }
-
-    const objAlreadyExists = function (objPath) {
-      return !(changeMap[objPath] && !changeMap[objPath].old)
-    }
-
-    const mergeDependenciesToParent = function (objPath, parentPath) {
-      // Remove dependency on parent
-      deps[objPath] = deps[objPath].filter(p => p !== parentPath)
-      // Merge parent deps and obj deps
-      deps[parentPath] = arrayUnique([...deps[parentPath], ...deps[objPath]])
-      // Remove dependencies of the object
-      delete deps[objPath]
-    }
-
-    const ensureExists = function (path) {
-      const [obj, propName] = getDBObjectAndProp(path, childMap)
-      const objPath = obj.getPath()
-      const objExists = objAlreadyExists(objPath)
-      const parentPath = obj.getParent() ? obj.getParent().getPath() : null
-      const parentExists = parentPath !== null ? objAlreadyExists(parentPath) : false
-
-      if (obj.getCreatedByParent()) {
-        if (objExists) {
-          // Nothing to do here, object already exists
-          return
-        } else {
-          if (parentExists) {
-            // If parent already exists then it will be altered to add obj object. Do nothing and go through dependencies.
-          } else {
-            // Object will be created by its parent - move all obj dependencies to the parent dependencies
-            mergeDependenciesToParent(objPath, parentPath)
-            ensureExists(parentPath)
-            delete changeMap[objPath]
-            delete changeMap[path]
-            return
-          }
-        }
-      } else {
-        if (!objExists) {
-          const defs = obj.getChildrenDefCollection()
-          if (defs) {
-            const defsToCreate = defs.defs.filter(def => def.class_.createdByParent)
-            // Dependencies of defsToCreate should be treated as the obj dependencies
-            for (const def of defsToCreate) {
-              for (const child of obj.getChildrenByDef(def)) {
-                mergeDependenciesToParent(child.getPath(), objPath)
-              }
-            }
-          }
-        }
-      }
-
-      const objDeps = deps[objPath]
-      if (!objDeps || objDeps.length === 0) {
-        if (changeMap[objPath]) {
-          result.push(changeMap[objPath])
-          delete changeMap[objPath]
-        }
-        if (propName && changeMap[path]) {
-          result.push(changeMap[path])
-          delete changeMap[path]
-        }
-      } else {
-        for (let i = objDeps.length - 1; i >= 0; i--) {
-          ensureExists(objDeps[i])
-          objDeps.pop()
-        }
-        if (changeMap[objPath]) {
-          result.push(changeMap[objPath])
-          delete changeMap[objPath]
-        }
-        if (propName && changeMap[path]) {
-          result.push(changeMap[path])
-          delete changeMap[path]
-        }
-      }
-    }
-
-    const ensureDropped = function (path) {
-
-    }
-
-    for (const change of changes.changes) {
-      if (change.cur) {
-        // Modification or creation
-        ensureExists(change.path)
-      } else {
-        // Deletion
-        ensureDropped(change.path)
-      }
-    }
-
-    return result
-  }
-
-  getChildrenDropOrder (children) {
-    return reverse(this.getChildrenCreateOrder(children))
-  }
-
-  /**
    * Returns DROP SQL statement for the object
    * @returns {string}
    */
-  getDropSqlWithChildren () {
+  getChangesDropSql () {
     const result = []
     if (this.getDroppedByParent()) {
       result.push(this.getSeparateDropSql())
     } else {
-      for (const child of this.getChildrenDropOrder(this.getAllChildren())) {
-        // Children dropping by the current object will be dropped automatically with this object,
-        // so skip dropping of them here.
-        if (!child.getDroppedByParent()) {
-          result.push(child.getDropSqlWithChildren());
-        }
-      }
       result.push(this.getDropSql())
     }
     return joinSql(result)
@@ -707,7 +467,7 @@ export default class AbstractDbObject {
       if (relType === 'ON') { // create index Index on table schema.table
         return `${this.sql.getEscapedName()} ON ${this.getParent().sql.getFullyQualifiedEscapedName()}`
       } else if (relType === '.') { // comment on column schema.table.column
-        return `${this.getParent().sql.getFullyQualifiedEscapedName()}`
+        return this.sql.getFullyQualifiedEscapedName()
       } else {
         return this.sql.getEscapedName()
       }
@@ -729,16 +489,17 @@ export default class AbstractDbObject {
 
   /**
    * Returns SQL for object update
-   * @param {AbstractDbObject} compared
-   * @param {Object.<string, ChangedPropertyDef>} changes - dot-separated paths to the changed properties with old and new values (empty if the whole object changed)
+   * @param {AbstractDbObject} oldObject - old object
+   * @param {ChangeItem[]} changes - array of changes
    * @returns {string}
    */
-  getAlterSql (compared, changes) {
+  getChangesAlterSql (oldObject, changes) {
     const parent = this.getParent()
-    let result = []
+    let result = [], result2 = []
     let dropAndRecreate = false
-    for (const propName of Object.keys(changes)) {
-      const change = changes[propName]
+    const curPathLength = this.getPath().length
+    for (const change of changes) {
+      const propName = change.path.substring(curPathLength + 1)
       const parsedPropName = parseArrayProp(propName)
       const propDef = this.getPropDefCollection().findPropByName(parsedPropName.path[0])
       if (propDef && propDef.recreateOnChange) {
@@ -746,24 +507,30 @@ export default class AbstractDbObject {
         result = []
         break
       }
-      const sql = this.getAlterPropSql(compared, propName, change.old, change.cur)
-      if (sql !== undefined) {
-        for (const s of [...isArray(sql) ? sql : [sql]]) {
-          if (this.getAlterWithParent()) {
-            result.push(`${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} ${this.getAlterWithParentOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter-alter', true)} ${s};`)
-          } else {
-            result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', false)} ${s};`)
+      const context = {}
+      const sql = this.getAlterPropSql(oldObject, propName, change.old, change.cur, context)
+      if (context.allowEmptySql) {
+        change.allowEmptySql = true
+      }
+      if (sql) {
+        if (context.separateSql) {
+          result2.push(sql)
+        } else {
+          for (const s of [...isArray(sql) ? sql : [sql]]) {
+            if (this.getAlterWithParent()) {
+              result.push(`${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} ${this.getAlterWithParentOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter-alter', true)} ${s};`)
+            } else {
+              result.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', false)} ${s};`)
+            }
           }
         }
-      } else {
-        change.allowEmptySql()
       }
     }
-    if (dropAndRecreate && compared) {
-      result.push(compared.getDropSqlWithChildren())
-      result.push(this.getCreateSqlWithChildren())
+    if (dropAndRecreate && oldObject) {
+      result.push(oldObject.getChangesDropSql())
+      result.push(this.getChangesCreateSql())
     }
-    return joinSql(result)
+    return joinSql([...result, ...result2])
   }
 
   /**
@@ -772,10 +539,11 @@ export default class AbstractDbObject {
    * @param {string} propName
    * @param {*} oldValue
    * @param {*} curValue
+   * @param {AlterPropContext} context
    * @return {string|string[]|undefined}
    */
-  getAlterPropSql (compared, propName, oldValue, curValue) {
-    return '';
+  getAlterPropSql (compared, propName, oldValue, curValue, context) {
+    return ''
   }
 
   /**
@@ -1126,16 +894,16 @@ export default class AbstractDbObject {
     const def = this.getChildrenDefCollection().getDefByObject(child)
     switch (def.propType) {
       case ChildDef.single:
-        this[def.propName] = child;
+        this[def.propName] = child
         break
       case ChildDef.array:
-        this[def.propName].push(child);
+        this[def.propName].push(child)
         break
       case ChildDef.map:
         if (!this.getChildrenDefCollection().isChildUnique(this, child)) {
           throw new Error(`Object with name ${child.name} already exists`)
         }
-        this[def.propName][child.name] = child;
+        this[def.propName][child.name] = child
         break
       default:
         throw new Error(`Unknown propType ${def.propType} for the object of ${child.getClassName()}`)
@@ -1156,10 +924,6 @@ export default class AbstractDbObject {
         context
       )
     }
-  }
-
-  getComparingProps(compared) {
-
   }
 }
 

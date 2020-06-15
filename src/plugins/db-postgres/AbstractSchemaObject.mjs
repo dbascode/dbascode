@@ -2,13 +2,13 @@
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
  */
-import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import AbstractPostgresDbObject from './AbstractPostgresDbObject'
 import SqlRules from './SqlRules'
 
 /**
  * Abstract class for objects belonging to a schema
  */
-export default class AbstractSchemaObject extends AbstractDbObject {
+export default class AbstractSchemaObject extends AbstractPostgresDbObject {
   /**
    * @type {typeof SqlRules}
    */

@@ -104,9 +104,9 @@ async function main() {
       await dbAsCode.initializePlugins()
       await dbAsCode.determineCurrentDbmsType()
       console.log('Loading changes...')
-      const [plan, changes] = await dbAsCode.createPlan()
-      console.log(`Current DB version: ${plan.id - 1}`)
-      if (!changes.hasChanges()) {
+      const plan = await dbAsCode.createPlan()
+      console.log(`Current DB version: ${plan.oldId}`)
+      if (!plan.hasChanges) {
         console.log('No changes detected. Nothing to do.')
         if (cliConfig.output) {
           fs.writeFileSync(cliConfig.output, JSON.stringify({ noChanges: true }, null, 2))
@@ -145,9 +145,8 @@ async function main() {
       } else {
         console.log('Input plan not set. Creating migration plan...')
         await dbAsCode.determineCurrentDbmsType()
-        const [p, changes] = await dbAsCode.createPlan()
-        plan = p
-        if (!changes.hasChanges()) {
+        const plan = await dbAsCode.createPlan()
+        if (!plan.hasChanges) {
           console.log('No changes detected. Nothing to do.')
           break
         }

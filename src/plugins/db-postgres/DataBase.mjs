@@ -9,7 +9,8 @@ import ChildDef from '../../dbascode/ChildDef'
 import ChildDefCollection from '../../dbascode/ChildDefCollection'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
-import AbstractDataBase from '../../dbascode/AbstractDataBase'
+import DataBaseMixin from '../../dbascode/DataBaseMixin'
+import AbstractPostgresDbObject from './AbstractPostgresDbObject'
 import { joinSql, parseArrayProp } from '../../dbascode/utils'
 import SqlRules from './SqlRules'
 
@@ -20,7 +21,7 @@ import SqlRules from './SqlRules'
  * @property {Object.<string, Role>} roles
  * @property {Object.<string, Schema>} schemas
  */
-export default class DataBase extends AbstractDataBase {
+export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
   /**
    * @type {string}
    * @private
@@ -118,7 +119,7 @@ export default class DataBase extends AbstractDataBase {
   /**
    * @inheritDoc
    */
-  getAlterSql (compared, changes) {
+  getChangesAlterSql (compared, changes) {
     const newChanges = {...changes}
     const result = []
     for (const propName of Object.keys(changes)) {
@@ -135,7 +136,7 @@ export default class DataBase extends AbstractDataBase {
         }
       }
     }
-    result.push(super.getAlterSql(compared, newChanges))
+    result.push(super.getChangesAlterSql(compared, newChanges))
     return joinSql(result)
   }
 

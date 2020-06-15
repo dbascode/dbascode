@@ -69,17 +69,11 @@ export default class DbAsCode {
    * Constructor
    * @param {DbAsCodeConfig} config
    * @param {string[]|PluginDescriptor[]} predefinedPlugins
-   * @param {Changes} changes
    */
   constructor (
     config = {},
     predefinedPlugins = [],
-    changes,
   ) {
-    if (changes === undefined) {
-      changes = new Changes()
-    }
-    this.changes = changes
     this._predefinedPlugins = predefinedPlugins
     this.config = { ...this.config, ...config }
   }
@@ -170,7 +164,7 @@ export default class DbAsCode {
 
   /**
    * Create migration plan.
-   * @return {Promise<State[]|ChangesContext[]>}
+   * @return {Promise<State>}
    */
   async createPlan () {
     console.log('Loading current DB state...')
@@ -211,20 +205,21 @@ export default class DbAsCode {
       }
     }
 
-    const changes = this.changes.collectChanges(prevTree, curTree, true)
+    this.changes = new Changes(prevTree, curTree)
+    this.changes.collectChanges(true)
 
     try {
-      const sql = this.getMigrationSql(changes, prevTree, curTree)
-      return [
-        new State({
-          id: (prevState.id || 0) + 1,
-          raw: curStateRaw,
-          migrationSql: sql,
-          dbAsCodeVersion: DbAsCode.version,
-          pluginVersion: dbPlugin.version,
-        }),
-        changes,
-      ]
+      const sql = this.getMigrationSql()
+      return new State({
+        oldId: prevState.id || 0,
+        id: (prevState.id || 0) + 1,
+        raw: curStateRaw,
+        migrationSql: sql,
+        dbAsCodeVersion: DbAsCode.version,
+        pluginVersion: dbPlugin.version,
+        hasChanges: this.changes.hasChanges(),
+        hasSqlChanges: this.changes.hasSqlChanges(),
+      })
     } finally {
       this.disposeTrees(prevTree, curTree)
     }
@@ -264,14 +259,11 @@ export default class DbAsCode {
 
   /**
    * @private
-   * @param changes
-   * @param prevTree
-   * @param curTree
    * @returns {string}
    */
-  getMigrationSql (changes, prevTree, curTree) {
-    let sqlDump = this.changes.getChangesSql(prevTree, curTree, changes)
-    if (changes.hasSqlChanges()) {
+  getMigrationSql () {
+    let sqlDump = this.changes.getChangesSql()
+    if (this.changes.hasSqlChanges()) {
       if (sqlDump.trim().length === 0) {
         throw new Error('Changes in state detected, but SQL dump is empty.')
       }

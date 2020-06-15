@@ -2,7 +2,7 @@
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
  */
-import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import AbstractPostgresDbObject from './AbstractPostgresDbObject'
 import Type from './Type'
 import Function from './Function'
 import Table from './Table'
@@ -18,7 +18,7 @@ import SqlRules from './SqlRules'
  * @property {Object.<string, Function>} functions
  * @property {Object.<string, Sequence>} sequences
  */
-export default class Schema extends AbstractDbObject {
+export default class Schema extends AbstractPostgresDbObject {
   /**
    * @type {typeof SqlRules}
    */

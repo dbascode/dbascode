@@ -1,0 +1,13 @@
+dbms: postgres
+schemas:
+  public_schema:
+    functions:
+      F1:
+        arguments:
+          A1: public_schema.T1
+          A2: text
+        returns: text
+    tables:
+      T1:
+        columns:
+          id: int

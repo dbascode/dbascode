@@ -177,7 +177,7 @@ export default class Column extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getAlterPropSql (compared, propName, oldValue, curValue) {
+  getAlterPropSql (compared, propName, oldValue, curValue, context) {
     if (!this._isInherited) {
       switch (propName) {
         case 'allowNull':
@@ -190,7 +190,7 @@ export default class Column extends AbstractSchemaObject {
           return `TYPE ${this.getSqlType()}`
       }
     }
-    return undefined
+    return super.getAlterPropSql(compared, propName, oldValue, curValue, context)
   }
 
   /**

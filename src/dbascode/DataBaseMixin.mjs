@@ -8,11 +8,12 @@ import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
 
 /**
- * Abstract database class to be inherited by a specific DBMS implementation plugin.
+ * Abstract database mixin that adds common database object methods
+ * (initial load from config, postprocessing, etc).
  * @property {number} dbmsVersion
  * @property {object} params
  */
-export default class AbstractDataBase extends AbstractDbObject {
+export default (Class) => class extends Class {
   /**
    * @type {PropDefCollection}
    */

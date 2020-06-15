@@ -1,0 +1,9 @@
+dbms: postgres
+schemas:
+  public_schema:
+    tables:
+      T1:
+        columns:
+          id: int
+          name: text
+          value: text

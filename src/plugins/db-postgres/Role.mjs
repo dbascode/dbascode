@@ -3,7 +3,7 @@
  * @copyright 2019 Alex Pravdin
  */
 
-import AbstractDbObject from '../../dbascode/AbstractDbObject'
+import AbstractPostgresDbObject from './AbstractPostgresDbObject'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
 import SqlRules from './SqlRules'
@@ -13,7 +13,7 @@ import SqlRules from './SqlRules'
  * @property {string[]} memberOf
  * @property {boolean} isClient
  */
-export default class Role extends AbstractDbObject {
+export default class Role extends AbstractPostgresDbObject {
 
   static propDefs = new PropDefCollection([
     new PropDef('memberOf', { type: PropDef.array }),

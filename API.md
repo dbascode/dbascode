@@ -268,8 +268,8 @@ Useful for adding custom migrations on the plugin version change.</p>
     * [.getCommentChangesSql(previous)](#AbstractDbObject+getCommentChangesSql) ⇒ <code>string</code>
     * [.getQuotedComment()](#AbstractDbObject+getQuotedComment) ⇒ <code>string</code>
     * [.getPermissionsChangesSql(previous)](#AbstractDbObject+getPermissionsChangesSql) ⇒ <code>string</code>
-    * [.getCreateSqlWithChildren()](#AbstractDbObject+getCreateSqlWithChildren) ⇒ <code>string</code>
-    * [.getDropSqlWithChildren()](#AbstractDbObject+getDropSqlWithChildren) ⇒ <code>string</code>
+    * [.getChangesCreateSql()](#AbstractDbObject+getCreateSqlWithChildren) ⇒ <code>string</code>
+    * [.getChangesDropSql()](#AbstractDbObject+getDropSqlWithChildren) ⇒ <code>string</code>
     * [.getCreateSql()](#AbstractDbObject+getCreateSql) ⇒ <code>string</code>
     * [.getCreateOperator()](#AbstractDbObject+getCreateOperator) ⇒ <code>string</code>
     * [.getSeparateCreateSql()](#AbstractDbObject+getSeparateCreateSql) ⇒ <code>string</code>
@@ -280,7 +280,7 @@ Useful for adding custom migrations on the plugin version change.</p>
     * [.getObjectClass(operation)](#AbstractDbObject+getObjectClass) ⇒ <code>string</code>
     * [.getObjectIdentifier(operation, isParentContext)](#AbstractDbObject+getObjectIdentifier) ⇒ <code>string</code>
     * [.getParentRelation(operation)](#AbstractDbObject+getParentRelation) ⇒ <code>string</code>
-    * [.getAlterSql(compared, changes)](#AbstractDbObject+getAlterSql) ⇒ <code>string</code>
+    * [.getChangesAlterSql(compared, changes)](#AbstractDbObject+getAlterSql) ⇒ <code>string</code>
     * [.getAlterPropSql(compared, propName, oldValue, curValue)](#AbstractDbObject+getAlterPropSql) ⇒ <code>string</code> \| <code>Array.&lt;string&gt;</code> \| <code>undefined</code>
     * [.getAlterOperator()](#AbstractDbObject+getAlterOperator) ⇒ <code>string</code>
     * [.getAlterWithParentOperator()](#AbstractDbObject+getAlterWithParentOperator) ⇒ <code>string</code>
@@ -516,15 +516,15 @@ This object still can be dropped separately by altering its prent object.</p>
 | --- |
 | previous | 
 
-<a name="AbstractDbObject+getCreateSqlWithChildren"></a>
+<a name="AbstractDbObject+getChangesCreateSql"></a>
 
-### abstractDbObject.getCreateSqlWithChildren() ⇒ <code>string</code>
+### abstractDbObject.getChangesCreateSql() ⇒ <code>string</code>
 <p>Returns CREATE SQL statement for the object and all its children</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  
-<a name="AbstractDbObject+getDropSqlWithChildren"></a>
+<a name="AbstractDbObject+getChangesDropSql"></a>
 
-### abstractDbObject.getDropSqlWithChildren() ⇒ <code>string</code>
+### abstractDbObject.getChangesDropSql() ⇒ <code>string</code>
 <p>Returns DROP SQL statement for the object</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  
@@ -626,9 +626,9 @@ This object still can be dropped separately by altering its prent object.</p>
 | --- | --- | --- |
 | operation | <code>string</code> | <p>operation which ir requiring the relation</p> |
 
-<a name="AbstractDbObject+getAlterSql"></a>
+<a name="AbstractDbObject+getChangesAlterSql"></a>
 
-### abstractDbObject.getAlterSql(compared, changes) ⇒ <code>string</code>
+### abstractDbObject.getChangesAlterSql(compared, changes) ⇒ <code>string</code>
 <p>Returns SQL for object update</p>
 
 **Kind**: instance method of [<code>AbstractDbObject</code>](#AbstractDbObject)  

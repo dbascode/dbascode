@@ -3,6 +3,8 @@
  * @copyright 2019 Alex Pravdin
  */
 
+import { joinSql } from './utils'
+
 /**
  * Abstract class for basic routines with SQL identifiers and strings escaping and validation.
  */
@@ -56,7 +58,7 @@ export default class AbstractSqlRules {
   getFullyQualifiedEscapedName () {
     let item = this.instance
     const result = []
-    while (item) {
+    while (item && item.name) {
       result.unshift(item.sql.getEscapedName())
       item = item.getParent()
     }
