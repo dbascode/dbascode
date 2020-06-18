@@ -64,8 +64,8 @@ export default class State {
       migrationSql,
       dbAsCodeVersion ,
       pluginVersion,
-      hasChanges,
-      hasSqlChanges,
+      hasChanges = false,
+      hasSqlChanges = false,
     }
   ) {
     this.oldId = oldId

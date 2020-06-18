@@ -1,0 +1,12 @@
+schemas:
+  test-schema:
+    types:
+      test-type1:
+        attributes:
+          a1: text
+          a2: text
+    tables:
+      test-table1:
+        columns:
+          col2: test-schema.wrong-type
+

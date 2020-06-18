@@ -12,5 +12,5 @@ import SqlRules from '../SqlRules'
 test('loads and orders create changes correctly', async () => {
   const r = new SqlRules()
 
-  expect(r.escapeSqlId('id')).toEqual("id")
+  expect(r.escapeSqlId('id')).toEqual('"id"')
 });

@@ -2,7 +2,6 @@
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
  */
-import isEmpty from 'lodash-es/isEmpty'
 import AbstractDbObject from './AbstractDbObject'
 import ChangesContext from './ChangesContext'
 import isArray from 'lodash-es/isArray'
@@ -121,9 +120,11 @@ export default class Changes {
    */
   _getLatestChildMap () {
     const childMap = {}
-    childMap[''] = this.latestTree
-    for (const child of this.latestTree.getAllChildrenRecurse()) {
-      childMap[child.getPath()] = child
+    if (this.latestTree) {
+      childMap[''] = this.latestTree
+      for (const child of this.latestTree.getAllChildrenRecurse()) {
+        childMap[child.getPath()] = child
+      }
     }
     return childMap
   }
@@ -159,7 +160,7 @@ export default class Changes {
       changeMap[change.path] = change
     }
 
-    const deps = this.latestTree.getAllDependencies()
+    const deps = this.latestTree ? this.latestTree.getAllDependencies() : {}
 
     const childMap = this._getLatestChildMap()
     const oldChildMap = this._getOldChildMap()

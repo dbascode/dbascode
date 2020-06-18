@@ -215,7 +215,11 @@ export default class Column extends AbstractSchemaObject {
   setupDependencies () {
     super.setupDependencies()
     if (this.type.schema) {
-      this._dependencies.push(this.getDb().findChildBySqlTypeDef(this.type).getPath())
+      const obj = this.getDb().findChildBySqlTypeDef(this.type)
+      if (!obj) {
+        throw new Error(`Type ${this.type.schema}.${this.type.type} not found`)
+      }
+      this._dependencies.push(obj.getPath())
     }
   }
 
@@ -227,17 +231,7 @@ export default class Column extends AbstractSchemaObject {
     if (this.isAutoIncrement && (this.type.schema || !isType(builtinIntegerTypes, this.type.type))) {
       context.addError(this, `Autoincrement values are only allowed on integer fields, ${stringifyTypeDef(this.type)} specified`)
     }
-    if (this.type.schema) {
-      const schema = this.getDb().getSchema(this.type.schema)
-      if (schema) {
-        const type = schema.types[this.type.type]
-        if (!type) {
-          context.addError(this, `Unknown column type: ${stringifyTypeDef(this.type)} - type ${this.type.type} not found in schema ${this.type.schema}`)
-        }
-      } else {
-        context.addError(this, `Unknown column type: ${stringifyTypeDef(this.type)} - schema ${this.type.schema} not found`)
-      }
-    } else {
+    if (!this.type.schema) {
       if (!this.isNumeric() && !this.isTextual() && !isType(builtinOtherTypes, this.type)) {
         context.addError(this, `Unknown column type: ${this.type}`)
       }

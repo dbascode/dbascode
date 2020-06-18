@@ -147,6 +147,9 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
    */
   findChildBySqlTypeDef (def) {
     const schema = this.getSchema(def.schema)
+    if (!schema) {
+      throw new Error(`Schema ${def.schema} not found in type definition ${def.schema}.${def.type}`)
+    }
     return schema.findChildByUniqueGroupAndName('default', def.type)
   }
 }

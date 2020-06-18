@@ -25,7 +25,7 @@ import Changes from './Changes'
  * Main class of the DbAsCode tool.
  */
 export default class DbAsCode {
-  static version = 2
+  static version = 3
   /**
    * @type {DbAsCodeConfig}
    */
