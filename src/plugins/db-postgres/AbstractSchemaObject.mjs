@@ -38,4 +38,23 @@ export default class AbstractSchemaObject extends AbstractPostgresDbObject {
     }
     return super.getObjectIdentifier(operation, isParentContext)
   }
+
+  /**
+   * Add dependency by typedef.
+   * @param {ArgumentTypeDef} typeDef
+   */
+  addDependencyBySqlTypeDef (typeDef) {
+    if (this.sql.isBuiltinType(typeDef)) {
+      return
+    }
+    const def = {...typeDef}
+    if (!def.schema) {
+      def.schema = this.getSchema().name
+    }
+    const obj = this.getDb().findChildBySqlTypeDef(def)
+    if (!obj) {
+      throw new Error(`Type ${def.schema}.${def.type} not found`)
+    }
+    this._dependencies.push(obj.getPath())
+  }
 }

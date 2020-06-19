@@ -6,6 +6,7 @@
 import AbstractSqlRules from '../../dbascode/AbstractSqlRules'
 import { replaceAll } from '../../dbascode/utils'
 import isFunction from 'lodash-es/isFunction'
+import { builtinIntegerTypes, builtinNumericTypes, builtinOtherTypes, builtinTextTypes, isType } from './utils'
 
 /**
  * Basic routines with SQL identifiers and strings escaping and validation for PostgreSQL.
@@ -67,5 +68,24 @@ export default class SqlRules extends AbstractSqlRules {
    */
   static escapeStringExpr (s) {
     return `'${this.escapeString(s)}'`
+  }
+
+  /**
+   * Is string an SQL type.
+   * @param {string|ArgumentTypeDef} type
+   * @param {string[]} typeList
+   * @return {boolean}
+   */
+  static isType (type, typeList) {
+    return isType(typeList, type)
+  }
+
+  /**
+   * Is string a builtin SQL type.
+   * @param {string} type
+   * @return {boolean}
+   */
+  static isBuiltinType (type) {
+    return this.isType(type, [...builtinNumericTypes, ...builtinTextTypes, ...builtinOtherTypes])
   }
 }

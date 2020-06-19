@@ -150,4 +150,42 @@ export default class AbstractSqlRules {
   escapeStringExpr (s) {
     return this.constructor.escapeStringExpr(s)
   }
+
+  /**
+   * Is string an SQL type.
+   * @param {string|ArgumentTypeDef} type
+   * @param {string[]} typeList
+   * @return {boolean}
+   */
+  static isType (type, typeList) {
+    return typeList.indexOf(type) >= 0
+  }
+
+  /**
+   * Is string an SQL type.
+   * @param {string|ArgumentTypeDef} type
+   * @param {string[]} typeList
+   * @return {boolean}
+   */
+  isType (type, typeList) {
+    return this.constructor.isType(type)
+  }
+
+  /**
+   * Is string a builtin SQL type.
+   * @param {string|ArgumentTypeDef} type
+   * @return {boolean}
+   */
+  static isBuiltinType (type) {
+    return false
+  }
+
+  /**
+   * Is string a builtin SQL type.
+   * @param {string|ArgumentTypeDef} type
+   * @return {boolean}
+   */
+  isBuiltinType (type) {
+    return this.constructor.isBuiltinType(type)
+  }
 }

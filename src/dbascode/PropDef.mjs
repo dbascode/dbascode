@@ -3,10 +3,10 @@
  * @copyright 2019 Alex Pravdin
  */
 import isArray from 'lodash-es/isArray'
-import isObject from 'lodash-es/isObject'
 import { camelCaseToUnderscore } from './utils'
 import isFunction from 'lodash-es/isFunction'
 import isString from 'lodash-es/isString'
+import isPlainObject from 'lodash-es/isPlainObject'
 
 /**
  * @typedef {object} VersionedPropName
@@ -98,7 +98,7 @@ export default class PropDef {
   apply (obj, config) {
     let configValue
     const configName = this.getConfigName(obj)
-    configValue = this.isDefault && !isObject(config)
+    configValue = this.isDefault && !isPlainObject(config)
       ? config
       : config
         ? config[configName]

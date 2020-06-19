@@ -1,0 +1,31 @@
+schemas:
+  schema:
+    tables:
+      fktarget:
+        columns:
+          id:
+            type: int
+            autoincrement: true
+
+      table:
+        comment: Table comment
+        columns:
+          id:
+            type: int
+            foreign_key: fktarget.id
+            allow_null: true
+          value: text[]
+          value2:
+            type: text
+            default: default value
+        indexes:
+          - id
+        primary_key:
+          - id
+          - value
+        triggers:
+          before_update: 'schema.update_modification_fields()'
+
+      table2:
+        extends: fktarget
+

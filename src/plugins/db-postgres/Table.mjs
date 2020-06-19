@@ -11,15 +11,14 @@ import UniqueKey from './UniqueKey'
 import ChildDef from '../../dbascode/ChildDef'
 import ForeignKey from './ForeignKey'
 import ChildDefCollection from '../../dbascode/ChildDefCollection'
-import AbstractDbObject from '../../dbascode/AbstractDbObject'
 import { parseTypedef } from './utils'
 
 /**
  * Table object
- * @property {ForeignKey} foreignKeys
- * @property {Column[]} columns
+ * @property {ForeignKey[]} foreignKeys
+ * @property {Object.<string, Column>} columns
  * @property {Index[]} indexes
- * @property {Trigger[]} triggers
+ * @property {Object.<string, Trigger>} triggers
  * @property {UniqueKey[]} uniqueKeys
  * @property {PrimaryKey} primaryKey
  */
@@ -35,10 +34,6 @@ export default class Table extends AbstractSchemaObject {
     new ChildDef(ForeignKey, ChildDef.array),
     new ChildDef(PrimaryKey, ChildDef.single),
   ])
-
-  // skipTriggers = false
-  // skipIndexes = false
-  // skipRLS = false
 
   /**
    * @inheritDoc
@@ -87,12 +82,12 @@ export default class Table extends AbstractSchemaObject {
   }
 
   /**
-   * Fills the dependencies list of this object
+   * @inheritDoc
    */
   setupDependencies() {
     super.setupDependencies()
     if (this.extends) {
-      this._dependencies.push(this.getDb().findChildBySqlTypeDef(parseTypedef(this.extends)))
+      this.addDependencyBySqlTypeDef(parseTypedef(this.extends))
     }
   }
 

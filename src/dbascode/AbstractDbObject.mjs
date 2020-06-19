@@ -169,6 +169,14 @@ export default class AbstractDbObject {
   }
 
   /**
+   * Whether this object was inherited from the ancestor (defined in the extends property).
+   * @return {boolean}
+   */
+  isInherited () {
+    return this._isInherited
+  }
+
+  /**
    * @return {boolean}
    */
   getCreatedByParent () {

@@ -16,7 +16,7 @@ import PostgreSqlPlugin from '../PostgreSqlPlugin'
 
 /**
  * Load this test test data
- * @returns {Promise<AbstractDataBase>}
+ * @returns {Promise<DataBase>}
  */
 async function loadTestData(idx = '') {
   const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/ColumnTest.data${idx}.yml`])

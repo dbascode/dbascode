@@ -215,11 +215,7 @@ export default class Column extends AbstractSchemaObject {
   setupDependencies () {
     super.setupDependencies()
     if (this.type.schema) {
-      const obj = this.getDb().findChildBySqlTypeDef(this.type)
-      if (!obj) {
-        throw new Error(`Type ${this.type.schema}.${this.type.type} not found`)
-      }
-      this._dependencies.push(obj.getPath())
+      this.addDependencyBySqlTypeDef(this.type)
     }
   }
 
