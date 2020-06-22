@@ -145,12 +145,13 @@ async function main() {
       } else {
         console.log('Input plan not set. Creating migration plan...')
         await dbAsCode.determineCurrentDbmsType()
-        const plan = await dbAsCode.createPlan()
+        plan = await dbAsCode.createPlan()
         if (!plan.hasChanges) {
           console.log('No changes detected. Nothing to do.')
           break
         }
       }
+      console.log(`Current DB version: ${plan.oldId}`)
       console.log('Executing SQL migration...')
       const exitCode = await dbAsCode.migrate(plan)
       if (exitCode !== 0) {
