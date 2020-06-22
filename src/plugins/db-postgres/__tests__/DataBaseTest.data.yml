@@ -1,0 +1,16 @@
+dbms: postgresql
+dbms_version: 12
+default_locale: 'en-US'
+extensions:
+  - pgcrypto
+roles:
+  role1: ~
+params:
+  publicSchema: helpdesk_public
+  privateSchema: helpdesk_private
+schemas:
+  helpdesk_public:
+    tables:
+      t1:
+        columns:
+          id: int

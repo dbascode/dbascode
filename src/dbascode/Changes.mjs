@@ -7,9 +7,11 @@ import ChangesContext from './ChangesContext'
 import isArray from 'lodash-es/isArray'
 import ChildDef from './ChildDef'
 import isObject from 'lodash-es/isObject'
-import { joinSql, parseArrayProp } from './utils'
+import { circularSafeStringify, joinSql, parseArrayProp } from './utils'
+import supportsColor from 'supports-color'
 import isFunction from 'lodash-es/isFunction'
 import isPlainObject from 'lodash-es/isPlainObject'
+import { color } from '../console-utils'
 
 /**
  * Changes calculation routines.
@@ -73,7 +75,7 @@ export default class Changes {
         const dropping = change.cur === undefined
         const creating = change.old === undefined
         if (!creating && !dropping || propName) {
-          result.push(obj.getAlterSql(oldChildMap[objPath], [change]))
+          result.push(obj.getChangesAlterSql(oldChildMap[objPath], [change]))
         } else if (creating) {
           result.push(obj.getChangesCreateSql())
         } else if (dropping) {
@@ -523,6 +525,40 @@ export default class Changes {
         )
       }
     }
+  }
+
+  /**
+   * Print changes to console
+   * @param {boolean} colored
+   * @return {string}
+   */
+  prettyPrint (colored) {
+    const useColors = colored && supportsColor.stdout
+    const delColor = color.FgRed
+    const addColor = color.FgGreen
+    const editColor = color.FgYellow
+    const coloredText = (text, clr) => {
+      return `${useColors ? clr : ''}${text}${useColors ? color.Reset : ''}`
+    }
+    const printVal = v => (isObject(v) || isArray(v) ? "\n" : '') + circularSafeStringify(v, true)
+
+    const result = []
+    for (const {path, old, cur} of this.changes) {
+      if (old && cur) {
+        result.push(
+          `${coloredText(`~ ${path}`, editColor)}: ${coloredText(printVal(old), editColor)} => ${coloredText(printVal(cur), editColor)}\n`
+        )
+      } else if (!old && cur) {
+        result.push(
+          `${coloredText(`+ ${path}`, addColor)}: ${printVal(cur)}\n`
+        )
+      } else if (old && !cur) {
+        result.push(
+          `${coloredText(`- ${path}`, delColor)}\n`
+        )
+      }
+    }
+    return result.join('')
   }
 }
 

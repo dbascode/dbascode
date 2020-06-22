@@ -146,17 +146,18 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         return result
       },
 
-      getAlterSql (origMethod, compared, changes) {
-        let recreateDefaultAcl = false, newChanges = {...changes}
-        for (const propName of Object.keys(changes)) {
-          const propDef = parseArrayProp(propName)
+      getChangesAlterSql (origMethod, compared, changes) {
+        let recreateDefaultAcl = false, newChanges = [...changes]
+        for (const i in changes) {
+          const change = changes[i]
+          const propDef = parseArrayProp(change.path)
           if (propDef.name === 'defaultAcl') {
             recreateDefaultAcl = true
-            delete newChanges[propName]
+            delete newChanges[i]
           }
         }
         const sql = []
-        sql.push(origMethod(compared, newChanges))
+        sql.push(origMethod(compared, newChanges.filter(i => i)))
         if (recreateDefaultAcl) {
           const defAclTable = inst.getSchema().getTable('default_acl')
           sql.push(inst.getDropDefAclRecordsSql())

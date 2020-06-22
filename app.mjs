@@ -119,7 +119,7 @@ async function main() {
         fs.writeFileSync(cliConfig.output, JSON.stringify(plan, null, 2))
       }
       console.log('Changes to be made:')
-      console.log(changes.prettyPrint(true))
+      console.log(dbAsCode.changes.prettyPrint(true))
       console.log('SQL to execute:')
       console.log(plan.migrationSql)
       console.log('Done')

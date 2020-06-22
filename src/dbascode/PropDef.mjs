@@ -144,7 +144,11 @@ export default class PropDef {
    */
   getConfigName (obj) {
     if (isArray(this._configName)) {
-      const dbVersion = obj.getClassName() === 'DataBase' ? obj.getVersion() :  obj.getDb().getVersion()
+      let dbVersion = obj.getClassName() === 'DataBase' ? obj.getVersion() :  obj.getDb().getVersion()
+      if (dbVersion === undefined) {
+        // No state - use the newest version of the config name
+        dbVersion = Number.MAX_VALUE
+      }
       const versions = [...this._configName]
         .map(v => isString(v) ? { version: 1, name: v } : v)
         .filter(

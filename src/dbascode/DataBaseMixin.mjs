@@ -2,7 +2,6 @@
  * @licence This file is covered by the LICENSE.md file in the root of this project.
  * @copyright 2019 Alex Pravdin
  */
-import AbstractDbObject from './AbstractDbObject'
 import { dispose } from './utils';
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
@@ -10,6 +9,7 @@ import PropDef from './PropDef'
 /**
  * Abstract database mixin that adds common database object methods
  * (initial load from config, postprocessing, etc).
+ * @typedef DataBaseMixin
  * @property {number} dbmsVersion
  * @property {object} params
  */
@@ -58,12 +58,12 @@ export default (Class) => class extends Class {
 
   /**
    * Instantiate new object from config data
-   * @param {typeof AbstractDataBase} class_
+   * @param {typeof DataBaseMixin} class_
    * @param {Object|null} cfg
    * @param {number} dbAsCodeVersion
    * @param {number} pluginVersion
    * @param {boolean} isNew
-   * @return {AbstractDataBase|null}
+   * @return {DataBaseMixin|null}
    */
   static createFromState(
     class_,

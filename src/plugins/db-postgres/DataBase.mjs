@@ -20,6 +20,8 @@ import SqlRules from './SqlRules'
  * @property {string[]} extensions
  * @property {Object.<string, Role>} roles
  * @property {Object.<string, Schema>} schemas
+ * @extends AbstractPostgresDbObject
+ * @extends DataBaseMixin
  */
 export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
   /**
@@ -108,11 +110,11 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
   /**
    * @inheritDoc
    */
-  getAlterPropSql (compared, propName, oldValue, curValue) {
+  getAlterPropSql (compared, propName, oldValue, curValue, context) {
     if (propName === 'dbmsVersion') {
       return undefined;
     } else {
-      return super.getAlterPropSql(compared, propName, oldValue, curValue)
+      return super.getAlterPropSql(compared, propName, oldValue, curValue, context)
     }
   }
 
@@ -120,13 +122,13 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
    * @inheritDoc
    */
   getChangesAlterSql (compared, changes) {
-    const newChanges = {...changes}
+    const newChanges = [...changes]
     const result = []
-    for (const propName of Object.keys(changes)) {
-      const parsedPropName = parseArrayProp(propName)
-      const change = changes[propName]
+    for (const i in changes) {
+      const change = changes[i]
+      const parsedPropName = parseArrayProp(change.path)
       if (parsedPropName.name === 'extensions') {
-        delete newChanges[propName]
+        delete newChanges[i]
         const replace = change.cur && change.old
         if (!change.cur || replace) {
           result.push(`DROP EXTENSION "${SqlRules.escapeStringExpr(change.old)}";`)
@@ -136,7 +138,7 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
         }
       }
     }
-    result.push(super.getChangesAlterSql(compared, newChanges))
+    result.push(super.getChangesAlterSql(compared, newChanges.filter(i => i)))
     return joinSql(result)
   }
 

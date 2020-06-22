@@ -98,16 +98,18 @@ class PostgraphilePlugin extends PluginDescriptor {
         return result
       },
 
-      getAlterSql (origMethod, compared, changes) {
-        let newChanges, omitSql
-        if (changes.omit) {
-          newChanges = clone(changes)
-          delete newChanges.omit
-          omitSql = inst.getCommentChangesSql(compared)
-        } else {
-          newChanges = changes
+      getChangesAlterSql (origMethod, compared, changes) {
+        let newChanges = [...changes], omitSql
+        for (const i in changes) {
+          const change = changes[i]
+          if (change.omit) {
+            delete newChanges[i]
+            omitSql = inst.getCommentChangesSql(compared)
+          } else {
+            newChanges = changes
+          }
         }
-        const result = origMethod(compared, newChanges)
+        const result = origMethod(compared, newChanges.filter(i => i))
         return omitSql ? joinSql([result, omitSql]) : result
       },
     })

@@ -89,4 +89,6 @@ test('loads table config', async () => {
   expect(table2.primaryKey).toBeInstanceOf(PrimaryKey)
   expect(table2.primaryKey.isInherited()).toBeTruthy()
   expect(schema.sequences.table2_id_seq).toBeInstanceOf(Sequence)
+
+
 })
