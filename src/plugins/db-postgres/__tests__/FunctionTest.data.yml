@@ -1,0 +1,52 @@
+dbms: postgres
+schemas:
+  schema:
+    functions:
+      func:
+        language: plpgsql
+        cost: 555
+        security_definer: true
+        stability: stable
+        parallel_safety: safe
+        leak_proof: true
+        returns: schema_public.type1
+        arguments:
+          a1: schema_public.type1
+          a2: schema_private.type2
+        code: |
+          DECLARE
+              confirmRow "schema_private".confirmation_code%ROWTYPE;
+              authRow "schema_private".service_auth_code%ROWTYPE;
+              res "schema_public".admin_get_confirmation_code_result_status;
+          BEGIN
+              CALL "schema_private".func1();
+              SELECT * INTO authRow FROM "schema_private".service_auth_code WHERE;
+              IF NOT FOUND THEN
+                  res.status := 'invalid'::"schema_public".admin_get_confirmation_code_result_status
+                  RETURN res;
+              END IF;
+              SELECT * INTO confirmRow FROM "schema_private".confirmation_code WHERE;
+              IF NOT FOUND THEN
+                  res.status := 'pending'::"schema_public".admin_get_confirmation_code_result_status
+                  RETURN res;
+              END IF;
+              res.status := 'ok'::"schema_public".admin_get_confirmation_code_result_status
+              res.code := confirmRow.code;
+              res.client_info := confirmRow.client_info;
+          END;
+
+  schema_private:
+    tables:
+      confirmation_code:
+      service_auth_code:
+    types:
+      type2:
+        enum: [v1]
+  schema_public:
+    tables:
+    types:
+      type1:
+        enum: [v1, v2]
+      admin_get_confirmation_code_result_status:
+        attributes:
+          a1: text

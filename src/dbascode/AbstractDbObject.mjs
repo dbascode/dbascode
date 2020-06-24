@@ -653,7 +653,7 @@ export default class AbstractDbObject {
 
   /**
    * Returns DB object that the current object belongs to
-   * @returns {AbstractDataBase}
+   * @returns {DataBaseMixin}
    */
   getDb () {
     let parent = this

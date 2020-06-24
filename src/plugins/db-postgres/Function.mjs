@@ -7,6 +7,8 @@ import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
 import { arrayUnique } from '../../dbascode/utils'
 import { parseTypedef } from './utils'
+import Type from './Type'
+import Table from './Table'
 
 /**
  * Function, Procedure, or Trigger Function object
@@ -188,6 +190,7 @@ $BODY$`
     if (this.code === null) {
       context.addError(this, `Function or procedure code can not be empty`)
     }
+    // TODO: add args and return types validation
   }
 
   /**
@@ -198,7 +201,7 @@ $BODY$`
     this._dependencies = arrayUnique([
       ...this._dependencies,
       ...this.getArgsAndReturnsDependencies(),
-      // ...this.getCodeDependencies(),
+      ...this.getCodeDependencies(),
     ])
   }
 
@@ -214,9 +217,11 @@ $BODY$`
       const { schema, type } = types[name]
       if (schema && type) {
         const schemaObj = db.getSchema(schema)
-        const object = schemaObj.types[type] || schemaObj.tables[type]
-        if (object) {
-          result.push(object.getPath())
+        if (schemaObj) {
+          const object = schemaObj.types[type] || schemaObj.tables[type]
+          if (object) {
+            result.push(object.getPath())
+          }
         }
       }
     }
@@ -229,19 +234,26 @@ $BODY$`
    */
   getCodeDependencies () {
     const db = this.getDb()
-    const thisSchema = this.getSchema()
+    // const thisSchema = this.getSchema()
     const result = []
-    const allDbObjects = db.getAllChildren()
+    const allChildren = db.getAllChildrenRecurse()
+    const allTypes = allChildren.filter(item => item instanceof Type)
+    const allTables = allChildren.filter(item => item instanceof Table)
 
-    for (const child of allDbObjects) {
-      const path = child.getPathArray()
-      const re = path.map(item => `(?:"|)${item}(?:"|)`)
-      const r = new RegExp(`/(?:^|[^\\w])${re.join('\\.')}(?:$|[^\\w])/g`)
-      const matches = [...this.code.matchAll(r)]
-      if (matches.length > 0) {
-        result.push('')
+    const doSearch = (objects) => {
+      for (const child of objects) {
+        const name = child.sql.getFullyQualifiedName().split('.')
+        const nameRe = name.map(item => `(?:"|)${item}(?:"|)`)
+        const matches = [...this.code.matchAll(new RegExp(`(?:^|[^\\w])${nameRe.join('\\.')}(?:$|[^\\w])`, 'g'))]
+        if (matches.length > 0) {
+          result.push(child.getPath())
+        }
       }
     }
+
+    doSearch(allTypes)
+    doSearch(allTables)
+
     return result
   }
 }

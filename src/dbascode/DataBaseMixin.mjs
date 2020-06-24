@@ -6,14 +6,16 @@ import { dispose } from './utils';
 import PropDefCollection from './PropDefCollection'
 import PropDef from './PropDef'
 
-/**
- * Abstract database mixin that adds common database object methods
- * (initial load from config, postprocessing, etc).
- * @typedef DataBaseMixin
- * @property {number} dbmsVersion
- * @property {object} params
- */
-export default (Class) => class extends Class {
+export default (Class) =>
+  /**
+   * Abstract database mixin that adds common database object methods
+   * (initial load from config, postprocessing, etc).
+   * @class DataBaseMixin
+   * @extends AbstractDbObject
+   * @property {number} dbmsVersion
+   * @property {object} params
+   */
+  class extends Class {
   /**
    * @type {PropDefCollection}
    */

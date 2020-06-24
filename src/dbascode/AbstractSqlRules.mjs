@@ -38,7 +38,7 @@ export default class AbstractSqlRules {
   }
 
   /**
-   * Returns fully qualified name of this in DB
+   * Returns fully qualified name of this object in DB
    * @returns {string}
    */
   getFullyQualifiedName () {
@@ -48,7 +48,7 @@ export default class AbstractSqlRules {
       result.unshift(item.sql.getName())
       item = item.getParent()
     }
-    return result.join('.')
+    return result.filter(i => i).join('.')
   }
 
   /**
