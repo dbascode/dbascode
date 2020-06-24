@@ -44,11 +44,11 @@ export default class AbstractSqlRules {
   getFullyQualifiedName () {
     let item = this.instance
     const result = []
-    while (item) {
+    while (item && !item.constructor.isDataBaseMixin) {
       result.unshift(item.sql.getName())
       item = item.getParent()
     }
-    return result.filter(i => i).join('.')
+    return result.join('.')
   }
 
   /**
@@ -58,7 +58,7 @@ export default class AbstractSqlRules {
   getFullyQualifiedEscapedName () {
     let item = this.instance
     const result = []
-    while (item && item.name) {
+    while (item && !item.constructor.isDataBaseMixin) {
       result.unshift(item.sql.getEscapedName())
       item = item.getParent()
     }

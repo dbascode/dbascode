@@ -169,7 +169,7 @@ $BODY$`
   /**
    * @inheritDoc
    */
-  getAlterPropSql (compared, propName, oldValue, curValue) {
+  getAlterPropSql (compared, propName, oldValue, curValue, context) {
     switch (propName) {
       case 'code':
       case 'language':
