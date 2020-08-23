@@ -1,0 +1,14 @@
+dbms_version: 12
+schemas:
+  schema:
+    tables:
+      table:
+        comment: Table comment
+        omit: true
+        columns:
+          id:
+            type: int
+            omit: true
+    functions:
+      func:
+        omit: true

@@ -179,6 +179,8 @@ $BODY$`
       case 'stability':
       case 'parallelSafety':
         return this.getSqlDefinition('create', [])
+      default:
+        return super.getAlterPropSql(compared, propName, oldValue, curValue, context)
     }
   }
 

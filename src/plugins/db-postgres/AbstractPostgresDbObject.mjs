@@ -25,7 +25,7 @@ export default class AbstractPostgresDbObject extends AbstractDbObject {
    * @return {string|string[]|undefined}
    */
   getAlterPropSql (compared, propName, oldValue, curValue, context) {
-    switch (propName) {
+    switch (propName.split('.')[0]) {
       case 'comment':
         context.separateSql = true
         return this.getCommentChangesSql(compared)

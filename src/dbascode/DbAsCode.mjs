@@ -12,6 +12,7 @@ import { TREE_INITIALIZED } from './PluginEvent'
 import isString from 'lodash-es/isString'
 import ValidationContext from './ValidationContext'
 import Changes from './Changes'
+import isArray from 'lodash-es/isArray'
 
 /**
  * @typedef {object} DbAsCodeConfig
@@ -67,7 +68,7 @@ export default class DbAsCode {
 
   /**
    * Constructor
-   * @param {DbAsCodeConfig} config
+   * @param {{source: string}} config
    * @param {string[]|PluginDescriptor[]} predefinedPlugins
    */
   constructor (
@@ -149,6 +150,20 @@ export default class DbAsCode {
       throw new Error('DBMS is not defined')
     }
     for (const p of this._plugins) {
+      if (p.dbClass) {
+        const dbClass = p.dbClass
+        if (isString(dbClass.dbms)) {
+          if (dbClass.dbms.toLowerCase() === dbms.toLowerCase()) {
+            this._dbPluginName = p.name
+            break
+          }
+        } else if (isArray(dbClass.dbms)) {
+          if (dbClass.dbms.map(name => name.toLowerCase()).indexOf(dbms.toLowerCase()) >= 0) {
+            this._dbPluginName = p.name
+            break
+          }
+        }
+      }
       if (p.dbClass && p.dbClass.dbms.toLowerCase() === dbms.toLowerCase()) {
         this._dbPluginName = p.name
         break
@@ -166,63 +181,64 @@ export default class DbAsCode {
    * Create migration plan.
    * @return {Promise<State>}
    */
-  async createPlan () {
-    console.log('Loading current DB state...')
+  async createPlan ({ forceOldState = false, oldStateConfig = undefined, forceNewState = false, newStateConfig = undefined }) {
+    console.log('Loading current/old DB state...')
     const dbPlugin = this.getDbPlugin()
-    const prevState = await dbPlugin.getStateStore().getState()
-    // const prevState = JSON.parse(fs.readFileSync('1.json'))
-    // fs.writeFileSync('1.json', JSON.stringify(prevState))
+    let oldState
+    if (forceOldState) {
+      oldState = new State({id: 0})
+    } else {
+      oldState = await dbPlugin.getStateStore().getState()
+    }
     console.log('Loading new state...')
-    const curStateRaw = await loadStateYaml([
-      await dbPlugin.getStateStore().getStorageConfigPath(),
-      this.config.source,
-    ])
+    if (!forceNewState) {
+      newStateConfig = await loadStateYaml([
+        await dbPlugin.getStateStore().getStorageConfigPath(),
+        this.config.source,
+      ])
+    }
     const dbClass = dbPlugin.dbClass
-    const prevTree = dbClass.createFromState(
+    const oldTree = dbClass.createFromState(
       dbClass,
-      {...prevState.raw, name: dbPlugin.getDbName()},
-      prevState.dbAsCodeVersion,
-      prevState.pluginVersion,
+      {...oldState.raw, name: dbPlugin.getDbName()},
+      oldState.dbAsCodeVersion,
+      oldState.pluginVersion,
       false,
     )
-    if (prevTree) {
-      this.pluginEvent(TREE_INITIALIZED, [prevTree])
+    if (oldTree) {
+      this.pluginEvent(TREE_INITIALIZED, [oldTree])
     }
-    const curTree = dbClass.createFromState(
+    const newTree = dbClass.createFromState(
       dbClass,
-      {...curStateRaw, name: dbPlugin.getDbName()},
+      {...newStateConfig, name: dbPlugin.getDbName()},
       DbAsCode.version,
       dbPlugin.version,
       true,
     )
-    if (curTree) {
-      this.pluginEvent(TREE_INITIALIZED, [curTree])
-      const validationContext = new ValidationContext(prevTree, curTree)
-      curTree.validate(prevTree, validationContext)
+    if (newTree) {
+      this.pluginEvent(TREE_INITIALIZED, [newTree])
+      const validationContext = new ValidationContext(oldTree, newTree)
+      newTree.validate(oldTree, validationContext)
       if (validationContext.hasErrors()) {
         console.log(validationContext.printErrors())
-        throw new Error('Current state validation has failed')
+        throw new Error('New state validation has failed')
       }
     }
 
-    this.changes = new Changes(prevTree, curTree)
+    this.changes = new Changes(oldTree, newTree)
     this.changes.collectChanges(true)
 
-    try {
-      const sql = this.getMigrationSql()
-      return new State({
-        oldId: prevState.id || 0,
-        id: (prevState.id || 0) + 1,
-        raw: curStateRaw,
-        migrationSql: sql,
-        dbAsCodeVersion: DbAsCode.version,
-        pluginVersion: dbPlugin.version,
-        hasChanges: this.changes.hasChanges(),
-        hasSqlChanges: this.changes.hasSqlChanges(),
-      })
-    } finally {
-      this.disposeTrees(prevTree, curTree)
-    }
+    const sql = this.getMigrationSql()
+    return new State({
+      oldId: oldState.id || 0,
+      id: (oldState.id || 0) + 1,
+      raw: newStateConfig,
+      migrationSql: sql,
+      dbAsCodeVersion: DbAsCode.version,
+      pluginVersion: dbPlugin.version,
+      hasChanges: this.changes.hasChanges(),
+      hasSqlChanges: this.changes.hasSqlChanges(),
+    })
   }
 
   /**

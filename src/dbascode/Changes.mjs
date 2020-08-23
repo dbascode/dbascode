@@ -32,15 +32,15 @@ export default class Changes {
   /**
    * @type {AbstractDbObject|undefined}
    */
-  latestTree
+  newTree
 
   /**
    * @param {AbstractDbObject|undefined} oldTree
-   * @param {AbstractDbObject|undefined} latestTree
+   * @param {AbstractDbObject|undefined} newTree
    */
-  constructor (oldTree, latestTree) {
+  constructor (oldTree, newTree) {
     this.oldTree = oldTree
-    this.latestTree = latestTree
+    this.newTree = newTree
   }
 
   /**
@@ -110,7 +110,7 @@ export default class Changes {
    */
   collectChanges (deep = false) {
     const context = new ChangesContext(deep)
-    this.compareValues(this.latestTree, this.oldTree, context)
+    this.compareValues(this.newTree, this.oldTree, context)
     this.changes = context.changes
     this.buildOrderedChanges()
   }
@@ -122,9 +122,9 @@ export default class Changes {
    */
   _getLatestChildMap () {
     const childMap = {}
-    if (this.latestTree) {
-      childMap[''] = this.latestTree
-      for (const child of this.latestTree.getAllChildrenRecurse()) {
+    if (this.newTree) {
+      childMap[''] = this.newTree
+      for (const child of this.newTree.getAllChildrenRecurse()) {
         childMap[child.getPath()] = child
       }
     }
@@ -162,7 +162,7 @@ export default class Changes {
       changeMap[change.path] = change
     }
 
-    const deps = this.latestTree ? this.latestTree.getAllDependencies() : {}
+    const deps = this.newTree ? this.newTree.getAllDependencies() : {}
 
     const childMap = this._getLatestChildMap()
     const oldChildMap = this._getOldChildMap()

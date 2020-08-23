@@ -183,9 +183,9 @@ export function getPropValue (obj, prop) {
  * @param name
  */
 export function parseArrayProp (name) {
-  const matches = name.match(/([\w-]+)(\[(\d+)\]|)/)
-  if (matches && matches[3] !== undefined) {
-    const [,propName,, index] = matches
+  const matches = name.match(/^([\w-]+|(?:[\w-]+\.[\w-]+)+)(?:\[(\d+)\]|)$/)
+  if (matches && matches[2] !== undefined) {
+    const [,propName, index] = matches
     return {
       name: propName,
       index: Number(index),

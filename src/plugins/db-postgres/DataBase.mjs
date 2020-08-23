@@ -33,7 +33,7 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
   /**
    * @type {string}
    */
-  static dbms = 'PostgreSQL'
+  static dbms = ['PostgreSQL', 'Postgres']
   /**
    * @type {PropDefCollection}
    */

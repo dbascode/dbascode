@@ -104,7 +104,7 @@ async function main() {
       await dbAsCode.initializePlugins()
       await dbAsCode.determineCurrentDbmsType()
       console.log('Loading changes...')
-      const plan = await dbAsCode.createPlan()
+      const plan = await dbAsCode.createPlan({})
       console.log(`Current DB version: ${plan.oldId}`)
       if (!plan.hasChanges) {
         console.log('No changes detected. Nothing to do.')
@@ -145,7 +145,7 @@ async function main() {
       } else {
         console.log('Input plan not set. Creating migration plan...')
         await dbAsCode.determineCurrentDbmsType()
-        plan = await dbAsCode.createPlan()
+        plan = await dbAsCode.createPlan({})
         if (!plan.hasChanges) {
           console.log('No changes detected. Nothing to do.')
           break

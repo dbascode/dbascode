@@ -184,7 +184,7 @@ test('create plan succeed on both states exists', async () => {
   inst._dbPluginName = 'test-plug'
   inst.getMigrationSql = () => 'migration sql'
   inst.pluginEvent = jest.fn()
-  const state = await inst.createPlan()
+  const state = await inst.createPlan({})
   expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
   expect(inst.pluginEvent.mock.calls[0][1]).toEqual([prevTree])
   expect(inst.pluginEvent.mock.calls[1][0]).toBe(TREE_INITIALIZED)
@@ -235,7 +235,7 @@ test('create plan succeed on prev state not exists', async () => {
   inst._dbPluginName = 'test-plug'
   inst.getMigrationSql = () => 'migration sql'
   inst.pluginEvent = jest.fn()
-  const state = await inst.createPlan()
+  const state = await inst.createPlan({})
   expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
   expect(inst.pluginEvent.mock.calls[0][1]).toEqual([curTree])
   expect(curTree.validate.mock.calls.length).toBe(1)
@@ -292,7 +292,7 @@ test('create plan succeed on new state not exists', async () => {
   inst._dbPluginName = 'test-plug'
   inst.getMigrationSql = () => 'migration sql'
   inst.pluginEvent = jest.fn()
-  const state = await inst.createPlan()
+  const state = await inst.createPlan({})
   expect(inst.pluginEvent.mock.calls[0][0]).toBe(TREE_INITIALIZED)
   expect(inst.pluginEvent.mock.calls[0][1]).toEqual([prevTree])
   expect(state).toEqual(new State({
