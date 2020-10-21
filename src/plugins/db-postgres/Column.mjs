@@ -93,15 +93,11 @@ export default class Column extends AbstractSchemaObject {
           grant: table.grant,
           revoke: table.revoke,
         }
-        if (!table.primaryKey) {
-          // For not inherited columns, there will be no primary key (checked in the validate() method).
-          // For inherited columns, an inherited primary key will already exist.
-          tableConfig[pkDef.configPropName] = {
-            columns: this.name,
-          }
+        tableConfig[pkDef.configPropName] = {
+          columns: this.name,
         }
         schema.createChildrenFromConfig(schemaConfig, false)
-        table.createChildrenFromConfig(tableConfig, false)
+        table.createChildrenFromConfig(tableConfig, this.isInherited())
       }
     } else if (this.foreignKey) {
       // Implicitly add foreign keys to the table if this column has the foreign_key config value.
@@ -241,9 +237,6 @@ export default class Column extends AbstractSchemaObject {
   validate (previous, context) {
     if (this.isAutoIncrement && (this.type.schema || !isType(builtinIntegerTypes, this.type.type))) {
       context.addError(this, `Autoincrement values are only allowed on integer fields, ${stringifyTypeDef(this.type)} specified`)
-    }
-    if (this.isAutoIncrement && this.getParent() && this.getParent().primaryKey) {
-      context.addError(this, `Autoincrement property must not be set together with an explicitly defined primary key in the table`)
     }
     if (!this.type.schema) {
       if (!this.isNumeric() && !this.isTextual() && !isType(builtinOtherTypes, this.type)) {
