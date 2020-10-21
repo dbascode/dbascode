@@ -182,6 +182,34 @@ test('function arguments deletion is correct', async () => {
   ])
 })
 
+test('create table with fkey calculates changes correctly', async () => {
+  const tree2 = await loadTestData(6)
+
+  const changes = new Changes(undefined, tree2)
+  changes.collectChanges(true)
+
+  expect(changes.changes.map(formatChangeLine)).toEqual(expect.arrayContaining([
+    ': ~ -> DataBase',
+    'schemas.schema2: ~ -> Schema',
+    'schemas.schema2.functions.func2: ~ -> Function',
+    'schemas.schema2.tables.table2: ~ -> Table',
+    'schemas.schema1: ~ -> Schema',
+    'schemas.schema1.tables.table1: ~ -> Table',
+  ]))
+
+  const orderedChanges = changes.orderedChanges
+
+  expect(orderedChanges.length).toEqual(changes.changes.length)
+  expect(orderedChanges.map(formatChangeLine)).toEqual([
+    ': ~ -> DataBase',
+    'schemas.schema2: ~ -> Schema',
+    'schemas.schema2.tables.table2: ~ -> Table',
+    'schemas.schema1: ~ -> Schema',
+    'schemas.schema1.tables.table1: ~ -> Table',
+    'schemas.schema2.functions.func2: ~ -> Function',
+  ])
+})
+
 test('creates table sql', async () => {
   const tree = await loadTestData('-sql')
 

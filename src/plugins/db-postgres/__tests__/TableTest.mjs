@@ -88,7 +88,5 @@ test('loads table config', async () => {
   // Implicit FK from autoincrement
   expect(table2.primaryKey).toBeInstanceOf(PrimaryKey)
   expect(table2.primaryKey.isInherited()).toBeTruthy()
-  expect(schema.sequences.table2_id_seq).toBeInstanceOf(Sequence)
-
-
+  expect(schema.sequences.fktarget_id_seq).toBeInstanceOf(Sequence)
 })

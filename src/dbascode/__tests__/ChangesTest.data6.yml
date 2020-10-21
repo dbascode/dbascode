@@ -1,0 +1,18 @@
+dbms: postgres
+schemas:
+  schema2:
+    functions:
+      func2:
+        code: ''
+        returns: schema1.table1
+    tables:
+      table2:
+        columns:
+          id: int
+  schema1:
+    tables:
+      table1:
+        columns:
+          col1:
+            type: int
+            foreign_key: schema2.table2.id

@@ -20,8 +20,8 @@ import { loadStateYaml } from '../../../dbascode/state-loader-yml'
  * Load this test test data
  * @returns {Promise<AbstractDataBase>}
  */
-async function loadTestData() {
-  const s = await loadStateYaml(['./src/plugins/db-postgres/__tests__/ResolveDependenciesTest.data.yml'])
+async function loadTestData(idx = '') {
+  const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/ResolveDependenciesTest.data${idx}.yml`])
   return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
 }
 

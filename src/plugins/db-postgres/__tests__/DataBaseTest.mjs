@@ -9,6 +9,7 @@ import PostgreSqlPlugin from '../PostgreSqlPlugin'
 import DataBase from '../DataBase'
 import Role from '../Role'
 import Changes from '../../../dbascode/Changes'
+const path = require('path');
 
 /**
  * @var {Jest} jest
@@ -19,7 +20,11 @@ import Changes from '../../../dbascode/Changes'
  * @returns {Promise<DataBase>}
  */
 async function loadTestData(idx = '') {
-  const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/DataBaseTest.data${idx}.yml`])
+  const fn = module.filename
+  const slashPos = fn.lastIndexOf(path.sep)
+  const extPos = fn.lastIndexOf('.')
+  const dataFile = `${fn.substr(0, slashPos)}/data/${fn.substr(slashPos + 1, extPos - slashPos)}data${idx}.yml`
+  const s = await loadStateYaml([dataFile])
   return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
 }
 
@@ -39,7 +44,7 @@ test('loads db config', async () => {
   changes.collectChanges(true)
 
   expect(changes.getChangesSql()).toBe(
-`CREATE EXTENSION IF NOT EXISTS 'pgcrypto';
+`CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE ROLE "role1" WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;
 CREATE SCHEMA "helpdesk_public" ;
 CREATE TABLE "helpdesk_public"."t1" (
@@ -47,3 +52,31 @@ CREATE TABLE "helpdesk_public"."t1" (
 );`
   )
 })
+
+test('table sql', async () => {
+  const tree = await loadTestData(2)
+  expect(tree).toBeInstanceOf(DataBase)
+
+  const changes = new Changes(undefined, tree)
+  changes.collectChanges(true)
+
+  expect(changes.getChangesSql()).toBe(
+`CREATE SCHEMA "helpdesk_public" ;
+CREATE TABLE "helpdesk_public"."t2" (
+ "id" int  DEFAULT NULL
+);
+CREATE TABLE "helpdesk_public"."t1" (
+ "id" int  DEFAULT NULL,
+ "value" text  DEFAULT NULL,
+ "email" text  DEFAULT NULL,
+ "t2_id" int  DEFAULT NULL,
+CONSTRAINT "t1_email_idx" UNIQUE ("email"),
+CONSTRAINT "t2_id_fkey" FOREIGN KEY ("t2_id")
+      REFERENCES "helpdesk_public"."t2" ("id") 
+      MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE INDEX "t1_id_idx" ON "helpdesk_public"."t1" ("id");
+CREATE INDEX "t1_value_idx" ON "helpdesk_public"."t1" ("value");`
+  )
+})
+

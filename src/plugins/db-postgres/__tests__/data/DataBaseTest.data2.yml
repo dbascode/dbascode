@@ -1,0 +1,26 @@
+dbms: postgresql
+dbms_version: 12
+default_locale: 'en-US'
+params:
+  publicSchema: helpdesk_public
+  privateSchema: helpdesk_private
+schemas:
+  helpdesk_public:
+    tables:
+      t1:
+        columns:
+          id: int
+          value: text
+          email: text
+          t2_id:
+            type: int
+            comment: Comment on FK
+            foreign_key: t2.id
+        indexes:
+          - id
+          - value
+        unique_keys:
+          - email
+      t2:
+        columns:
+          id: int

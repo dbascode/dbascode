@@ -7,7 +7,7 @@ import ChangesContext from './ChangesContext'
 import isArray from 'lodash-es/isArray'
 import ChildDef from './ChildDef'
 import isObject from 'lodash-es/isObject'
-import { circularSafeStringify, joinSql, parseArrayProp } from './utils'
+import { circularSafeStringify, joinSql, parseArrayProp, replaceAll } from './utils'
 import supportsColor from 'supports-color'
 import isFunction from 'lodash-es/isFunction'
 import isPlainObject from 'lodash-es/isPlainObject'
@@ -586,7 +586,7 @@ const getLastProp = function (path) {
 function getDBObjectAndProp (path, map) {
   let result, propName = '', objPath = path, lastResult = null
   do {
-    result = map[objPath]
+    result = map[objPath.replace(/\.(\d+)/g, '[$1]')]
     if (result === lastResult && result !== undefined) {
       throw new Error(`Can't find ${path}`)
     }

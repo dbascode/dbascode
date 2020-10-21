@@ -62,7 +62,7 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
     let sql = []
     if (this.extensions.length > 0) {
       for (const ext of this.extensions) {
-        sql.push(`CREATE EXTENSION IF NOT EXISTS ${SqlRules.escapeStringExpr(ext)};`)
+        sql.push(`CREATE EXTENSION IF NOT EXISTS ${SqlRules.escapeSqlId(ext)};`)
       }
     }
     return joinSql(sql)
@@ -131,10 +131,10 @@ export default class DataBase extends DataBaseMixin(AbstractPostgresDbObject) {
         delete newChanges[i]
         const replace = change.cur && change.old
         if (!change.cur || replace) {
-          result.push(`DROP EXTENSION "${SqlRules.escapeStringExpr(change.old)}";`)
+          result.push(`DROP EXTENSION "${SqlRules.escapeSqlId(change.old)}";`)
         }
         if (!change.old || replace) {
-          result.push(`CREATE EXTENSION IF NOT EXISTS ${SqlRules.escapeStringExpr(change.cur)};`)
+          result.push(`CREATE EXTENSION IF NOT EXISTS ${SqlRules.escapeSqlId(change.cur)};`)
         }
       }
     }
