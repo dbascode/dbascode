@@ -78,7 +78,7 @@ export default class Column extends AbstractSchemaObject {
       // column primary key.
       const table = this.getParent()
       const tableName = table.name
-      const seqName = `${tableName}_${this.name}_seq`
+      const seqName = this.getAutoincrementSequenceName()
       const schema = this.getSchema()
       const seqDef = schema.getChildrenDefCollection().getDefByClass(Sequence)
       if (!schema.findChildByDefAndName(seqDef, seqName)) {
@@ -93,8 +93,12 @@ export default class Column extends AbstractSchemaObject {
           grant: table.grant,
           revoke: table.revoke,
         }
-        tableConfig[pkDef.configPropName] = {
-          columns: this.name,
+        if (!table.primaryKey) {
+          // For not inherited columns, there will be no primary key (checked in the validate() method).
+          // For inherited columns, an inherited primary key will already exist.
+          tableConfig[pkDef.configPropName] = {
+            columns: this.name,
+          }
         }
         schema.createChildrenFromConfig(schemaConfig, false)
         table.createChildrenFromConfig(tableConfig, false)
@@ -137,7 +141,7 @@ export default class Column extends AbstractSchemaObject {
    */
   getSqlDefinition (operation, addSql) {
     const defaultValue = this.isAutoIncrement ?
-      (`DEFAULT nextval('${this.getAutoIncSeqName()}'::regclass)`) :
+      (`DEFAULT nextval('${this.getAutoincrementSequenceSqlFullName()}'::regclass)`) :
       (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')
     const allowNull = this.getAllowNull() ? '' : 'NOT NULL'
     return `${this.getSqlType()} ${allowNull} ${defaultValue}`.trim()
@@ -151,11 +155,19 @@ export default class Column extends AbstractSchemaObject {
   }
 
   /**
+   * Returns sequence name for the autoincrement column
+   * @returns {string}
+   */
+  getAutoincrementSequenceName () {
+    return `${this.getParent().name}_${this.name}_seq`
+  }
+
+  /**
    * Returns full name of autoincrement sequence for this column
    * @returns {string}
    */
-  getAutoIncSeqName () {
-    return `${this.getSchema().sql.getEscapedName()}."${this.getParent().name}_${this.name}_seq"`
+  getAutoincrementSequenceSqlFullName () {
+    return `${this.getSchema().sql.getEscapedName()}.${this.sql.escapeSqlId(this.getAutoincrementSequenceName())}`
   }
 
   /**
@@ -178,7 +190,7 @@ export default class Column extends AbstractSchemaObject {
    * @inheritDoc
    */
   getAlterPropSql (compared, propName, oldValue, curValue, context) {
-    if (!this._isInherited) {
+    if (!this.isInherited()) {
       switch (propName) {
         case 'allowNull':
           return this.allowNull ? 'DROP NOT NULL' : 'SET NOT NULL'
@@ -217,6 +229,9 @@ export default class Column extends AbstractSchemaObject {
     if (this.type.schema) {
       this.addDependencyBySqlTypeDef(this.type)
     }
+    if (this.isAutoIncrement) {
+      this.addDependency(this.getSchema().sequences[this.getAutoincrementSequenceName()])
+    }
   }
 
   /**
@@ -226,6 +241,9 @@ export default class Column extends AbstractSchemaObject {
   validate (previous, context) {
     if (this.isAutoIncrement && (this.type.schema || !isType(builtinIntegerTypes, this.type.type))) {
       context.addError(this, `Autoincrement values are only allowed on integer fields, ${stringifyTypeDef(this.type)} specified`)
+    }
+    if (this.isAutoIncrement && this.getParent() && this.getParent().primaryKey) {
+      context.addError(this, `Autoincrement property must not be set together with an explicitly defined primary key in the table`)
     }
     if (!this.type.schema) {
       if (!this.isNumeric() && !this.isTextual() && !isType(builtinOtherTypes, this.type)) {

@@ -14,6 +14,7 @@ import ForeignKey from '../ForeignKey'
 import Index from '../Index'
 import PrimaryKey from '../PrimaryKey'
 import Trigger from '../Trigger'
+import { getModuleDataPath } from '../test-utils'
 
 /**
  * @var {Jest} jest
@@ -24,7 +25,7 @@ import Trigger from '../Trigger'
  * @returns {Promise<DataBase>}
  */
 async function loadTestData(idx = '') {
-  const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/TableTest.data${idx}.yml`])
+  const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
   return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
 }
 
@@ -88,5 +89,5 @@ test('loads table config', async () => {
   // Implicit FK from autoincrement
   expect(table2.primaryKey).toBeInstanceOf(PrimaryKey)
   expect(table2.primaryKey.isInherited()).toBeTruthy()
-  expect(schema.sequences.fktarget_id_seq).toBeInstanceOf(Sequence)
+  expect(schema.sequences.table2_id_seq).toBeInstanceOf(Sequence)
 })

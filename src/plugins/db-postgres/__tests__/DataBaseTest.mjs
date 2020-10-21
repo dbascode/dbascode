@@ -9,7 +9,7 @@ import PostgreSqlPlugin from '../PostgreSqlPlugin'
 import DataBase from '../DataBase'
 import Role from '../Role'
 import Changes from '../../../dbascode/Changes'
-const path = require('path');
+import { getModuleDataPath } from '../test-utils'
 
 /**
  * @var {Jest} jest
@@ -20,11 +20,7 @@ const path = require('path');
  * @returns {Promise<DataBase>}
  */
 async function loadTestData(idx = '') {
-  const fn = module.filename
-  const slashPos = fn.lastIndexOf(path.sep)
-  const extPos = fn.lastIndexOf('.')
-  const dataFile = `${fn.substr(0, slashPos)}/data/${fn.substr(slashPos + 1, extPos - slashPos)}data${idx}.yml`
-  const s = await loadStateYaml([dataFile])
+  const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
   return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
 }
 

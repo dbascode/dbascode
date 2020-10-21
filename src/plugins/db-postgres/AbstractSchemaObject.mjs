@@ -55,6 +55,22 @@ export default class AbstractSchemaObject extends AbstractPostgresDbObject {
     if (!obj) {
       throw new Error(`Type ${def.schema}.${def.type} not found`)
     }
+    this.addDependency(obj)
+  }
+
+  /**
+   * Add dependency by DB object
+   * @param {AbstractDbObject} obj
+   */
+  addDependency (obj) {
     this._dependencies.push(obj.getPath())
+  }
+
+  /**
+   * Add dependency by path
+   * @param {string} path
+   */
+  addDependencyPath (path) {
+    this._dependencies.push(path)
   }
 }

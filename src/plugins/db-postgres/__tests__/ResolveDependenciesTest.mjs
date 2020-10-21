@@ -15,13 +15,14 @@ import PostgraphilePlugin from '../../tools-postgres-postgraphile/PostgraphilePl
 import RowLevelSecurityPlugin from '../../tools-postgres-rls/RowLevelSecurityPlugin'
 import DefaultRowsPlugin from '../../tools-postgres-default-rows/DefaultRowsPlugin'
 import { loadStateYaml } from '../../../dbascode/state-loader-yml'
+import { getModuleDataPath } from '../test-utils'
 
 /**
  * Load this test test data
  * @returns {Promise<AbstractDataBase>}
  */
-async function loadTestData(idx = '') {
-  const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/ResolveDependenciesTest.data${idx}.yml`])
+async function loadTestData (idx = '') {
+  const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
   return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
 }
 
@@ -197,6 +198,41 @@ test('resolve dependencies correctly', async () => {
     'schemas.public_schema.tables.T5': [
       'schemas.public_schema.tables.T5.columns.col1',
       'schemas.public_schema.tables.T5.foreignKeys[0]',
+    ],
+  })
+})
+
+test('resolve table sequence dependency correctly', async () => {
+  const tree = await loadTestData(2)
+  applyPlugins(tree)
+
+  const deps = tree.getAllDependencies()
+  expect(deps).toEqual({
+    'schemas.schema': [
+      '',
+    ],
+    'schemas.schema.sequences.t1_col1_seq': [
+      'schemas.schema'
+    ],
+    'schemas.schema.tables.t1': [
+      'schemas.schema',
+    ],
+    'schemas.schema.tables.t1.columns.col1': [
+      'schemas.schema.sequences.t1_col1_seq',
+      'schemas.schema.tables.t1',
+    ],
+    'schemas.schema.tables.t1.primaryKey': [
+      'schemas.schema.tables.t1',
+    ],
+    'schemas.schema.tables.t2': [
+      'schemas.schema',
+    ],
+    'schemas.schema.tables.t2.columns.t1_id': [
+      'schemas.schema.tables.t2',
+    ],
+    'schemas.schema.tables.t2.foreignKeys[0]': [
+      'schemas.schema.tables.t1',
+      'schemas.schema.tables.t2',
     ],
   })
 })

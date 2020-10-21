@@ -5,7 +5,6 @@
 
 import { replaceAll } from '../../dbascode/utils'
 import isObject from 'lodash-es/isObject'
-import isFunction from 'lodash-es/isFunction'
 import SqlRules from './SqlRules'
 
 /**

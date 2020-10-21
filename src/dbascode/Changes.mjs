@@ -476,7 +476,7 @@ export default class Changes {
    */
   compareValues (v2, v1, context, skipMode = null) {
     if (v1 instanceof AbstractDbObject && v2 instanceof AbstractDbObject) {
-      if (v1._isInherited && v2._isInherited) {
+      if (v1.isInherited() && v2.isInherited()) {
         return
       }
       this.compareObjects(v2, v1, context, null)

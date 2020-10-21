@@ -1,0 +1,14 @@
+dbms: postgres
+schemas:
+  schema:
+    tables:
+      t2:
+        columns:
+          t1_id:
+            type: int
+            foreign_key: t1.id
+      t1:
+        columns:
+          col1:
+            type: int
+            autoincrement: true

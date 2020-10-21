@@ -16,13 +16,14 @@ import { TREE_INITIALIZED } from '../PluginEvent'
 import DataBase from '../../plugins/db-postgres/DataBase'
 import Changes from '../Changes'
 import isObject from 'lodash-es/isObject'
+import { getModuleDataPath } from '../../plugins/db-postgres/test-utils'
 
 /**
  * Load this test test data
  * @returns {Promise<AbstractDataBase>}
  */
 async function loadTestData (idx) {
-  const s = await loadStateYaml([`./src/dbascode/__tests__/ChangesTest.data${idx}.yml`])
+  const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
   const tree = DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
   applyPlugins(tree)
   return tree

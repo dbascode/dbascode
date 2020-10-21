@@ -409,7 +409,7 @@ export default class AbstractDbObject {
   getSqlDefinition (operation, addSql) {
     const result = []
     for (const child of this.getAllChildren()) {
-      if (child.getCreatedByParent() && !child._isInherited) {
+      if (child.getCreatedByParent() && !child.isInherited()) {
         result.push(`${child.getObjectClass(operation)} ${child.getObjectIdentifier('create', true)} ${child.getSqlDefinition('create', addSql)}`)
       }
     }
@@ -841,14 +841,14 @@ export default class AbstractDbObject {
           return
         }
         const child =
-          new def.class_(
-            processCalculations(this, {
+          new def.class_({
+            ...processCalculations(this, {
               name,
               parent: this,
-              isInherited,
               rawConfig: cfg,
-            })
-          )
+            }),
+            isInherited,
+          })
         this.addChild(child)
         child.applyConfig(cfg)
         return child

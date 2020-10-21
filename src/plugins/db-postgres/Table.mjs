@@ -39,9 +39,8 @@ export default class Table extends AbstractSchemaObject {
    * @inheritDoc
    */
   postprocessTree (isNew) {
-    super.postprocessTree(isNew)
     if (this.extends) {
-      // Add inherited objects
+      // Copy inherited objects to this object
       const ancestor = this.getSchema().getTable(this.extends)
       if (!ancestor) {
         throw new Error(`Ancestor table ${this.extends} for table ${this.name} not exists`)
@@ -76,9 +75,9 @@ export default class Table extends AbstractSchemaObject {
           }
         }
       }
-
       this.createChildrenFromConfig(extendedConfig, true)
     }
+    super.postprocessTree(isNew)
   }
 
   /**
