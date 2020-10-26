@@ -93,8 +93,8 @@ export default class Table extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
-    let result = `(\n${super.getSqlDefinition(operation, addSql)}\n)`
+  getSqlDefinition (operation) {
+    let result = `(\n${super.getSqlDefinition(operation)}\n)`
     if (this.extends) {
       const ancestor = this.getSchema().getTable(this.extends)
       result = `${result} INHERITS (${ancestor.getObjectIdentifier('')})`

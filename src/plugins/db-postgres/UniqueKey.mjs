@@ -53,7 +53,7 @@ export default class UniqueKey extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     return `UNIQUE ("${this.columns.join('","')}")`
   }
 }

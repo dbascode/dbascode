@@ -46,7 +46,7 @@ export default class PrimaryKey extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     return `PRIMARY KEY ("${this.columns.join('", "')}")`
   }
 }

@@ -49,7 +49,7 @@ export default class Index extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     return `("${this.columns.join('","')}")`
   }
 }

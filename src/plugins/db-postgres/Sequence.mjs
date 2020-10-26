@@ -28,7 +28,7 @@ export default class Sequence extends AbstractSchemaObject{
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     return `START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1`
   }
 }

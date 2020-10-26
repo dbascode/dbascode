@@ -112,6 +112,15 @@ class PostgraphilePlugin extends PluginDescriptor {
         const result = origMethod(compared, newChanges.filter(i => i))
         return omitSql ? joinSql([result, omitSql]) : result
       },
+
+      getAlterPropSql (origMethod, compared, propName, oldValue, curValue, context) {
+        switch (propName.split('.')[0]) {
+          case 'omit':
+            context.separateSql = true
+            return this.getCommentChangesSql(compared)
+          default: return origMethod(compared, propName, oldValue, curValue, context)
+        }
+      },
     })
     if (type === 'Table' && inst.primaryKey) {
       inst.primaryKey.omit = inst.omit

@@ -34,7 +34,7 @@ export default class Attribute extends AbstractSchemaObject{
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     return (this.schema
       ? `"${this.schema}"."${this.type}"`
       : `${this.type}`)

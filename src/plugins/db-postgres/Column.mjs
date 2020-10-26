@@ -135,7 +135,7 @@ export default class Column extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     const defaultValue = this.isAutoIncrement ?
       (`DEFAULT nextval('${this.getAutoincrementSequenceSqlFullName()}'::regclass)`) :
       (this.defaultValue !== undefined ? `DEFAULT ${this.getDefaultValueSql()}` : '')

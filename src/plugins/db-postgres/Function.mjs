@@ -144,7 +144,7 @@ export default class Function extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     const isFunction = this.getIsFunction()
     const returns = isFunction ? `RETURNS ${this.getArgType(this.returns)}` : ''
     const cost = this.cost && isFunction ? `COST ${this.cost}` : ''
@@ -178,7 +178,7 @@ $BODY$`
       case 'cost':
       case 'stability':
       case 'parallelSafety':
-        return this.getSqlDefinition('create', [])
+        return this.getSqlDefinition('create')
       default:
         return super.getAlterPropSql(compared, propName, oldValue, curValue, context)
     }

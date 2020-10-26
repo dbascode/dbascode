@@ -75,18 +75,19 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         }
       },
 
-      getSqlDefinition: (origMethod, operation, addSql) => {
+      getSqlDefinitionAfter: (origMethod, operation) => {
+        const sql = [origMethod(operation)]
         const rls = inst.getRowLevelSecurity()
         if (Object.keys(rls).length > 0) {
-          addSql.push(`ALTER TABLE ${inst.getObjectIdentifier('alter')} ENABLE ROW LEVEL SECURITY;`)
+          sql.push(`ALTER TABLE ${inst.getObjectIdentifier('alter')} ENABLE ROW LEVEL SECURITY;`)
           for (const op in rls) {
             const checkType = op === 'insert' ? 'WITH CHECK' : 'USING'
             const name = `${inst.getParent().sql.getName()}_${inst.sql.getName()}`
-            addSql.push(`CREATE POLICY "${name}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
+            sql.push(`CREATE POLICY "${name}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
           }
         }
-        addSql.push(inst.getCreateDefAclRecordsSql())
-        return origMethod(operation, addSql)
+        sql.push(inst.getCreateDefAclRecordsSql())
+        return joinSql(sql)
       },
 
       getCreateDefAclRecordsSql() {

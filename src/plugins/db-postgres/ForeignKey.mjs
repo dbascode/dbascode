@@ -71,7 +71,7 @@ export default class ForeignKey extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     const ref = this.ref
     const refSchema = ref.schema ? this.getDb().getSchema(ref.schema) : this.getSchema()
     return `FOREIGN KEY (${this.sql.escapeSqlId(this.column)})

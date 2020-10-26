@@ -37,6 +37,24 @@ export default class AbstractPostgresDbObject extends AbstractDbObject {
   }
 
   /**
+   * Returns SQL queries added after creating the object definition body as separate queries.
+   * @param {string} operation
+   * @returns {string}
+   */
+  getSqlDefinitionAfter (operation) {
+    switch (operation) {
+      case 'create':
+        return joinSql([
+          super.getSqlDefinitionAfter(operation),
+          this.getCommentChangesSql(undefined),
+          this.getPermissionsChangesSql(undefined)
+        ])
+      default:
+        return super.getSqlDefinitionAfter(operation)
+    }
+  }
+
+  /**
    * Returns SQL for comments update
    * @param {AbstractDbObject} previous
    * @returns {string}

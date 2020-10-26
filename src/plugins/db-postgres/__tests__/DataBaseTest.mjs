@@ -71,6 +71,7 @@ CONSTRAINT "t2_id_fkey" FOREIGN KEY ("t2_id")
       REFERENCES "helpdesk_public"."t2" ("id") 
       MATCH SIMPLE ON UPDATE RESTRICT ON DELETE RESTRICT
 );
+COMMENT ON COLUMN "helpdesk_public"."t1"."t2_id" IS 'Comment on FK';
 CREATE INDEX "t1_id_idx" ON "helpdesk_public"."t1" ("id");
 CREATE INDEX "t1_value_idx" ON "helpdesk_public"."t1" ("value");`
   )

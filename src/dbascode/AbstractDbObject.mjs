@@ -373,8 +373,8 @@ export default class AbstractDbObject {
    */
   getCreateSql () {
     const sql = []
-    const result = `${this.getCreateOperator()} ${this.getObjectClass('create')} ${this.getObjectIdentifier('create', false)} ${this.getSqlDefinition('create', sql)};`
-    sql.unshift(result)
+    sql.push(`${this.getCreateOperator()} ${this.getObjectClass('create')} ${this.getObjectIdentifier('create', false)} ${this.getSqlDefinition('create')};`)
+    sql.push(this.getSqlDefinitionAfter('create'))
     return joinSql(sql)
   }
 
@@ -388,32 +388,46 @@ export default class AbstractDbObject {
   }
 
   /**
-   * Returns SQL for object creation for objects created by its parents
+   * Returns SQL for object creation for objects created by their parents
    * @protected
    * @returns {string}
    */
   getSeparateCreateSql () {
     const parent = this.getParent()
     const sql = []
-    const result = `ALTER ${parent.getObjectClass('alter')} ${parent.getObjectIdentifier('parent', false)} ADD ${this.getObjectClass('alter-add')} ${this.getObjectIdentifier('alter-add', true)} ${this.getSqlDefinition('alter-add', sql)};`
-    sql.unshift(result)
+    sql.push(`ALTER ${parent.getObjectClass('alter')} ${parent.getObjectIdentifier('parent', false)} ADD ${this.getObjectClass('alter-add')} ${this.getObjectIdentifier('alter-add', true)} ${this.getSqlDefinition('alter-add')};`)
+    sql.push(parent.getSqlDefinitionAfter('alter-add'))
     return joinSql(sql)
   }
 
   /**
    * Returns SQL text of the definition body of the object (without object type and name).
    * @param {string} operation
-   * @param {array} addSql - Array to add additional SQL queries after the current definition will be executed.
    * @returns {string}
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     const result = []
     for (const child of this.getAllChildren()) {
       if (child.getCreatedByParent() && !child.isInherited()) {
-        result.push(`${child.getObjectClass(operation)} ${child.getObjectIdentifier('create', true)} ${child.getSqlDefinition('create', addSql)}`)
+        result.push(`${child.getObjectClass(operation)} ${child.getObjectIdentifier('create', true)} ${child.getSqlDefinition('create')}`)
       }
     }
     return result.join(",\n")
+  }
+
+  /**
+   * Returns SQL queries added after creating the object definition body as separate queries.
+   * @param {string} operation
+   * @returns {string}
+   */
+  getSqlDefinitionAfter (operation) {
+    const result = []
+    for (const child of this.getAllChildren()) {
+      if (child.getCreatedByParent() && !child.isInherited()) {
+        result.push(child.getSqlDefinitionAfter(operation))
+      }
+    }
+    return joinSql(result)
   }
 
   /**
@@ -576,14 +590,14 @@ export default class AbstractDbObject {
    */
   getFullAlterSql () {
     const sql = []
-    let result
     if (this.getAlterWithParent()) {
       const parent = this.getParent()
-      result = `${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} CHANGE ${this.getObjectClass()} ${this.getObjectIdentifier('alter-alter', true)} ${this.getSqlDefinition('alter-alter', sql)};`
+      sql.push(`${parent.getAlterOperator()} ${parent.getObjectClass('alter-alter')} ${parent.getObjectIdentifier('parent', false)} CHANGE ${this.getObjectClass()} ${this.getObjectIdentifier('alter-alter', true)} ${this.getSqlDefinition('alter-alter')};`)
+      sql.push(parent.getSqlDefinitionAfter('alter-alter'))
     } else {
-      result = `${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${this.getSqlDefinition('alter', sql)};`
+      sql.push(`${this.getAlterOperator()} ${this.getObjectClass('alter')} ${this.getObjectIdentifier('alter', true)} ${this.getSqlDefinition('alter')};`)
+      sql.push(this.getSqlDefinitionAfter('alter'))
     }
-    sql.unshift(result)
     return joinSql(sql)
   }
 

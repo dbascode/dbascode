@@ -38,7 +38,7 @@ export default class Trigger extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     return `FOR EACH ROW EXECUTE PROCEDURE ${this.what}`
   }
 

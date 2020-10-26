@@ -65,7 +65,7 @@ export default class Type extends AbstractSchemaObject {
   /**
    * @inheritDoc
    */
-  getSqlDefinition (operation, addSql) {
+  getSqlDefinition (operation) {
     if (this.isEnum) {
       return `AS ENUM ('${this.values.join("', '")}')`
     } else {
