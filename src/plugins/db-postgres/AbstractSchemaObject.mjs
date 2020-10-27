@@ -70,7 +70,7 @@ export default class AbstractSchemaObject extends AbstractPostgresDbObject {
    * Add dependency by path
    * @param {string} path
    */
-  addDependencyPath (path) {
+  addDependencyByPath (path) {
     this._dependencies.push(path)
   }
 }

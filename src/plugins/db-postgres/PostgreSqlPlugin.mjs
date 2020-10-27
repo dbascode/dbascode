@@ -12,7 +12,7 @@ import SqlExec from './SqlExec'
 /**
  * Postgres plugin descriptor
  */
-class PostgreSqlPlugin extends PluginDescriptor{
+class PostgreSqlPlugin extends PluginDescriptor {
   dbConfig = {
     host: null,
     port: 5432,

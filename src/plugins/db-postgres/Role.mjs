@@ -30,14 +30,6 @@ export default class Role extends AbstractPostgresDbObject {
    * @inheritDoc
    */
   getSqlDefinition (operation) {
-    if (this.memberOf.length > 0) {
-      for (const memberOf of this.memberOf) {
-        addSql.push(`GRANT "${memberOf}" TO ${this.sql.getEscapedName()};`)
-      }
-    }
-    if (this.isClient) {
-      addSql.push(`GRANT ${this.sql.getEscapedName()} TO current_user;`)
-    }
     return `WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION`
   }
 

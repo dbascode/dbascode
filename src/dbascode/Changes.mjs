@@ -12,6 +12,7 @@ import supportsColor from 'supports-color'
 import isFunction from 'lodash-es/isFunction'
 import isPlainObject from 'lodash-es/isPlainObject'
 import { color } from '../console-utils'
+import clone from 'lodash-es/clone'
 
 /**
  * Changes calculation routines.
@@ -161,6 +162,7 @@ export default class Changes {
     for (const change of this.changes) {
       changeMap[change.path] = change
     }
+    const changeMapCopy = clone(changeMap)
 
     const deps = this.newTree ? this.newTree.getAllDependencies() : {}
 
@@ -169,6 +171,20 @@ export default class Changes {
 
     const oldDeps = this.oldTree ? this.oldTree.getAllDependencies() : {}
     const oldBackDeps = this.oldTree ? this.oldTree.createBackDependencies(oldDeps) : {}
+
+    const processingContext = {}
+
+    const isProcessing = path => !!processingContext[path]
+    const beginProcessing = path => { processingContext[path] = 1 }
+    const endProcessing = path => { delete processingContext[path] }
+
+    // Add change instruction to the result if it was not added already
+    const addChangeToResult = objPath => {
+      if (changeMap[objPath]) {
+        result.push(changeMap[objPath])
+        delete changeMap[objPath]
+      }
+    }
 
     // Check object's creation operation already added to the result
     const objAlreadyExists = function (objPath) {
@@ -180,6 +196,11 @@ export default class Changes {
     // Check object's dropping operation already added to the result
     const objAlreadyDropped = function (objPath) {
       return !(changeMap[objPath] && changeMap[objPath].cur === undefined)
+    }
+
+    // Check object's dropping operation already added to the result
+    const objShouldBeDropped = (objPath) => {
+      return changeMapCopy[objPath] && changeMapCopy[objPath].cur === undefined
     }
 
     const doMergeDependenciesToParent = function (map, objPath, parentPath) {
@@ -207,10 +228,7 @@ export default class Changes {
       if (propName) {
         // If changing a property then assume the object already created before changes.
         // Just add this change to the result.
-        if (changeMap[path]) {
-          result.push(changeMap[path])
-          delete changeMap[path]
-        }
+        addChangeToResult(path)
       } else {
         const objExists = objAlreadyExists(objPath)
         const parentPath = obj.getParent() ? obj.getParent().getPath() : null
@@ -254,11 +272,7 @@ export default class Changes {
             objDeps.pop()
           }
         }
-
-        if (changeMap[objPath]) {
-          result.push(changeMap[objPath])
-          delete changeMap[objPath]
-        }
+        addChangeToResult(objPath)
       }
     }
 
@@ -266,28 +280,39 @@ export default class Changes {
     // Ensure dependencies are dropped before the object.
     const ensureDropped = function (path) {
       const [obj, propName, objPath] = getDBObjectAndProp(path, oldChildMap)
-      const objDropped = objAlreadyDropped(objPath)
 
       if (propName) {
         // Need to drop a parameter, not the whole object.
         // Just drop it without processing dependencies.
-        if (changeMap[path]) {
-          result.push(changeMap[path])
-          delete changeMap[path]
-        }
+        addChangeToResult(objPath)
       } else {
+        beginProcessing(objPath)
+        const parentPath = obj.getParent() ? obj.getParent().getPath() : null
+        const parentDropped = objAlreadyDropped(parentPath)
+        const parentShouldBeDropped = objShouldBeDropped(parentPath)
+        const droppedByParent = obj.getDroppedByParent()
+        const objDropped = droppedByParent
+          ? parentShouldBeDropped && parentDropped || !parentShouldBeDropped && objAlreadyDropped(objPath)
+          : objAlreadyDropped(objPath)
+
         // Dropping the whole object with dependencies processing.
         if (objDropped) {
           // Nothing to do here, object already dropped. Dependencies must be already checked.
+          endProcessing(objPath)
           return
         }
-        if (obj.getDroppedByParent()) {
-          // If to be dropped by parent - just add to the result.
-          // Dependencies should be processed in advance.
-          if (changeMap[objPath]) {
-            result.push(changeMap[objPath])
-            delete changeMap[objPath]
+        if (droppedByParent) {
+          // If the whole parent should be dropped then add parent to our dependencies to drop before this object.
+          if (parentShouldBeDropped) {
+            // If parent is already processing its dropping then do nothing
+            if (!isProcessing(parentPath)) {
+              ensureDropped(parentPath)
+            }
+          } else {
+            // Otherwise, only drop this object separately from its parent
+            addChangeToResult(objPath)
           }
+          endProcessing(objPath)
           return
         }
 
@@ -312,10 +337,8 @@ export default class Changes {
           }
         }
         // Now drop this object
-        if (changeMap[objPath]) {
-          result.push(changeMap[objPath])
-          delete changeMap[objPath]
-        }
+        addChangeToResult(objPath)
+        endProcessing(path)
       }
     }
 

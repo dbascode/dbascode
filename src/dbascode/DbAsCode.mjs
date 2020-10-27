@@ -207,6 +207,7 @@ export default class DbAsCode {
     )
     if (oldTree) {
       this.pluginEvent(TREE_INITIALIZED, [oldTree])
+      oldTree.setupDependencies()
     }
     const newTree = dbClass.createFromState(
       dbClass,
@@ -217,6 +218,7 @@ export default class DbAsCode {
     )
     if (newTree) {
       this.pluginEvent(TREE_INITIALIZED, [newTree])
+      newTree.setupDependencies();
       const validationContext = new ValidationContext(oldTree, newTree)
       newTree.validate(oldTree, validationContext)
       if (validationContext.hasErrors()) {

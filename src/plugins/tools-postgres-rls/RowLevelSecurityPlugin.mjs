@@ -86,57 +86,60 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
             sql.push(`CREATE POLICY "${name}_acl_check_${op}" ON ${inst.getObjectIdentifier('alter')} FOR ${op.toUpperCase()} ${checkType} (${rls[op]});`)
           }
         }
-        sql.push(inst.getCreateDefAclRecordsSql())
+        if (inst.hasDefaultAcl()) {
+          sql.push(inst.getCreateDefAclRecordsSql())
+        }
         return joinSql(sql)
       },
 
       getCreateDefAclRecordsSql() {
         const sql = []
         const defaultAcl = inst.defaultAcl
-        if (defaultAcl && defaultAcl.length > 0) {
-          const defAclTable = inst.getSchema().getTable('default_acl')
-          const aclSql = []
-          const opMap = {
-            select: 0b0001,
-            update: 0b0010,
-            delete: 0b0100,
-            insert: 0b1000,
-            all: 0b1111,
-          }
-          for (const rule of defaultAcl) {
-            let mask = 0, perm = 0
-            for (const op of rule.allow ? (Array.isArray(rule.allow) ? rule.allow : [rule.allow]) : []) {
-              const bits = opMap[op]
-              if (bits) {
-                mask = mask | bits
-                perm = perm | bits
-              }
-            }
-            for (const op of rule.deny ? (Array.isArray(rule.deny) ? rule.deny : [rule.deny]) : []) {
-              const bits = opMap[op]
-              if (bits) {
-                mask = mask | bits
-                perm = perm & !bits
-              }
-            }
-            if (mask !== 0) {
-              const pad = '0000'
-              const maskStr = mask.toString(2)
-              const permStr = perm.toString(2)
-              const sqlData = []
-              sqlData.push(`'${rule.role}'`);
-              sqlData.push(`B'${pad.substring(0, pad.length - maskStr.length) + maskStr}'`)
-              sqlData.push(`B'${pad.substring(0, pad.length - permStr.length) + permStr}'`)
-              aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().sql.getEscapedName()}.row_acl`)
-            }
-          }
-          sql.push(`INSERT INTO ${defAclTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.sql.getFullyQualifiedName()}', ARRAY[${aclSql.join(', ')}] );`)
+        const defAclTable = inst.getSchema().getTable('default_acl')
+        const aclSql = []
+        const opMap = {
+          select: 0b0001,
+          update: 0b0010,
+          delete: 0b0100,
+          insert: 0b1000,
+          all: 0b1111,
         }
+        for (const rule of defaultAcl) {
+          let mask = 0, perm = 0
+          for (const op of rule.allow ? (Array.isArray(rule.allow) ? rule.allow : [rule.allow]) : []) {
+            const bits = opMap[op]
+            if (bits) {
+              mask = mask | bits
+              perm = perm | bits
+            }
+          }
+          for (const op of rule.deny ? (Array.isArray(rule.deny) ? rule.deny : [rule.deny]) : []) {
+            const bits = opMap[op]
+            if (bits) {
+              mask = mask | bits
+              perm = perm & !bits
+            }
+          }
+          if (mask !== 0) {
+            const pad = '0000'
+            const maskStr = mask.toString(2)
+            const permStr = perm.toString(2)
+            const sqlData = []
+            sqlData.push(`'${rule.role}'`)
+            sqlData.push(`B'${pad.substring(0, pad.length - maskStr.length) + maskStr}'`)
+            sqlData.push(`B'${pad.substring(0, pad.length - permStr.length) + permStr}'`)
+            aclSql.push(`(${sqlData.join(', ')})::${inst.getSchema().sql.getEscapedName()}.row_acl`)
+          }
+        }
+        sql.push(`INSERT INTO ${defAclTable.getObjectIdentifier('insert')} ("table", "acl") VALUES ( '${inst.sql.getFullyQualifiedName()}', ARRAY[${aclSql.join(', ')}] );`)
         return joinSql(sql)
       },
 
       getDropDefAclRecordsSql() {
         const defAclTable = inst.getSchema().getTable('default_acl')
+        if (!defAclTable) {
+          return ''
+        }
         return `DELETE FROM ${defAclTable.getObjectIdentifier('delete')} WHERE "table" = '${inst.sql.getFullyQualifiedName()}';`
       },
 
@@ -167,19 +170,24 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
         return joinSql(sql)
       },
 
+      hasDefaultAcl () {
+        return inst.defaultAcl && inst.defaultAcl.length > 0
+      },
+
       getDropSql (origMethod) {
         const sql = []
         sql.push(origMethod())
-        sql.push(inst.getDropDefAclRecordsSql())
+        if (inst.hasDefaultAcl()) {
+          sql.push(inst.getDropDefAclRecordsSql())
+        }
         return joinSql(sql)
       },
 
       setupDependencies: (origMethod) => {
-        const result = origMethod()
-        if (inst.defaultAcl) {
-          result.push(inst.getSchema().getTable('default_acl').getPath())
+        origMethod()
+        if (inst.hasDefaultAcl()) {
+          inst.addDependencyByPath(inst.getSchema().getTable('default_acl').getPath())
         }
-        return result
       },
 
       validate (origMethod, previous, context) {

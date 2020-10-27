@@ -90,7 +90,7 @@ export default (Class) =>
       result._pluginVersion = pluginVersion
       result.applyConfig(cfg)
       result.postprocessTree(isNew)
-      result.setupDependencies()
+      // result.setupDependencies()
       return result
     }
 
