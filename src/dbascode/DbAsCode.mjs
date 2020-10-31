@@ -228,7 +228,7 @@ export default class DbAsCode {
     }
 
     this.changes = new Changes(oldTree, newTree)
-    this.changes.collectChanges(true)
+    this.changes.collectChanges(true, (event, args) => { this.pluginEvent(event, args) })
 
     const sql = this.getMigrationSql()
     return new State({

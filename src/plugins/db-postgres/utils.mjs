@@ -26,6 +26,7 @@ export function parsePgConfig (vars, dbAsCodeConfig) {
  * @typedef {object} ArgumentTypeDef
  * @property {string|undefined} schema
  * @property {string} type
+ * @property {int|null} size
  * @property {boolean} isArray
  */
 /**
@@ -34,7 +35,7 @@ export function parsePgConfig (vars, dbAsCodeConfig) {
  * @returns {ArgumentTypeDef}
  */
 export function parseTypedef (def) {
-  let schema, type, isArray = false
+  let schema, type, isArray = false, size = null
   if (isObject(def)) {
     schema = def.schema
     type = def.type
@@ -64,6 +65,7 @@ export function parseTypedef (def) {
   p = type.indexOf('(')
   if (p >= 0) {
     const p2 = type.indexOf(')')
+    size = parseInt(type.substr(p + 1, p2 - p))
     type = type.substr(0, p) + ' ' + type.substr(p2 + 1, type.length)
     type = replaceAll(type, '  ', ' ')
     type = type.toLowerCase()
@@ -73,6 +75,7 @@ export function parseTypedef (def) {
   return {
     schema,
     type,
+    size,
     isArray,
   }
 }
@@ -83,7 +86,7 @@ export function parseTypedef (def) {
  */
 export function stringifyTypeDef (def) {
   const sql = SqlRules
-  return `${def.schema ? sql.escapeSqlId(def.schema) + '.' : ''}${def.type}${def.isArray ? '[]' : ''}`
+  return `${def.schema ? sql.escapeSqlId(def.schema) + '.' : ''}${def.type}${def.size ? `(${def.size})` : ''}${def.isArray ? '[]' : ''}`
 }
 
 /**

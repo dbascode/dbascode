@@ -13,6 +13,7 @@ import isFunction from 'lodash-es/isFunction'
 import isPlainObject from 'lodash-es/isPlainObject'
 import { color } from '../console-utils'
 import clone from 'lodash-es/clone'
+import { CHANGES_COLLECTED, CHANGES_ORDERED } from './PluginEvent'
 
 /**
  * Changes calculation routines.
@@ -107,13 +108,16 @@ export default class Changes {
   /**
    * Collect changes between DB object trees
    * @param {boolean} [deep] Whether to iterate over children
+   * @param {function} eventCallback
    * @return {void}
    */
-  collectChanges (deep = false) {
+  collectChanges (deep = false, eventCallback) {
     const context = new ChangesContext(deep)
     this.compareValues(this.newTree, this.oldTree, context)
     this.changes = context.changes
+    eventCallback ? eventCallback(CHANGES_COLLECTED, [this]) : null
     this.buildOrderedChanges()
+    eventCallback ? eventCallback(CHANGES_ORDERED, [this]) : null
   }
 
   /**

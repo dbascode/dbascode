@@ -7,6 +7,8 @@ import { parsePgConfig } from './utils'
 import DataBase from './DataBase'
 import StateStore from './StateStore'
 import SqlExec from './SqlExec'
+import { CHANGES_COLLECTED, CHANGES_ORDERED } from '../../dbascode/PluginEvent'
+import Role from './Role'
 
 
 /**
@@ -37,6 +39,31 @@ class PostgreSqlPlugin extends PluginDescriptor {
    */
   getDbName () {
     return this.dbConfig.db
+  }
+
+  /**
+   * @inheritDoc
+   */
+  event (eventName, args = []) {
+    if (eventName === CHANGES_ORDERED) {
+      this.fixRolesDropOrder(args[0])
+    }
+  }
+
+  /**
+   * Move roles dropping down
+   * @param {Changes} changes
+   */
+  fixRolesDropOrder (changes) {
+    const result = [], roles = []
+    for (const change of changes.orderedChanges) {
+      if (change.old && !change.cur && changes.oldTree.getChildByPath(change.path) instanceof Role) {
+        roles.push(change)
+      } else {
+        result.push(change)
+      }
+    }
+    changes.orderedChanges = [...result, ...roles]
   }
 }
 

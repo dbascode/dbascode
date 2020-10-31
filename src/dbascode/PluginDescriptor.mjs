@@ -22,7 +22,7 @@ export default class PluginDescriptor {
    * Constructor
    * @param {string} name
    * @param {number} version
-   * @param {typeof AbstractDataBase|null} [dbClass]
+   * @param {typeof DataBaseMixin|null} [dbClass]
    * @param {typeof AbstractStateStore|null} [stateStoreClass]
    * @param {typeof AbstractSqlExec|null} [sqlExecClass]
    * @param {function|null} [eventHandler]
