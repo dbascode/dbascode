@@ -76,6 +76,9 @@ class RowLevelSecurityPlugin extends PluginDescriptor {
       },
 
       getSqlDefinitionAfter: (origMethod, operation) => {
+        if (operation !== 'create') {
+          return origMethod(operation);
+        }
         const sql = [origMethod(operation)]
         const rls = inst.getRowLevelSecurity()
         if (Object.keys(rls).length > 0) {

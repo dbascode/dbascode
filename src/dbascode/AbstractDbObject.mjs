@@ -883,7 +883,8 @@ export default class AbstractDbObject {
           break
 
         case ChildDef.array:
-          for (const cfg of childConfig || []) {
+          const childConfigAry = childConfig || []
+          for (const cfg of isInherited ? childConfigAry.reverse() : childConfigAry) {
             createAndAdd('', cfg)
           }
           break
@@ -919,7 +920,11 @@ export default class AbstractDbObject {
         this[def.propName] = child
         break
       case ChildDef.array:
-        this[def.propName].push(child)
+        if (child.isInherited()) {
+          this[def.propName].unshift(child)
+        } else {
+          this[def.propName].push(child)
+        }
         break
       case ChildDef.map:
         if (!this.getChildrenDefCollection().isChildUnique(this, child)) {
