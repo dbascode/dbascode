@@ -26,7 +26,9 @@ import { getModuleDataPath } from '../test-utils'
  */
 async function loadTestData(idx = '') {
   const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
-  return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
+  const db = DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
+  db.setupDependencies()
+  return db
 }
 
 test('loads table config', async () => {
@@ -39,7 +41,7 @@ test('loads table config', async () => {
   expect(fktarget.columns.id).toBeInstanceOf(Column)
   expect(fktarget.columns.id.isAutoIncrement).toBeTruthy()
   expect(fktarget.columns.id.allowNull).toBeFalsy()
-  expect(fktarget.columns.id.type).toEqual({schema: undefined, type: 'int', isArray: false})
+  expect(fktarget.columns.id.type).toEqual({schema: undefined, type: 'int', size: null, isArray: false})
   expect(schema.sequences.fktarget_id_seq).toBeInstanceOf(Sequence)
   // Implicit FK from autoincrement
   expect(fktarget.primaryKey).toBeInstanceOf(PrimaryKey)
@@ -50,9 +52,9 @@ test('loads table config', async () => {
   expect(table.comment).toEqual('Table comment')
 
   expect(table.columns.id).toBeInstanceOf(Column)
-  expect(table.columns.id.type).toEqual({schema: undefined, type: 'int', isArray: false})
+  expect(table.columns.id.type).toEqual({schema: undefined, type: 'int', size: null, isArray: false})
   expect(table.columns.id.allowNull).toBeTruthy()
-  expect(table.columns.id.foreignKey).toEqual('fktarget.id')
+  expect(table.columns.id.foreignKey).toEqual({ref: 'fktarget.id'})
 
   expect(table.foreignKeys.length).toEqual(1)
   expect(table.foreignKeys[0]).toBeInstanceOf(ForeignKey)
@@ -62,11 +64,11 @@ test('loads table config', async () => {
   expect(table.foreignKeys[0].onUpdate).toEqual('restrict')
 
   expect(table.columns.value).toBeInstanceOf(Column)
-  expect(table.columns.value.type).toEqual({schema: undefined, type: 'text', isArray: true})
+  expect(table.columns.value.type).toEqual({schema: undefined, type: 'text', size: null, isArray: true})
   expect(table.columns.value.allowNull).toBeFalsy()
 
   expect(table.columns.value2).toBeInstanceOf(Column)
-  expect(table.columns.value2.type).toEqual({schema: undefined, type: 'text', isArray: false})
+  expect(table.columns.value2.type).toEqual({schema: undefined, type: 'text', size: null, isArray: false})
   expect(table.columns.value2.defaultValue).toEqual('default value')
 
   expect(table.indexes.length).toEqual(1)

@@ -8,6 +8,7 @@ import DbAsCode from '../../../dbascode/DbAsCode'
 import PostgreSqlPlugin from '../PostgreSqlPlugin'
 import DataBase from '../DataBase'
 import Function from '../Function'
+import { getModuleDataPath } from '../test-utils'
 
 /**
  * @var {Jest} jest
@@ -18,8 +19,10 @@ import Function from '../Function'
  * @returns {Promise<DataBase>}
  */
 async function loadTestData(idx = '') {
-  const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/FunctionTest.data${idx}.yml`])
-  return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version, true)
+  const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
+  const db = DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version, true)
+  db.setupDependencies()
+  return db
 }
 
 test('loads function', async() => {

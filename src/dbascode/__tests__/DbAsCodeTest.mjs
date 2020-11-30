@@ -173,10 +173,12 @@ test('create plan succeed on both states exists', async () => {
             _old: 1,
             validate: () => {},
             dispose: () => {},
+            setupDependencies: () => {},
           })
           .mockReturnValueOnce(curTree = {
             validate: jest.fn(),
             dispose: () => {},
+            setupDependencies: () => {},
           }),
       },
     },
@@ -228,6 +230,7 @@ test('create plan succeed on prev state not exists', async () => {
             dispose: () => {},
             getAllDependencies: () => ({}),
             getAllChildrenRecurse: () => ([]),
+            setupDependencies: () => {},
           }),
       },
     },
@@ -284,6 +287,8 @@ test('create plan succeed on new state not exists', async () => {
             getAllChildrenRecurse: () => ([]),
             getDroppedByParent: () => false,
             getChildrenDefCollection: () => ({defs: []}),
+            setupDependencies: () => {},
+            getParent: () => {},
           })
           .mockReturnValueOnce(undefined),
       },

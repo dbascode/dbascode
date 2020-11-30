@@ -19,6 +19,8 @@ import {
   parseTypedef,
   stringifyTypeDef
 } from './utils'
+import isPlainObject from 'lodash-es/isPlainObject'
+import clone from 'lodash-es/clone'
 
 /**
  * Column in a table
@@ -42,7 +44,17 @@ export default class Column extends AbstractSchemaObject {
         return parseTypedef(value)
       },
     }),
-    new PropDef('foreignKey'),
+    new PropDef('foreignKey', {
+      type: PropDef.map,
+      allowNull: true,
+      defaultValue: null,
+      normalize: (obj, value) => {
+        if (value === undefined) {
+          return undefined
+        }
+        return isPlainObject(value) ? value : { ref: value }
+      },
+    }),
     new PropDef('allowNull', { type: PropDef.bool }),
     new PropDef('defaultValue', {
       type: PropDef.map,
@@ -105,10 +117,9 @@ export default class Column extends AbstractSchemaObject {
       const config = {}
       const fkDef = table.getChildrenDefCollection().getDefByClass(ForeignKey)
       table.getChildrenDefCollection().initConfig(config)
-      config[fkDef.configPropName].push({
-        column: this.name,
-        ref: this.foreignKey,
-      })
+      const fkConfig = clone(this.foreignKey)
+      fkConfig.column = this.name
+      config[fkDef.configPropName].push(fkConfig)
       table.createChildrenFromConfig(config, false)
     }
   }

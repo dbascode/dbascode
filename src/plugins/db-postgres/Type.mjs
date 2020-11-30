@@ -8,7 +8,7 @@ import ChildDefCollection from '../../dbascode/ChildDefCollection'
 import ChildDef from '../../dbascode/ChildDef'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 import PropDef from '../../dbascode/PropDef'
-import { arrayUnique, replaceAll } from '../../dbascode/utils'
+import { arrayUnique, parseArrayProp } from '../../dbascode/utils'
 
 /**
  * DB Type object
@@ -75,6 +75,28 @@ export default class Type extends AbstractSchemaObject {
       }
       return `AS (\n${fields.join(",\n")}\n)`
     }
+  }
+
+  /**
+   * Returns SQL for alteration of a particular property
+   * @param {AbstractDbObject} compared
+   * @param {string} propName
+   * @param {*} oldValue
+   * @param {*} curValue
+   * @param {object} context
+   * @return {string|string[]|undefined}
+   */
+  getAlterPropSql (compared, propName, oldValue, curValue, context) {
+    const parsedProp = parseArrayProp(propName)
+    switch (parsedProp.path[0]) {
+      case 'values':
+        if (curValue) {
+          return `ADD VALUE ${this.sql.escapeStringExpr(curValue)}`
+        } else {
+          throw Error('Removing values not supported')
+        }
+    }
+    return super.getAlterPropSql(compared, propName, oldValue, curValue, context)
   }
 
   /**

@@ -9,6 +9,7 @@ import DataBase from '../DataBase'
 import { loadStateYaml } from '../../../dbascode/state-loader-yml'
 import DbAsCode from '../../../dbascode/DbAsCode'
 import PostgreSqlPlugin from '../PostgreSqlPlugin'
+import { getModuleDataPath } from '../test-utils'
 
 /**
  * @var {Jest} jest
@@ -19,8 +20,10 @@ import PostgreSqlPlugin from '../PostgreSqlPlugin'
  * @returns {Promise<DataBase>}
  */
 async function loadTestData(idx = '') {
-  const s = await loadStateYaml([`./src/plugins/db-postgres/__tests__/ColumnTest.data${idx}.yml`])
-  return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
+  const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
+  const db = DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
+  db.setupDependencies()
+  return db
 }
 
 test('validate fail on unknown type', async () => {

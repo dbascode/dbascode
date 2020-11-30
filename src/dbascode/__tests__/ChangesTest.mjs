@@ -26,6 +26,7 @@ async function loadTestData (idx) {
   const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
   const tree = DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
   applyPlugins(tree)
+  tree.setupDependencies()
   return tree
 }
 
@@ -147,12 +148,12 @@ test('loads and orders drop changes correctly', async () => {
     'schemas.private_schema: Schema -> ~',
     'schemas.private_schema.functions.FF4: Function -> ~',
     'schemas.private_schema.tables.TT4: Table -> ~',
-    'schemas.public_schema.functions.F1.args.A3: public_schema,T3,false -> ~',
+    'schemas.public_schema.functions.F1.args.A3: public_schema,T3,,false -> ~',
     'schemas.public_schema.functions.F3: Function -> ~',
     'schemas.public_schema.tables.T1.comment: Test comment T1 -> ~',
     'schemas.public_schema.tables.T2.comment: ~ -> Test comment T2',
-    'schemas.public_schema.tables.T3.comment: ~ -> Test comment T3',
     'schemas.public_schema.tables.T3.columns.col2: Column -> ~',
+    'schemas.public_schema.tables.T3.comment: ~ -> Test comment T3',
   ]))
 
   const orderedChanges = changes.orderedChanges
@@ -162,7 +163,7 @@ test('loads and orders drop changes correctly', async () => {
     'schemas.private_schema.tables.TT4: Table -> ~',
     'schemas.private_schema.functions.FF4: Function -> ~',
     'schemas.private_schema: Schema -> ~',
-    'schemas.public_schema.functions.F1.args.A3: public_schema,T3,false -> ~',
+    'schemas.public_schema.functions.F1.args.A3: public_schema,T3,,false -> ~',
     'schemas.public_schema.functions.F3: Function -> ~',
     'schemas.public_schema.tables.T1.comment: Test comment T1 -> ~',
     'schemas.public_schema.tables.T2.comment: ~ -> Test comment T2',
@@ -179,7 +180,7 @@ test('function arguments deletion is correct', async () => {
   changes.collectChanges(true)
 
   expect(changes.changes.map(formatChangeLine)).toEqual([
-    'schemas.public_schema.functions.F1.args.A1: public_schema,T1,false -> ~',
+    'schemas.public_schema.functions.F1.args.A1: public_schema,T1,,false -> ~',
   ])
 })
 
@@ -231,6 +232,30 @@ CREATE TABLE "public_schema"."T1" (
  "id" int  DEFAULT NULL,
  "name" text  DEFAULT NULL,
  "value" text  DEFAULT NULL
+);`
+  )
+})
+
+test('group changes of simple props on single db object ', async () => {
+  const tree = await loadTestData('-sql')
+  const tree2 = await loadTestData('-sql1')
+
+  const changes = new Changes(tree, tree2)
+  changes.collectChanges(true)
+
+  expect(changes.orderedChanges.length).toEqual(changes.changes.length)
+
+  expect(changes.orderedChanges.map(formatChangeLine)).toEqual([
+    'schemas.public_schema.tables.T1.columns.value.allowNull: ~ -> true',
+    'schemas.public_schema.tables.T1.columns.value.comment: ~ -> Comment',
+    'schemas.public_schema.tables.T2: ~ -> Table',
+  ])
+
+  expect(changes.getChangesSql()).toEqual(
+`ALTER TABLE "public_schema"."T1" ALTER COLUMN "value" DROP NOT NULL;
+COMMENT ON COLUMN "public_schema"."T1"."value" IS 'Comment';
+CREATE TABLE "public_schema"."T2" (
+ "id" int  DEFAULT NULL
 );`
   )
 })

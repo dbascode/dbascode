@@ -288,7 +288,7 @@ export default class Changes {
       if (propName) {
         // Need to drop a parameter, not the whole object.
         // Just drop it without processing dependencies.
-        addChangeToResult(objPath)
+        addChangeToResult(path)
       } else {
         beginProcessing(objPath)
         const parentPath = obj.getParent() ? obj.getParent().getPath() : null

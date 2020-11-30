@@ -1,0 +1,8 @@
+dbms: postgres
+schemas:
+  schema:
+    types:
+      T1:
+        enum:
+          - V1
+          - V2

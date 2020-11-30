@@ -29,11 +29,21 @@ export default class ForeignKey extends AbstractSchemaObject {
   static fullAlter = true
 
   static propDefs = new PropDefCollection([
-    new PropDef('column'),
-    new PropDef('onUpdate', { defaultValue: 'restrict' }),
-    new PropDef('onDelete', { defaultValue: 'restrict' }),
+    new PropDef('column', {
+      recreateOnChange: true,
+    }),
+    new PropDef('onUpdate', {
+      defaultValue: 'restrict',
+      recreateOnChange: true,
+    }),
+    new PropDef('onDelete', {
+      defaultValue: 'restrict',
+      recreateOnChange: true,
+    }),
     new PropDef('ref', {
+      isDefault: true,
       type: PropDef.map,
+      recreateOnChange: true,
       normalize: (obj, value) => {
         if (isString(value)) {
           const [column, table, schema] = reverse(value.split('.'))
@@ -92,6 +102,20 @@ export default class ForeignKey extends AbstractSchemaObject {
   getParentRelation (operation) {
     return 'ON'
   }
+
+  /**
+   * @inheritDoc
+   */
+  // getAlterPropSql (compared, propName, oldValue, curValue, context) {
+  //   if (!this.isInherited()) {
+  //     switch (propName) {
+  //       case 'onDelete':
+  //       case 'onUpdate':
+  //         return `ALTER KEY ${this.sql.}`
+  //     }
+  //   }
+  //   return super.getAlterPropSql(compared, propName, oldValue, curValue, context)
+  // }
 
   /**
    * Fills the dependencies list of this object

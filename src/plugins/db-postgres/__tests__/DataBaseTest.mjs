@@ -21,7 +21,9 @@ import { getModuleDataPath } from '../test-utils'
  */
 async function loadTestData(idx = '') {
   const s = await loadStateYaml([getModuleDataPath(module.filename, idx)])
-  return DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
+  const db = DataBase.createFromState(DataBase, s, DbAsCode.version, PostgreSqlPlugin.version)
+  db.setupDependencies()
+  return db
 }
 
 test('loads db config', async () => {
