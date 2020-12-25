@@ -8,8 +8,7 @@ import isString from 'lodash-es/isString'
 import PluginDescriptor from '../../dbascode/PluginDescriptor'
 import { TREE_INITIALIZED } from '../../dbascode/PluginEvent'
 import PropDef from '../../dbascode/PropDef'
-import clone from 'lodash-es/clone'
-import { joinSql } from '../../dbascode/utils'
+import { joinSql, parseArrayProp } from '../../dbascode/utils'
 import PropDefCollection from '../../dbascode/PropDefCollection'
 
 /**
@@ -99,22 +98,26 @@ class PostgraphilePlugin extends PluginDescriptor {
       },
 
       getChangesAlterSql (origMethod, compared, changes) {
-        let newChanges = [...changes], omitSql
+        // Replace any number of the omit array changes by a single change that will cover all possible changes
+        // by a single SQL request.
+        let newChanges = [...changes], omitChangeFound = false
         for (const i in changes) {
           const change = changes[i]
-          if (change.omit) {
-            delete newChanges[i]
-            omitSql = inst.getCommentChangesSql(compared)
-          } else {
-            newChanges = changes
+          const parsedProp = parseArrayProp(change.path)
+          if (parsedProp.path[parsedProp.path.length - 1] === 'omit') {
+            if (omitChangeFound) {
+              delete newChanges[i]
+            }
+            omitChangeFound = true;
           }
         }
-        const result = origMethod(compared, newChanges.filter(i => i))
-        return omitSql ? joinSql([result, omitSql]) : result
+        // Pass to the original method removing undefined (deleted) array items
+        return origMethod(compared, newChanges.filter(i => i))
       },
 
       getAlterPropSql (origMethod, compared, propName, oldValue, curValue, context) {
-        switch (propName.split('.')[0]) {
+        const parsedProp = parseArrayProp(propName)
+        switch (parsedProp.name) {
           case 'omit':
             context.separateSql = true
             return this.getCommentChangesSql(compared)

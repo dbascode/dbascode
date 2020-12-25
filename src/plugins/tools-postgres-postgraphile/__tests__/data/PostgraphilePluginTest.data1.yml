@@ -1,0 +1,10 @@
+dbms_version: 12
+schemas:
+  schema:
+    tables:
+      table:
+        comment: Table comment
+        omit: create
+        columns:
+          id:
+            type: int

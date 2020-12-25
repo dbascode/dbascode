@@ -181,12 +181,12 @@ export default class DbAsCode {
    * Create migration plan.
    * @return {Promise<State>}
    */
-  async createPlan ({ forceOldState = false, oldStateConfig = undefined, forceNewState = false, newStateConfig = undefined }) {
+  async createPlan ({ forceOldState = null, oldStateConfig = undefined, forceNewState = false, newStateConfig = undefined }) {
     console.log('Loading current/old DB state...')
     const dbPlugin = this.getDbPlugin()
     let oldState
     if (forceOldState) {
-      oldState = new State({id: 0})
+      oldState = forceOldState
     } else {
       oldState = await dbPlugin.getStateStore().getState()
     }
