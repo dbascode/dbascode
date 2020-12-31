@@ -112,9 +112,17 @@ export default class Function extends AbstractSchemaObject {
    * @returns {string}
    */
   getArgType (definition) {
+    const realSchemaName = definition.schema ? definition.schema : this.getSchema().name
+    const db = this.getDb()
+    const schema = db.schemas[realSchemaName]
+    const table = schema.tables[definition.type]
+    if (table) {
+      const sqlType = table.getObjectIdentifier('')
+      return (definition.isArray) ? `SETOF ${sqlType}` : sqlType
+    }
     return (definition.schema
-      ? `"${definition.schema}"."${definition.type}"`
-      : definition.type)
+      ? `${db.schemas[definition.schema].getObjectIdentifier('')}.${this.sql.escapeSqlId(definition.type)}`
+      : this.sql.isBuiltinType(definition.type) ? definition.type : this.sql.escapeSqlId(definition.type))
       + (definition.isArray ? '[]' : '')
   }
 

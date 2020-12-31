@@ -1,0 +1,10 @@
+dbms: postgres
+schemas:
+  schema:
+    functions:
+      f1:
+        arguments:
+          a1: int
+          a2: text
+        returns: bigint
+        code: CODE

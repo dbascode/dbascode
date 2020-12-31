@@ -85,3 +85,31 @@ test('loads function dependencies', async() => {
     'schemas.schema',
   ])
 })
+
+test('returns setof', async() => {
+  const tree = await loadTestData(1)
+  const func = tree.schemas.schema.functions.f1
+  expect(func).toBeInstanceOf(Function)
+  expect(func.getCreateSql()).toBe(
+`CREATE OR REPLACE FUNCTION "schema"."f1"() RETURNS SETOF "schema"."t1" LANGUAGE 'sql'
+  COST 10 VOLATILE NOT LEAKPROOF  PARALLEL UNSAFE
+AS $BODY$
+CODE
+$BODY$;`
+  )
+})
+
+
+test('scalar arg types', async() => {
+  const tree = await loadTestData(2)
+  const func = tree.schemas.schema.functions.f1
+  expect(func).toBeInstanceOf(Function)
+  expect(func.getCreateSql()).toBe(
+`CREATE OR REPLACE FUNCTION "schema"."f1"("a1" int, "a2" text) RETURNS bigint LANGUAGE 'sql'
+  COST 10 VOLATILE NOT LEAKPROOF  PARALLEL UNSAFE
+AS $BODY$
+CODE
+$BODY$;`
+  )
+})
+

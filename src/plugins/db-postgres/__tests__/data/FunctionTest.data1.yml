@@ -1,0 +1,9 @@
+dbms: postgres
+schemas:
+  schema:
+    tables:
+      t1:
+    functions:
+      f1:
+        returns: t1[]
+        code: CODE
