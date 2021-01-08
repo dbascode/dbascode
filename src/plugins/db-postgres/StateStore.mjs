@@ -52,7 +52,7 @@ export default class StateStore extends AbstractStateStore {
    */
   async getStorageConfigPath () {
     // return `${__dirname}/state-storage.yml`
-    return `src/plugins/db-postgres/state-storage.yml`
+    return `${path.dirname(fileURLToPath(import.meta.url))}${path.sep}state-storage.yml`
   }
 
   /**
